@@ -1,0 +1,13 @@
+**/node_modules
+**/venv
+**/.venv
+**/__pycache__
+**/dist
+**/.env
+**/runtime_settings.json
+design
+deploy/.env
+deploy/state
+*.pdf
+*.zip
+.git

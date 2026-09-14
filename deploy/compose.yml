@@ -1,0 +1,149 @@
+# AI Lecture Notes — self-contained production stack.
+# Start with deploy/start.sh (builds, starts, pulls models, bootstraps the admin).
+#
+# Public URL: Tailscale Funnel on the `tailscale` service. The app shares its
+# network namespace, so Funnel proxies to localhost:8000 and the app still
+# reaches postgres/minio/ollama by name through that namespace.
+
+name: lecture-notes
+
+x-restart: &restart unless-stopped
+
+services:
+  postgres:
+    image: postgres:18-alpine
+    restart: *restart
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: lecture_notes
+    volumes:
+      - postgres-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d lecture_notes"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  minio:
+    image: quay.io/minio/minio:latest
+    restart: *restart
+    command: server /data --address :9000
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: make sure the audio bucket exists.
+  minio-init:
+    image: quay.io/minio/mc:latest
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
+      mc mb local/lecture-audio --ignore-existing"
+
+  # Bundled Ollama (CPU only — Docker cannot use the Mac's GPU). Started only
+  # when OLLAMA_BASE_URL is unset; point it at a native Ollama for GPU speed.
+  ollama:
+    image: ollama/ollama:latest
+    restart: *restart
+    profiles: [bundled-ollama]
+    volumes:
+      # A named volume by default. Set OLLAMA_MODELS to a host directory that
+      # already holds models (e.g. another Ollama's ~/.ollama) to share them.
+      - ${OLLAMA_MODELS:-ollama-data}:/root/.ollama
+    # llama3 needs ~5 GB of RAM while generating; Ollama unloads it after 5 idle minutes.
+
+  # Writes the Funnel serve config into a volume (a file bind-mount would not
+  # work when compose is driven from inside another container).
+  tailscale-config:
+    image: busybox:stable
+    volumes:
+      - tailscale-config:/config
+    command:
+      - sh
+      - -c
+      - |
+        cat > /config/serve.json <<'EOF'
+        {"TCP":{"443":{"HTTPS":true}},"Web":{"$${TS_CERT_DOMAIN}:443":{"Handlers":{"/":{"Proxy":"http://127.0.0.1:8000"}}}},"AllowFunnel":{"$${TS_CERT_DOMAIN}:443":true}}
+        EOF
+
+  tailscale:
+    image: tailscale/tailscale:latest
+    restart: *restart
+    hostname: ${TS_HOSTNAME:-lecture-notes}
+    depends_on:
+      tailscale-config:
+        condition: service_completed_successfully
+    environment:
+      TS_HOSTNAME: ${TS_HOSTNAME:-lecture-notes}
+      TS_AUTHKEY: ${TS_AUTHKEY:-}
+      TS_STATE_DIR: /var/lib/tailscale
+      TS_USERSPACE: "true"
+      TS_SERVE_CONFIG: /config/serve.json
+      TS_EXTRA_ARGS: --accept-dns=false
+    volumes:
+      - tailscale-state:/var/lib/tailscale
+      - tailscale-config:/config:ro
+    ports:
+      # Local/LAN access to the app without going through Funnel.
+      - "${APP_PORT:-8010}:8000"
+    extra_hosts:
+      # Lets the app (which shares this network namespace) reach services on
+      # the Mac itself, e.g. a native Ollama at host.docker.internal:11434.
+      - "host.docker.internal:host-gateway"
+
+  app:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile
+    image: lecture-notes-app:latest
+    restart: *restart
+    network_mode: service:tailscale
+    depends_on:
+      postgres:
+        condition: service_healthy
+      minio-init:
+        condition: service_completed_successfully
+      tailscale:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/lecture_notes
+      POSTGRES_HOST: postgres
+      S3_ENDPOINT_URL: http://minio:9000
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_BUCKET: lecture-audio
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
+      WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in deploy/.env}
+      AUDIO_RETENTION_DAYS: ${AUDIO_RETENTION_DAYS:-14}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:-}
+      MAIL_FROM: ${MAIL_FROM:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-AI Lecture Notes}
+      MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
+      PUBLIC_URL: ${PUBLIC_URL:-}
+    volumes:
+      - app-state:/app/state
+      # Whisper / Hugging Face model downloads.
+      - app-cache:/root/.cache
+
+volumes:
+  postgres-data:
+  minio-data:
+  ollama-data:
+  tailscale-state:
+  tailscale-config:
+  app-state:
+  app-cache:

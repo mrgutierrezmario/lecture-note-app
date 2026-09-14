@@ -1,0 +1,18 @@
+{
+  "id": "/",
+  "name": "AI Lecture Notes",
+  "short_name": "Lecture Notes",
+  "description": "Record, transcribe, and generate structured notes from lectures. By M.G. Network and Technology Solutions.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "lang": "en",
+  "theme_color": "#061F52",
+  "background_color": "#F4F6FA",
+  "icons": [
+    { "src": "/android-chrome-192x192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/android-chrome-512x512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

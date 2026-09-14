@@ -1,0 +1,89 @@
+"""Outgoing email over SMTP (Gmail App Password by default).
+
+Same transport as the stock-tracker project: SMTP over SSL, credentials from
+.env. Sending runs in a thread so the event loop never blocks on the network.
+"""
+
+import asyncio
+import html
+import logging
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.utils import formataddr
+
+from config import get_settings
+
+logger = logging.getLogger(__name__)
+
+
+def configured() -> bool:
+    """``True`` when an SMTP username, password and sender are all set."""
+    s = get_settings()
+    return bool(s.mail_username and s.mail_password and (s.mail_from or s.mail_username))
+
+
+def _clean(value: str) -> str:
+    # Header values must never carry CR/LF (header injection).
+    return (value or "").replace("\r", "").replace("\n", "").strip()
+
+
+def _send_sync(to: str, subject: str, text: str, html_body: str) -> None:
+    s = get_settings()
+    from_addr = _clean(s.mail_from or s.mail_username)
+    msg = MIMEMultipart("alternative")
+    msg["Subject"] = _clean(subject)
+    msg["From"] = formataddr((_clean(s.mail_from_name), from_addr))
+    msg["To"] = _clean(to)
+    if s.mail_reply_to:
+        msg["Reply-To"] = _clean(s.mail_reply_to)
+    msg.attach(MIMEText(text, "plain", "utf-8"))
+    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    with smtplib.SMTP_SSL(s.mail_server, s.mail_port, timeout=30) as server:
+        server.login(s.mail_username, s.mail_password)
+        server.sendmail(from_addr, [msg["To"]], msg.as_string())
+
+
+async def send(to: str, subject: str, text: str, html_body: str) -> bool:
+    """Send one email; returns ``False`` (and logs) instead of raising on failure."""
+    if not configured():
+        logger.warning("Mail not configured; would have sent %r to %s", subject, to)
+        return False
+    try:
+        await asyncio.to_thread(_send_sync, to, subject, text, html_body)
+        logger.info("Sent %r to %s", subject, to)
+        return True
+    except Exception as e:
+        logger.error("Failed to send %r to %s: %s: %s", subject, to, type(e).__name__, e)
+        return False
+
+
+def password_reset_email(username: str, link: str, minutes: int) -> tuple[str, str, str]:
+    """(subject, text, html) for a reset link."""
+    subject = "Reset your AI Lecture Notes password"
+    text = (
+        f"Hi {username},\n\n"
+        f"Someone asked to reset the password for your AI Lecture Notes account. "
+        f"Open this link within {minutes} minutes to choose a new password:\n\n{link}\n\n"
+        "If you didn't ask for this, you can ignore this email — your password stays the same.\n\n"
+        "This is an automated message; replies are not monitored."
+    )
+    body = f"""
+<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;
+            margin:0 auto;padding:24px;color:#0f1f3d">
+  <h2 style="margin:0 0 12px;font-size:20px">Reset your password</h2>
+  <p style="margin:0 0 16px;line-height:1.5">Hi {html.escape(username)}, someone asked to reset
+  the password for your
+  AI Lecture Notes account. This link works for {minutes} minutes:</p>
+  <p style="margin:0 0 20px"><a href="{html.escape(link, quote=True)}"
+     style="display:inline-block;background:#0b74f6;color:#fff;text-decoration:none;
+            padding:12px 18px;border-radius:8px;font-weight:600">
+     Choose a new password</a></p>
+  <p style="margin:0 0 8px;font-size:13px;color:#5b6b86">Or paste this into your browser:<br>
+     <span style="word-break:break-all">{html.escape(link)}</span></p>
+  <p style="margin:16px 0 0;font-size:13px;color:#5b6b86">If you didn't ask for this, ignore this
+  email — your password stays the same.</p>
+  <p style="margin:16px 0 0;font-size:12px;color:#8a97ae">This is an automated message; replies
+  are not monitored.</p>
+</div>"""
+    return subject, text, body

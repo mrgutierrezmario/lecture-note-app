@@ -1,0 +1,16 @@
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+extend-exclude = ["venv", "alembic/versions"]
+
+[tool.ruff.lint]
+# pycodestyle (E, W), pyflakes (F), import ordering (I)
+select = ["E", "W", "F", "I", "D1"]  # D1: every public module/class/function needs a docstring
+
+[tool.ruff.lint.isort]
+known-first-party = ["auth", "cleanup", "config", "database", "document_processor", "image_analyzer",
+  "mailer", "models", "notes_generator", "providers", "quota", "routes", "s3_client",
+  "schemas", "settings_store", "transcriber", "websocket_handler"]
+
+[tool.ruff.format]
+quote-style = "double"

@@ -1,0 +1,11 @@
+{
+  "artboards": [
+    { "file": "Main.dc.html", "title": "Light", "x": 0, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Dark.dc.html", "title": "Dark", "x": 1540, "y": 0, "w": 1440, "h": 900 },
+    { "file": "Settings.dc.html", "title": "Settings · Appearance", "x": 0, "y": 1040, "w": 760, "h": 720 }
+  ],
+  "annotations": [
+    { "id": "direction", "x": 860, "y": 1040, "w": 520, "text": "Direction: MG Network palette (navy #061F52, blue #0B74F6, cyan #12BCEB, teal #11D4B2) replaces the Vite-default indigo and Bootstrap-copied button colors.\n\nWhat changed vs. today:\n- Compact 64px app bar with the logo mark instead of a 360px centered logo + hero text\n- Lecture title, session id and connection status live in the bar (no separate grey strips)\n- One primary action (Start recording); exports grouped as a single button set\n- Checkboxes become switches; Settings is an icon button\n- Cards get a header row with a status hint and a real empty state\n- Dark theme is navy-tinted, not flat #1a1a1a\n\nSettings gains an Appearance section: System / Light / Dark, stored per browser." }
+  ],
+  "launch": { "view": "canvas" }
+}

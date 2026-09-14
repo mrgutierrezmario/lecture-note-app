@@ -1,0 +1,179 @@
+/* ── Design tokens ─────────────────────────────────────────────────────────
+   Brand palette from MG-Network-Website-Brand-Assets/README.txt.
+   Light is the default; [data-theme="dark"] (set on <html> by useTheme and the
+   inline script in index.html) overrides only the surface/text tokens. */
+
+:root {
+  --brand-navy: #061f52;
+  --brand-blue: #0b74f6;
+  --brand-cyan: #12bceb;
+  --brand-teal: #11d4b2;
+
+  --bg: #f4f6fa;
+  --surface: #ffffff;
+  --surface-2: #f1f4f9;
+  --border: #dee4ee;
+  --border-strong: #b9c6db;
+  --text: #0f1f3d;
+  --muted: #5b6b86;
+  --faint: #8a97ae;
+
+  --primary: var(--brand-blue);
+  --primary-hover: #0863d6;
+  --primary-ink: #ffffff;
+  --primary-tint: rgba(11, 116, 246, 0.1);
+  --accent-ink: var(--brand-navy);
+  --teal-ink: #0a8f77;
+  --teal-tint: rgba(17, 212, 178, 0.14);
+  --cyan-ink: #0b86ab;
+  --cyan-tint: rgba(18, 188, 235, 0.14);
+  --danger: #e5484d;
+  --danger-tint: rgba(229, 72, 77, 0.12);
+  --warning: #d97706;
+  --warning-tint: rgba(217, 119, 6, 0.12);
+
+  --shadow: 0 1px 2px rgba(6, 31, 82, 0.06), 0 8px 24px rgba(6, 31, 82, 0.05);
+  --shadow-lg: 0 24px 64px rgba(6, 31, 82, 0.25);
+  --backdrop: rgba(4, 10, 28, 0.55);
+
+  --radius-sm: 6px;
+  --radius: 8px;
+  --radius-lg: 12px;
+  --control-h: 36px;
+
+  color-scheme: light;
+  font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: var(--text);
+  background-color: var(--bg);
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0a1430;
+  --surface: #101d3f;
+  --surface-2: #172650;
+  --border: #243663;
+  --border-strong: #34497a;
+  --text: #e7ecf7;
+  --muted: #9aaac9;
+  --faint: #6d7fa6;
+
+  --primary-hover: #2f8bff;
+  --accent-ink: var(--brand-blue);
+  --teal-ink: var(--brand-teal);
+  --teal-tint: rgba(17, 212, 178, 0.16);
+  --cyan-ink: var(--brand-cyan);
+  --danger: #f2555a;
+  --warning: #f59e0b;
+
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.3), 0 8px 24px rgba(0, 0, 0, 0.25);
+  --shadow-lg: 0 24px 64px rgba(0, 0, 0, 0.45);
+  --backdrop: rgba(4, 10, 28, 0.72);
+
+  color-scheme: dark;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+h1, h2, h3 {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+button {
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: var(--radius);
+  border: 1px solid transparent;
+  padding: 0 14px;
+  height: var(--control-h);
+  color: inherit;
+  background: transparent;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+input,
+select,
+textarea {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  height: var(--control-h);
+  padding: 0 12px;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: none;
+  border-color: var(--primary);
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--faint);
+}
+
+input:disabled,
+select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+textarea {
+  height: auto;
+  padding: 10px 12px;
+  resize: none;
+}
+
+code, pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/* Phones: 44px hit targets, and 16px inputs so iOS Safari does not zoom on focus. */
+@media (max-width: 600px) {
+  :root {
+    --control-h: 44px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}

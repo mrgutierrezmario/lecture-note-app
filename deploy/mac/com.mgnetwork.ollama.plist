@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Native Ollama for the lecture app, tuned for a 16 GB Mac:
+     OLLAMA_MAX_LOADED_MODELS=1 keeps only one model resident (llama3 or llava),
+     so the worst case is ~5 GB instead of ~10 GB. Loopback only (default), so
+     nothing outside the Mac can reach it.
+
+     Install (replaces the Homebrew service) — first replace YOUR_USERNAME below:
+       brew services stop ollama
+       cp deploy/mac/com.mgnetwork.ollama.plist ~/Library/LaunchAgents/
+       launchctl load ~/Library/LaunchAgents/com.mgnetwork.ollama.plist
+     Logs: ~/Library/Logs/ollama.log -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.mgnetwork.ollama</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/opt/ollama/bin/ollama</string>
+    <string>serve</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>OLLAMA_MAX_LOADED_MODELS</key>
+    <string>1</string>
+    <key>OLLAMA_NUM_PARALLEL</key>
+    <string>2</string>
+    <key>OLLAMA_FLASH_ATTENTION</key>
+    <string>1</string>
+    <key>OLLAMA_KV_CACHE_TYPE</key>
+    <string>q8_0</string>
+  </dict>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>StandardOutPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/ollama.log</string>
+  <key>StandardErrorPath</key>
+  <string>/Users/YOUR_USERNAME/Library/Logs/ollama.log</string>
+</dict>
+</plist>

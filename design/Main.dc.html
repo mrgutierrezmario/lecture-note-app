@@ -1,0 +1,166 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&amp;display=swap">
+  <style>
+    body { margin: 0; font-family: "Plus Jakarta Sans", "Segoe UI", system-ui, -apple-system, sans-serif; -webkit-font-smoothing: antialiased; }
+    a { color: #0B74F6; } a:hover { color: #0857B8; }
+    * { box-sizing: border-box; }
+    svg { display: block; }
+  </style>
+</helmet>
+<div style="--bg:#F4F6FA; --surface:#FFFFFF; --surface-2:#F1F4F9; --border:#DEE4EE; --text:#0F1F3D; --muted:#5B6B86; --faint:#8A97AE; --primary:#0B74F6; --primary-ink:#FFFFFF; --navy:#061F52; --teal:#11D4B2; --cyan:#12BCEB; --record:#E5484D; --shadow:0 1px 2px rgba(6,31,82,0.06), 0 8px 24px rgba(6,31,82,0.05); width: 1440px; height: 900px; background: var(--bg); color: var(--text); display: flex; flex-direction: column; overflow: hidden;">
+
+  <!-- Top bar -->
+  <div style="height: 64px; padding: 0 32px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 24px; flex-shrink: 0;">
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <img src="logo-mark.svg" alt="MG Network" style="width: 40px; height: 40px; object-fit: contain;">
+      <div style="display: flex; flex-direction: column; gap: 1px;">
+        <div style="font-size: 16px; font-weight: 700; line-height: 20px; letter-spacing: -0.01em;">AI Lecture Notes</div>
+        <div style="font-size: 11px; font-weight: 600; line-height: 14px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint);">MG Network</div>
+      </div>
+    </div>
+
+    <div style="width: 1px; height: 28px; background: var(--border);"></div>
+
+    <div style="display: flex; align-items: center; gap: 10px; flex-grow: 1;">
+      <input type="text" placeholder="Untitled lecture" style="height: 36px; width: 420px; padding: 0 12px; font: inherit; font-size: 14px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; outline: none;">
+      <div style="display: flex; align-items: center; gap: 6px; height: 28px; padding: 0 10px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--border); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; color: var(--muted);">
+        <span>session</span><span style="color: var(--text);">b0e5ebbf</span>
+      </div>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 12px;">
+      <div style="display: flex; align-items: center; gap: 8px; height: 32px; padding: 0 12px; border-radius: 999px; background: rgba(17,212,178,0.12); color: #0A8F77; font-size: 13px; font-weight: 600;">
+        <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--teal); box-shadow: 0 0 0 3px rgba(17,212,178,0.25);"></span>
+        Connected
+      </div>
+      <button style="width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; background: transparent; border: 1px solid var(--border); border-radius: 8px; color: var(--muted); cursor: pointer;" aria-label="Settings">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"></path></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div style="height: 60px; padding: 0 32px; display: flex; align-items: center; gap: 16px; flex-shrink: 0; border-bottom: 1px solid var(--border); background: var(--surface);">
+    <button style="height: 38px; padding: 0 18px 0 14px; display: flex; align-items: center; gap: 10px; background: var(--primary); color: var(--primary-ink); border: none; border-radius: 8px; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; box-shadow: 0 1px 2px rgba(11,116,246,0.3);">
+      <span style="width: 10px; height: 10px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 0 0 2px rgba(255,255,255,0.35);"></span>
+      Start recording
+    </button>
+
+    <div style="display: flex; align-items: center; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface);">
+      <button style="height: 36px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: transparent; border: none; border-right: 1px solid var(--border); font: inherit; font-size: 13px; font-weight: 500; color: var(--faint); cursor: not-allowed;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><path d="M8 13h8M8 17h8"></path></svg>
+        Notes
+      </button>
+      <button style="height: 36px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: transparent; border: none; border-right: 1px solid var(--border); font: inherit; font-size: 13px; font-weight: 500; color: var(--faint); cursor: not-allowed;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h14"></path></svg>
+        Transcript
+      </button>
+      <button style="height: 36px; padding: 0 14px; display: flex; align-items: center; gap: 8px; background: transparent; border: none; font: inherit; font-size: 13px; font-weight: 500; color: var(--faint); cursor: not-allowed;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 18V6l12-2v12"></path><circle cx="6" cy="18" r="3"></circle><circle cx="18" cy="16" r="3"></circle></svg>
+        MP3
+      </button>
+    </div>
+    <div style="font-size: 12px; color: var(--faint);">Exports enable once there is content</div>
+
+    <div style="flex-grow: 1;"></div>
+
+    <div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted);">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"></path></svg>
+      <select style="height: 34px; padding: 0 32px 0 10px; font: inherit; font-size: 13px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 8px; outline: none;">
+        <option>BlackHole 2ch (Virtual)</option>
+      </select>
+    </div>
+
+    <div style="display: flex; align-items: center; gap: 20px; padding-left: 16px; border-left: 1px solid var(--border);">
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer;">
+        <span style="width: 32px; height: 18px; border-radius: 999px; background: var(--border); position: relative; display: inline-block;"><span style="position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></span></span>
+        Tab audio
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer;">
+        <span style="width: 32px; height: 18px; border-radius: 999px; background: var(--border); position: relative; display: inline-block;"><span style="position: absolute; top: 2px; left: 2px; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></span></span>
+        Mute mic
+      </label>
+      <label style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); cursor: pointer;">
+        <span style="width: 32px; height: 18px; border-radius: 999px; background: var(--primary); position: relative; display: inline-block;"><span style="position: absolute; top: 2px; left: 16px; width: 14px; height: 14px; border-radius: 50%; background: #FFFFFF; box-shadow: 0 1px 2px rgba(0,0,0,0.2);"></span></span>
+        Save storage
+      </label>
+    </div>
+  </div>
+
+  <!-- Workspace -->
+  <div style="flex-grow: 1; padding: 24px 32px 32px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; min-height: 0;">
+
+    <!-- Transcript -->
+    <div style="display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden;">
+      <div style="height: 52px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 28px; height: 28px; border-radius: 8px; background: rgba(11,116,246,0.1); color: var(--primary); display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h10M4 18h14"></path></svg></span>
+          <span style="font-size: 15px; font-weight: 600;">Live transcript</span>
+        </div>
+        <span style="font-size: 12px; color: var(--faint);">0 segments</span>
+      </div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px; text-align: center;">
+        <span style="width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); color: var(--faint); display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="12" rx="3"></rect><path d="M5 10a7 7 0 0 0 14 0M12 17v5M8 22h8"></path></svg></span>
+        <div style="font-size: 14px; font-weight: 600; color: var(--text);">Nothing transcribed yet</div>
+        <div style="font-size: 13px; color: var(--muted); max-width: 260px; line-height: 1.5;">Press Start recording and speech will appear here in real time.</div>
+      </div>
+    </div>
+
+    <!-- Notes -->
+    <div style="display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden;">
+      <div style="height: 52px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <span style="width: 28px; height: 28px; border-radius: 8px; background: rgba(17,212,178,0.14); color: #0A8F77; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"></path><path d="M14 3v6h6"></path><path d="M8 13h8M8 17h8"></path></svg></span>
+          <span style="font-size: 15px; font-weight: 600;">Notes</span>
+        </div>
+        <span style="font-size: 12px; color: var(--faint);">Regenerates every 60s</span>
+      </div>
+      <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 32px; text-align: center;">
+        <span style="width: 44px; height: 44px; border-radius: 12px; background: var(--surface-2); color: var(--faint); display: flex; align-items: center; justify-content: center;"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.8 4.2L18 9l-4.2 1.8L12 15l-1.8-4.2L6 9l4.2-1.8z"></path><path d="M19 16l.9 2.1L22 19l-2.1.9L19 22l-.9-2.1L16 19l2.1-.9z"></path></svg></span>
+        <div style="font-size: 14px; font-weight: 600; color: var(--text);">Notes will build as you record</div>
+        <div style="font-size: 13px; color: var(--muted); max-width: 260px; line-height: 1.5;">Structured headings and bullet points are generated from the transcript automatically.</div>
+      </div>
+    </div>
+
+    <!-- Right column -->
+    <div style="display: flex; flex-direction: column; gap: 20px; min-height: 0;">
+      <div style="padding: 18px 20px; display: flex; align-items: center; gap: 14px; background: var(--surface); border: 1px dashed #B9C6DB; border-radius: 12px;">
+        <span style="width: 36px; height: 36px; border-radius: 10px; background: rgba(11,116,246,0.1); color: var(--primary); display: flex; align-items: center; justify-content: center; flex-shrink: 0;"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M6 10l6-6 6 6"></path><path d="M4 20h16"></path></svg></span>
+        <div style="display: flex; flex-direction: column; gap: 2px; flex-grow: 1;">
+          <div style="font-size: 14px; font-weight: 600;">Add slides to this lecture</div>
+          <div style="font-size: 12px; color: var(--muted);">Drop a PDF or PowerPoint, or browse</div>
+        </div>
+        <button style="height: 32px; padding: 0 12px; background: transparent; border: 1px solid var(--border); border-radius: 8px; font: inherit; font-size: 13px; font-weight: 500; color: var(--text); cursor: pointer;">Browse</button>
+      </div>
+
+      <div style="flex-grow: 1; display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; box-shadow: var(--shadow); overflow: hidden; min-height: 0;">
+        <div style="height: 52px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border);">
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <span style="width: 28px; height: 28px; border-radius: 8px; background: rgba(18,188,235,0.14); color: #0B86AB; display: flex; align-items: center; justify-content: center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 21l1.9-5.4A8 8 0 1 1 21 12z"></path></svg></span>
+            <span style="font-size: 15px; font-weight: 600;">Ask about the lecture</span>
+          </div>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center;">
+          <div style="font-size: 13px; color: var(--muted); max-width: 260px; line-height: 1.5;">Questions are answered from the transcript and any slides you add. Paste an image to ask about it.</div>
+        </div>
+        <div style="padding: 12px 16px 16px; border-top: 1px solid var(--border); display: flex; align-items: center; gap: 10px;">
+          <input type="text" placeholder="Ask a question…" style="flex-grow: 1; height: 40px; padding: 0 14px; font: inherit; font-size: 14px; color: var(--text); background: var(--surface-2); border: 1px solid var(--border); border-radius: 10px; outline: none;">
+          <button style="width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; background: var(--navy); color: #FFFFFF; border: none; border-radius: 10px; cursor: pointer;" aria-label="Send">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"></path></svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+</x-dc>
+</body>
+</html>

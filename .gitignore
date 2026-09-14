@@ -1,0 +1,42 @@
+# Secrets — .env holds live API keys, keep it local
+.env
+**/.env
+!.env.example
+!**/.env.example
+
+# Python
+venv/
+.venv/
+**/venv/
+__pycache__/
+*.pyc
+
+# Node / builds
+node_modules/
+dist/
+build/
+
+# OS
+.DS_Store
+
+# Binaries
+minio
+mc
+
+# MinIO runtime/data
+minio-data/
+**/.minio.sys/
+
+# Runtime settings written by the Settings panel
+app/ui_backend/runtime_settings.json
+
+# Local scratch files
+Untitled.pdf
+*.zip
+
+# Design canvas: seeded editor page is generated from design/*.dc.html
+design/*.html
+!design/*.dc.html
+deploy/.env
+deploy/.env
+deploy/state/
