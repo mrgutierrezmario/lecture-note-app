@@ -380,4 +380,9 @@ Never commit `.env` files, `deploy/.env`, or anything under `deploy/state/`
 
 ## License
 
-[MIT](LICENSE) — © 2026 M.G. Network and Technology Solutions.
+[PolyForm Noncommercial 1.0.0](LICENSE) — © 2026 M.G. Network and Technology Solutions.
+
+Free to use, modify and share for **noncommercial** purposes: personal study,
+research, hobby projects, and use by educational institutions, charities and
+other noncommercial organizations. **Commercial use requires a separate
+license** — contact the copyright holder.

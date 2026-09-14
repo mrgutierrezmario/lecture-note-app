@@ -173,7 +173,9 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   Claude helpers removed from `routes/sessions.py`; pydantic v2 config style.
 - **README** rewritten as a from-scratch guide (dev + Docker production,
   public URL, accounts, providers, configuration table, troubleshooting).
-- **MIT license** added (© M.G. Network and Technology Solutions).
+- **License**: PolyForm Noncommercial 1.0.0 (© M.G. Network and Technology
+  Solutions) — noncommercial use free, commercial use needs a separate license.
+  (MIT was added first and replaced before anything went public.)
 - **Scrubbed** personal details from tracked files (email, hostname, tailnet,
   home paths); verified no secrets ever existed in any commit.
 - **History squashed**: `main` is one commit; old branches deleted on GitHub.
