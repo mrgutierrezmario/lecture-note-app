@@ -1,5 +1,12 @@
 # AI Lecture Notes
 
+[![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
+[![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](app/ui_backend)
+[![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg?logo=fastapi&logoColor=white)](app/ui_backend)
+[![React 18](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react&logoColor=black)](app/ui)
+[![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](deploy)
+[![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64.svg)](app/ui_backend/pyproject.toml)
+
 Record a lecture from your browser, watch the transcript appear live, and get
 structured notes generated every minute — then ask questions about the lecture
 afterwards. Everything runs on your own machine; cloud AI providers are
