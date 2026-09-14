@@ -82,11 +82,11 @@ async def health():
 
 
 # ── Built frontend ────────────────────────────────────────────────────────────
-# In production the backend serves `app/ui/dist` itself, so one port carries the
+# In production the backend serves `app/ui_frontend/dist` itself, so one port carries the
 # UI, the API and the websocket — a single tunnel or reverse proxy exposes the
 # whole app, and there is no cross-origin traffic to configure. In development
 # the Vite dev server proxies to us instead and `dist/` may not exist.
-UI_DIST = Path(__file__).resolve().parent.parent / "ui" / "dist"
+UI_DIST = Path(__file__).resolve().parent.parent / "ui_frontend" / "dist"
 
 if (UI_DIST / "index.html").exists():
     app.mount("/assets", StaticFiles(directory=UI_DIST / "assets"), name="ui-assets")
@@ -110,5 +110,5 @@ else:
         return {
             "message": "Lecture Notes API",
             "docs": "/docs",
-            "hint": "Run `npm run build` in app/ui to serve the UI from this port.",
+            "hint": "Run `npm run build` in app/ui_frontend to serve the UI from this port.",
         }

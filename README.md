@@ -3,7 +3,7 @@
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](app/ui_backend)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg?logo=fastapi&logoColor=white)](app/ui_backend)
-[![React 18](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react&logoColor=black)](app/ui)
+[![React 18](https://img.shields.io/badge/React-18-61DAFB.svg?logo=react&logoColor=black)](app/ui_frontend)
 [![Docker Compose](https://img.shields.io/badge/Docker-Compose-2496ED.svg?logo=docker&logoColor=white)](deploy)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-D7FF64.svg)](app/ui_backend/pyproject.toml)
 
@@ -95,7 +95,7 @@ cp .env.example .env            # defaults match the docker-compose dev services
 python manage_users.py create admin --admin      # prompts for a password
 
 # Frontend
-cd ../ui && npm install
+cd ../ui_frontend && npm install
 ```
 
 Then start everything:
@@ -348,7 +348,7 @@ app/ui_backend/          FastAPI backend
   quota.py, cleanup.py   storage accounting and retention
   models.py, alembic/    schema and migrations (applied on startup)
   manage_users.py        CLI for accounts
-app/ui/                  React + Vite frontend (src/components, src/hooks)
+app/ui_frontend/         React + Vite frontend (src/components, src/hooks)
 deploy/                  compose.yml, Dockerfile, start.sh/stop.sh, mac/ launch agent
 ```
 
@@ -379,7 +379,7 @@ Issues and pull requests are welcome. Before opening a PR:
 
 ```bash
 cd app/ui_backend && venv/bin/ruff format . && venv/bin/ruff check .   # must pass (includes docstring checks)
-cd ../ui && npm run build                                                 # must build
+cd ../ui_frontend && npm run build                                                 # must build
 ```
 
 Never commit `.env` files, `deploy/.env`, or anything under `deploy/state/`

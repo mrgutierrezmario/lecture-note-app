@@ -3,7 +3,7 @@ set -e
 
 ROOT="$(cd "$(dirname "$0")" && pwd)"
 BACKEND="$ROOT/app/ui_backend"
-FRONTEND="$ROOT/app/ui"
+FRONTEND="$ROOT/app/ui_frontend"
 
 log() { echo "[start.sh] $*"; }
 
