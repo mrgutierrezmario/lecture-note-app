@@ -1,9 +1,11 @@
-# Checkpoint — 2026-09-14 (evening update)
+# Checkpoint — 2026-09-14 (public release)
 
 > Supersedes the 2026-03-29 checkpoint (kept at the bottom for history). The
 > app now runs as its own Docker stack on the Mac mini with a fixed public URL,
-> user accounts, and a redesigned UI. 53 commits landed on `main` across
-> 2026-09-13/14; the "Later on 2026-09-14" section lists the evening's work.
+> user accounts, and a redesigned UI. The repository history was squashed to a
+> single "initial public release" commit on 2026-09-14 in preparation for
+> making it public; the full development history exists only in a local,
+> never-pushed backup branch on the Mac mini's dev container.
 
 ## State of the Project
 
@@ -161,6 +163,22 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   ever be wanted. The Sept 9 lectures that appeared in earlier notes tests are
   therefore gone from the live DB.
 
+### Public-release preparation (2026-09-14)
+- **PEP 8**: whole backend formatted with ruff (line length 100, isort);
+  `pyproject.toml` pins the config and now enforces docstrings (`D1`).
+  Ruff also surfaced real fixes: a duplicate route function name
+  (`admin_reset_password`), `== False` → `.is_(False)`, an ambiguous `l`.
+- **Documentation**: module/class/function docstrings on all 32 backend
+  modules (100%), header comments on every frontend component/hook; dead
+  Claude helpers removed from `routes/sessions.py`; pydantic v2 config style.
+- **README** rewritten as a from-scratch guide (dev + Docker production,
+  public URL, accounts, providers, configuration table, troubleshooting).
+- **MIT license** added (© M.G. Network and Technology Solutions).
+- **Scrubbed** personal details from tracked files (email, hostname, tailnet,
+  home paths); verified no secrets ever existed in any commit.
+- **History squashed**: `main` is one commit; old branches deleted on GitHub.
+  Local backup branch `backup-full-history-2026-09-14` — do not push it.
+
 ### Deployment history (for context)
 Dev container with supervisor → own Docker Compose stack → Ollama moved
 native for the GPU. Cloudflare quick tunnel was used briefly; Tailscale Funnel
@@ -174,6 +192,8 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
 2. **Turn off Settings → Sign-up** once the intended users have accounts.
 3. Re-add the phone home-screen app from the new URL and update bookmarks
    (the URL itself is confirmed live).
+4. Flip the GitHub repository to public when ready (Settings → Danger Zone).
+   Optionally ask GitHub Support to GC unreachable old commits first.
 4. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
 5. stock-tracker's report emails are failing on a revoked App Password —
