@@ -607,7 +607,9 @@ function SettingsPanel({ user, onUserChange }) {
         </>
       )}
       <p className="settings-footer">
-        <a href="/privacy" target="_blank" rel="noreferrer">Privacy policy</a> — what this app stores and how your Google Drive is used.
+        <a href="/guide" target="_blank" rel="noreferrer">User guide</a> — how to record, add slides, ask questions and save to Drive
+        {' · '}
+        <a href="/privacy" target="_blank" rel="noreferrer">Privacy policy</a>
       </p>
       </div>
       </div>
