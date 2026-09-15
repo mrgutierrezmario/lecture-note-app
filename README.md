@@ -23,7 +23,7 @@ optional.
 | Transcription | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) on CPU, live, 5-second chunks |
 | Notes & chat | Local [Ollama](https://ollama.com) (default) — or Claude, Gemini or OpenAI via API key |
 | Slides & images | Claude / Gemini / OpenAI vision, falling back to local llava |
-| Accounts | Username or email sign-in, self-registration, emailed password reset, admin role |
+| Accounts | Username or email sign-in; self-registration with email confirmation and optional admin approval; emailed password reset; admin role |
 | Per user | Lecture history, per-user storage quota, "keep" up to 5 lectures from cleanup |
 | Runs as | A Docker Compose stack (Postgres, MinIO, app) with a fixed public HTTPS URL via Tailscale Funnel — free, no domain needed |
 | Works on | Desktop browsers and phones (installable as a home-screen app) |
@@ -247,12 +247,16 @@ hashed). Logins last 30 days.
 | History: open (read-only), rename, delete, delete audio, download | own lectures | all lectures, owner shown |
 | Keep lectures (skip cleanup, block deletion) | up to 5 | unlimited |
 | Storage quota (retained audio) | 500 MB default | sets per-user overrides |
-| Accounts | self-register (if open), forgot password, change own email/password | manage users, reset passwords, close sign-up |
+| Accounts | self-register (if open), forgot password, change own email/password | manage users, approve sign-ups, reset passwords, close sign-up |
 | Models, API keys, provider choice, limits | — | Settings |
 
-- **Self-registration** is on by default. Anyone with the URL can create an
-  account until you turn it off in **Settings → Sign-up** — do that once your
-  users are enrolled.
+- **Self-registration** is on by default and, with outgoing mail configured,
+  new accounts must confirm their email address first. Under
+  **Settings → Sign-up** you can also require **admin approval**: every admin
+  with an email address gets a "New account request" message with a one-click
+  approve link (pending accounts also show under Users with an Approve
+  button), and the user is emailed when the account is active. Turn sign-up
+  off entirely once your users are enrolled.
 - **Forgot password** emails a single-use, one-hour link. It needs outgoing
   mail configured (`MAIL_*` in `deploy/.env`; a Gmail address with an App
   Password works well — use a dedicated `…donotreply@gmail.com` account so

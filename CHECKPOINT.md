@@ -242,6 +242,19 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   commit — history rewritten (2 commits) and force-pushed, verified clean.
 - **Chat**: replies render Markdown; the last 8 exchanges are sent with each
   question so follow-ups ("when is that due?") resolve.
+- **Admin approval for sign-ups** (migration 011, `users.approved`):
+  Settings → Sign-up has *Allow anyone…* and *Require my approval…*; both
+  are **on** on this server. Flow: register → confirm email → every admin
+  with an email gets "New account request" with a one-time approve link
+  (7 days, `/api/auth/approve?token=`) → also a **pending** badge +
+  Approve button in Settings → Users → user emailed "Your account is
+  active". Login meanwhile: 403 `approval_pending`. Tested end to end.
+- **Email addresses**: sender stays `mgnetwork.donotreply@gmail.com`
+  (App Password); Reply-To, backup-failure alerts, the admin account's
+  email (→ approval requests, admin password reset) and the privacy
+  contact are all `mg.net.tech@gmail.com`. Google consent screen still
+  shows donotreply (Google only allows an address the project owner
+  owns — add mg.net.tech as a project Owner to change it).
 - **Privacy policy** at `/privacy` (public, no sign-in): formal, numbered
   sections — what is stored, AI providers, Google Drive scope/tokens/
   revocation, backups, choices, contact. Contact line comes from
@@ -316,8 +329,8 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
 1. Optional: **Claude API credits** at console.anthropic.com → Plans &
    Billing. Claude is the second link in the cascade; without credits it is
    skipped in about a second and the local model answers instead.
-2. ~~Turn off Settings → Sign-up~~ — closed 2026-09-15 (admins add
-   accounts; invite codes not built).
+2. ~~Sign-up~~ — reopened 2026-09-15 evening **with admin approval**
+   (see above); invite codes not needed.
 3. ~~Re-add the phone home-screen app from the new URL~~ — done 2026-09-15.
 4. ~~Flip the GitHub repository to public~~ — done 2026-09-14; description,
    topics and badges set. Ask GitHub Support to GC old commits if desired.
@@ -343,7 +356,7 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    app's own Funnel host was used as the domain. Any Google account can
    now connect a Drive.
 10. Optional next features: Google Picker folder chooser (~3 h, needs an API
-    key); invite codes for sign-up; Claude API credits.
+    key); Claude API credits.
 11. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
 12. stock-tracker's report emails are failing on a revoked App Password —
