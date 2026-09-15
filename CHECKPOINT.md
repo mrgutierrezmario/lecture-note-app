@@ -242,6 +242,10 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   commit — history rewritten (2 commits) and force-pushed, verified clean.
 - **Chat**: replies render Markdown; the last 8 exchanges are sent with each
   question so follow-ups ("when is that due?") resolve.
+- **Privacy policy** at `/privacy` (public, no sign-in): what is stored,
+  AI providers, Google Drive scope/tokens/revocation, backups, controls,
+  contact (`SUPPORT_EMAIL` in `deploy/.env`, blank = generic). Linked from
+  the sign-in page and the Settings footer.
 - **Audio retention** is now a live admin setting (Settings → Audio
   retention); set to **7 days** on this server. UI texts read the value.
 - **Fixed**: stale transcript/notes/status painted over a new session when
@@ -323,11 +327,14 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    and was heavily throttled. Note: `drive.file` scope means rclone only sees
    the folder it created; a half-uploaded folder from the shared client was
    trashed by hand.
-9. ~~Per-user Google Drive export~~ — built and working 2026-09-15 (see
-   below). Still to do on Google's side: the consent screen is in
-   **Testing** (only listed test users can connect). Finish Branding (no
-   logo — it forces the verification review; no authorized domain — `ts.net`
-   is not ours) and Audience → **Publish app** before other users try it.
+9. ~~Per-user Google Drive export~~ — built 2026-09-15; consent screen
+   **published (In production)** the same evening. Google required a home
+   page + privacy policy URL + authorized domain for an external app, so
+   `/privacy` was added (operator contact from `SUPPORT_EMAIL`) and the
+   app's own Funnel host was used as the domain. Any Google account can
+   now connect a Drive.
+10. Optional next features: Google Picker folder chooser (~3 h, needs an API
+    key); invite codes for sign-up; Claude API credits.
 11. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
 12. stock-tracker's report emails are failing on a revoked App Password —
