@@ -72,7 +72,9 @@ function ChatPane({ sessionId }) {
     setIsLoading(true)
 
     try {
-      const body = { message: text || 'Please describe and analyze this image.' }
+      // Send the recent exchanges so follow-up questions keep their context.
+      const history = messages.slice(-8).map(m => ({ role: m.role, text: m.text }))
+      const body = { message: text || 'Please describe and analyze this image.', history }
       if (imageToSend) {
         body.image_base64 = imageToSend.base64
         body.image_media_type = imageToSend.mediaType

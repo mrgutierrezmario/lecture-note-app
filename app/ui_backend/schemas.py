@@ -89,12 +89,20 @@ class DocumentUploadResponse(BaseModel):
 # ── Chat ──────────────────────────────────────────────────────────────────────
 
 
+class ChatTurn(BaseModel):
+    """One earlier message in the chat, so follow-ups like "when is that due?" resolve."""
+
+    role: str  # "user" | "assistant"
+    text: str
+
+
 class ChatRequest(BaseModel):
     """A question about the lecture, optionally with a pasted image."""
 
     message: str
     image_base64: Optional[str] = None  # base64-encoded image, data-URL prefix stripped
     image_media_type: Optional[str] = None  # e.g. "image/png"
+    history: list[ChatTurn] = []  # the most recent exchanges, oldest first
 
 
 class ChatResponse(BaseModel):

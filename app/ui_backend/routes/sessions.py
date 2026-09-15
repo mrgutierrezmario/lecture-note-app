@@ -523,6 +523,15 @@ async def chat(
         context_parts.append(f"## Document: {doc.filename}\n{doc.extracted_text[:20_000]}")
 
     context = "\n\n".join(context_parts) if context_parts else "No lecture content available yet."
+    # Recent exchanges, so a follow-up ("when is that due?") has its referent.
+    # Bounded so a long chat can't crowd out the lecture itself.
+    turns = [t for t in request.history[-8:] if t.text.strip() and t.text != "(image)"]
+    if turns:
+        lines = [
+            f"{'Student' if t.role == 'user' else 'Assistant'}: {t.text.strip()[:1500]}"
+            for t in turns
+        ]
+        context += "\n\n## Conversation so far\n" + "\n\n".join(lines)
 
     # Image path: Claude API → llava fallback → error
     if request.image_base64:
@@ -618,6 +627,8 @@ Question: {request.message}
 
 Instructions:
 - Answer directly and concisely
+- The question may refer back to the conversation so far ("that", "it", "the first one");
+  resolve such references using the earlier exchanges before answering
 - If the answer is not in the provided content, say
   "I don't see that covered in the lecture materials"
 - Do not make up information not present in the content above"""
