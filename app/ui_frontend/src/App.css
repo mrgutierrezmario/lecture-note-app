@@ -1692,11 +1692,6 @@
   color: var(--primary-ink);
 }
 
-.auth-warning-soft {
-  display: flex;
-  gap: 6px;
-  align-items: flex-start;
-}
 
 .btn-icon-danger:hover:not(:disabled) {
   color: var(--danger);

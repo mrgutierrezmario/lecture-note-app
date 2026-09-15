@@ -5,7 +5,7 @@
  * (/api/drive/connect → consent → /api/drive/callback → back here).
  */
 import { useState, useEffect, useCallback } from 'react'
-import { CheckIcon, AlertIcon, DriveIcon } from './Icons'
+import { CheckIcon, DriveIcon } from './Icons'
 import { useDialog } from './Dialog'
 
 // `refreshKey` changes when an admin saves/clears the OAuth client, so the section re-checks availability.
@@ -79,7 +79,9 @@ function DriveSection({ isAdmin, refreshKey }) {
         <>
           <p className="settings-note settings-note-full">
             Keep your own copy: each lecture's notes, transcript and MP3 go into an
-            "AI Lecture Notes" folder in your Google Drive. The app can only see the files it creates there.
+            "AI Lecture Notes" folder in your Google Drive. Google will ask you to allow this app
+            to "see and edit files it creates" — that is the only permission requested; it cannot
+            see anything else in your Drive.
           </p>
           <div className="settings-actions">
             <a className="btn-primary-link" href="/api/drive/connect">
@@ -121,11 +123,6 @@ function DriveSection({ isAdmin, refreshKey }) {
         </>
       )}
       {!status && !error && <p className="settings-loading">Loading…</p>}
-      {status?.connected === false && status?.available && (
-        <p className="settings-note settings-note-full auth-warning-soft">
-          <AlertIcon size={13} /> Google shows a consent screen from this app; only the "see and edit files it creates" permission is requested.
-        </p>
-      )}
     </section>
   )
 }
