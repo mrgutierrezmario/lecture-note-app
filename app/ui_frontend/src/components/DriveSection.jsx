@@ -8,7 +8,8 @@ import { useState, useEffect, useCallback } from 'react'
 import { CheckIcon, AlertIcon, DriveIcon } from './Icons'
 import { useDialog } from './Dialog'
 
-function DriveSection({ isAdmin }) {
+// `refreshKey` changes when an admin saves/clears the OAuth client, so the section re-checks availability.
+function DriveSection({ isAdmin, refreshKey }) {
   const dialog = useDialog()
   const [status, setStatus] = useState(null) // { available, connected, email, auto_export, folder_url }
   const [busy, setBusy] = useState(false)
@@ -24,7 +25,7 @@ function DriveSection({ isAdmin }) {
     }
   }, [])
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => { load() }, [load, refreshKey])
 
   const setAuto = async (auto_export) => {
     setBusy(true)
@@ -120,7 +121,6 @@ function DriveSection({ isAdmin }) {
         </>
       )}
       {!status && !error && <p className="settings-loading">Loading…</p>}
-      {status?.available === false && isAdmin && null}
       {status?.connected === false && status?.available && (
         <p className="settings-note settings-note-full auth-warning-soft">
           <AlertIcon size={13} /> Google shows a consent screen from this app; only the "see and edit files it creates" permission is requested.

@@ -231,7 +231,7 @@ function SettingsPanel({ user, onUserChange }) {
 
       <PasswordSection user={user} onUserChange={onUserChange} />
 
-      <DriveSection isAdmin={isAdmin} />
+      <DriveSection isAdmin={isAdmin} refreshKey={`${settings?.google_client_id}|${settings?.google_client_secret_masked}`} />
 
       {error && <div className="settings-error">{error}</div>}
       {message && <div className="settings-message">{message}</div>}
