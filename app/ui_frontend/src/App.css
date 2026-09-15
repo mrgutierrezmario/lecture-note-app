@@ -792,6 +792,32 @@
   background: var(--primary-tint);
 }
 
+/* Model replies are Markdown (bold, lists, code) — render them like the notes. */
+.chat-markdown p {
+  margin: 0 0 8px;
+}
+
+.chat-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.chat-markdown ul,
+.chat-markdown ol {
+  margin: 4px 0 8px;
+  padding-left: 20px;
+}
+
+.chat-markdown li {
+  margin: 2px 0;
+}
+
+.chat-markdown code {
+  font-size: 12px;
+  background: var(--surface-2);
+  padding: 1px 4px;
+  border-radius: 4px;
+}
+
 .chat-message.assistant {
   align-self: flex-start;
   background: var(--surface-2);

@@ -3,6 +3,7 @@
  * documents. Pasting an image (Ctrl/Cmd+V) attaches it to the next question so
  * a vision model can answer about a slide or screenshot.
  */
+import ReactMarkdown from 'react-markdown'
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { ChatIcon, SendIcon, CloseIcon } from './Icons'
 
@@ -127,7 +128,11 @@ function ChatPane({ sessionId }) {
             {msg.imageUrl && (
               <img src={msg.imageUrl} alt="pasted" className="chat-image-preview" />
             )}
-            <p>{msg.text !== '(image)' ? msg.text : ''}</p>
+            {msg.text !== '(image)' && (
+              msg.role === 'assistant'
+                ? <div className="chat-markdown"><ReactMarkdown>{msg.text}</ReactMarkdown></div>
+                : <p>{msg.text}</p>
+            )}
             {msg.role === 'assistant' && msg.provider && (
               <span className={`chat-provider${msg.fallback ? ' chat-provider-fallback' : ''}`}>
                 {providerLabel(msg.provider)}

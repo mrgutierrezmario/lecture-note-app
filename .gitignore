@@ -40,3 +40,7 @@ design/*.html
 deploy/.env
 deploy/.env
 deploy/state/
+design/screenshots/raw/
+# Raw screenshots / exports dropped into the tree (browser chrome, personal tabs)
+Untitled*.pdf
+**/Untitled*.pdf

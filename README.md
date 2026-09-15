@@ -14,6 +14,10 @@ optional.
 
 **By M.G. Network and Technology Solutions.**
 
+![A past lecture open in dark mode: full transcript on the left, generated notes in the middle, and the chat answering a question about the lecture on the right](design/screenshots/lecture-dark.png)
+
+<p align="center"><em>Transcript, generated notes, and "Ask about the lecture" — dark mode.</em></p>
+
 | | |
 |---|---|
 | Transcription | [faster-whisper](https://github.com/SYSTRAN/faster-whisper) on CPU, live, 5-second chunks |
@@ -23,6 +27,35 @@ optional.
 | Per user | Lecture history, per-user storage quota, "keep" up to 5 lectures from cleanup |
 | Runs as | A Docker Compose stack (Postgres, MinIO, app) with a fixed public HTTPS URL via Tailscale Funnel — free, no domain needed |
 | Works on | Desktop browsers and phones (installable as a home-screen app) |
+| Your data | Nightly encrypted off-site backups; users can keep their own copy of every lecture in their Google Drive |
+
+<details>
+<summary><strong>More screenshots</strong> — light mode, phone, history, settings</summary>
+
+<br>
+
+![The same lecture in light mode](design/screenshots/lecture-light.png)
+<p align="center"><em>Light mode.</em></p>
+
+![Three phone screens: the lecture header and transcript in dark mode, the notes in dark mode, and the notes in light mode](design/screenshots/phone.png)
+<p align="center"><em>Installed as a home-screen app on a phone: transcript and notes stack vertically.</em></p>
+
+![The empty workspace before recording, light mode](design/screenshots/workspace-empty.png)
+<p align="center"><em>Ready to record: name the lecture, pick a microphone, optionally capture tab audio or skip keeping the audio.</em></p>
+
+![The History drawer listing lectures with download, rename, keep and delete actions](design/screenshots/history.png)
+<p align="center"><em>History: every lecture with its notes/audio/kept/Drive status, downloads, and the storage quota.</em></p>
+
+![Settings: provider and model choice, notes interval, storage quota, kept lectures, sign-up switch](design/screenshots/settings-models.png)
+<p align="center"><em>Admin settings: which provider does what, the notes interval, quotas and sign-up.</em></p>
+
+![Settings: Google Drive connected, auto-save switch and folder choice](design/screenshots/settings-google-drive.png)
+<p align="center"><em>Each user can connect their own Google Drive.</em></p>
+
+![The sign-in page](design/screenshots/login.png)
+<p align="center"><em>Sign in with username or email; password reset by email.</em></p>
+
+</details>
 
 ---
 
