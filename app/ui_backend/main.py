@@ -103,10 +103,10 @@ if (UI_DIST / "index.html").exists():
         """privacy.html with the operator's contact substituted in."""
         email = get_settings().support_email.strip()
         contact = (
-            f'<a href="mailto:{email}">{email}</a> — the operator of this installation'
+            f'email <a href="mailto:{email}">{email}</a>.'
             if email
-            else "the operator of this installation — the support email shown on the Google "
-            "sign-in screen, or the person who created your account"
+            else "contact the Operator using the support address shown on the Google "
+            "sign-in screen, or the person who issued your account."
         )
         return path.read_text().replace("{{CONTACT}}", contact)
 
