@@ -978,6 +978,14 @@
   border-bottom: none;
 }
 
+.settings-footer {
+  margin: 0;
+  padding: 14px 24px 18px;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  color: var(--faint);
+}
+
 .settings-section h3 {
   margin: 0 0 12px;
   font-size: 14px;

@@ -134,6 +134,7 @@ services:
       MAIL_FROM_NAME: ${MAIL_FROM_NAME:-AI Lecture Notes}
       MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
       PUBLIC_URL: ${PUBLIC_URL:-}
+      SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
     volumes:
       - app-state:/app/state
       # Whisper / Hugging Face model downloads.

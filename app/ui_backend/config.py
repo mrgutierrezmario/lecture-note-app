@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     mail_port: int = 465
     # Base URL used in emailed links, e.g. https://notes.example.com
     public_url: str = ""
+    # Shown on the privacy page as the operator's contact. Blank = generic wording.
+    support_email: str = ""
 
     # Google OAuth client ("Web application" type) that lets users connect
     # their own Google Drive. Set from the Settings panel; the secret lives in

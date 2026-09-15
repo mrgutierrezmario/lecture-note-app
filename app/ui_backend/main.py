@@ -11,7 +11,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.staticfiles import StaticFiles
 
 import settings_store
@@ -99,19 +99,30 @@ UI_DIST = Path(__file__).resolve().parent.parent / "ui_frontend" / "dist"
 if (UI_DIST / "index.html").exists():
     app.mount("/assets", StaticFiles(directory=UI_DIST / "assets"), name="ui-assets")
 
+    def _privacy_page(path: Path) -> str:
+        """privacy.html with the operator's contact substituted in."""
+        email = get_settings().support_email.strip()
+        contact = (
+            f'<a href="mailto:{email}">{email}</a> — the operator of this installation'
+            if email
+            else "the operator of this installation — the support email shown on the Google "
+            "sign-in screen, or the person who created your account"
+        )
+        return path.read_text().replace("{{CONTACT}}", contact)
+
     @app.get("/{path:path}", include_in_schema=False)
     async def serve_ui(path: str):
         """Serve the single-page app and its static files."""
         # Real files (favicons, logo, manifest) are served as-is; anything else
         # falls through to index.html so client-side routes and reloads work.
+        # The privacy page (linked from Google's consent screen, so it may be
+        # requested with or without the extension) gets the operator's contact
+        # address filled in from settings.
+        if path in ("privacy", "privacy.html"):
+            return HTMLResponse(_privacy_page(UI_DIST / "privacy.html"))
         candidate = (UI_DIST / path).resolve()
         if path and candidate.is_relative_to(UI_DIST) and candidate.is_file():
             return FileResponse(candidate)
-        # Static pages linked from outside (privacy policy) may be requested
-        # without their extension.
-        page = (UI_DIST / f"{path}.html").resolve()
-        if path and page.is_relative_to(UI_DIST) and page.is_file():
-            return FileResponse(page)
         # index.html must never be cached: it names the hashed JS/CSS bundles,
         # and a stale copy keeps showing the previous release after a deploy.
         return FileResponse(
