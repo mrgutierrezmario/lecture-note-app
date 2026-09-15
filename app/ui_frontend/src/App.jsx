@@ -222,8 +222,19 @@ function Workspace({ user, onLogout, onUserChange }) {
   }, [])
 
   const stopRecordingRef = useRef(null)
-  const { sendMessage, sendBinary, isConnected } = useWebSocket(sessionId, handleMessage)
+  // After a reconnect mid-recording, re-send the options the server keeps in
+  // memory (they are dropped when the socket closes or the server restarts).
+  const isRecordingRef = useRef(false)
+  const saveStorageRef = useRef(false)
+  const sendMessageRef = useRef(null)
+  const onReconnect = useCallback(() => {
+    if (isRecordingRef.current) {
+      sendMessageRef.current?.({ type: 'resume', save_storage: saveStorageRef.current }, true)
+    }
+  }, [])
+  const { sendMessage, sendBinary, isConnected, queuedChunks } = useWebSocket(sessionId, handleMessage, onReconnect)
   isConnectedRef.current = isConnected
+  sendMessageRef.current = sendMessage
 
   const startRecording = useCallback(async () => {
     try {
@@ -276,7 +287,9 @@ function Workspace({ user, onLogout, onUserChange }) {
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0 && isConnectedRef.current) {
+        // Sent even while disconnected: the socket hook queues chunks and
+        // replays them in order once it reconnects.
+        if (event.data.size > 0) {
           const track = micTrackRef.current
           const micMutedAndNoTab = track && !track.enabled && !tabAudioActiveRef.current
           if (!micMutedAndNoTab) {
@@ -288,6 +301,8 @@ function Workspace({ user, onLogout, onUserChange }) {
       mediaRecorder.start(5000)
       startLevelMeter(recordingStream)
       setIsRecording(true)
+      isRecordingRef.current = true
+      saveStorageRef.current = saveStorage
       if (micState !== 'granted') { setMicState('granted'); loadDevices() }
       sendMessage({ type: 'start', title: title || undefined, save_storage: saveStorage })
       setStatus(`Recording (${statusLabel})${micMuted ? ' — mic muted' : ''}...`)
@@ -333,6 +348,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     tabAudioActiveRef.current = false
     setMicMuted(false)
     setIsRecording(false)
+    isRecordingRef.current = false
     sendMessage({ type: 'stop' })
     setStatus('Processing...')
   }, [sendMessage, stopLevelMeter])
@@ -467,10 +483,14 @@ function Workspace({ user, onLogout, onUserChange }) {
           <span className="user-name" data-tip={user.is_admin ? 'Signed in as an administrator' : 'Signed in'}>{user.username}</span>
           <span
             className={`status-pill ${isConnected ? 'connected' : 'disconnected'}`}
-            data-tip={isConnected ? 'Live link to the server is up' : 'Not connected to the server — recording is paused'}
+            data-tip={isConnected
+              ? (queuedChunks ? `Reconnected — sending ${queuedChunks * 5} s of buffered audio` : 'Live link to the server is up')
+              : (isRecording
+                ? `Not connected — recording continues, ${queuedChunks * 5} s buffered and will be sent when the link is back`
+                : 'Not connected to the server')}
           >
             <span className="status-dot" />
-            <span className="status-label">{isConnected ? 'Connected' : 'Disconnected'}</span>
+            <span className="status-label">{isConnected ? 'Connected' : (isRecording && queuedChunks ? `Buffering ${queuedChunks * 5}s` : 'Disconnected')}</span>
           </span>
           <HistoryPanel user={user} currentSessionId={sessionId} onOpen={openPastLecture} />
           <SettingsPanel user={user} onUserChange={onUserChange} />

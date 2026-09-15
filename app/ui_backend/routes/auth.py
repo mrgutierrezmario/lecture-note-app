@@ -11,6 +11,7 @@ from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import mailer
+import ratelimit
 from auth import (
     CurrentUser,
     clear_login_cookie,
@@ -100,6 +101,12 @@ def _public_base(request: Request) -> str:
     return configured or str(request.base_url).rstrip("/")
 
 
+def _client_ip(request: Request) -> str:
+    """The caller's address (uvicorn runs with --proxy-headers, so this is the
+    real client behind the Funnel/reverse proxy, not the proxy)."""
+    return request.client.host if request.client else "unknown"
+
+
 @router.post("/forgot", status_code=202)
 async def forgot_password(
     body: ForgotPasswordRequest,
@@ -108,7 +115,14 @@ async def forgot_password(
     db: AsyncSession = Depends(get_db),
 ):
     """Always 202: the response never reveals whether an account or email exists.
-    The email is sent in the background so timing doesn't reveal it either."""
+    The email is sent in the background so timing doesn't reveal it either.
+    Each request counts as a "failure" for rate limiting, so one address can
+    trigger at most a handful of reset emails per ten minutes."""
+    key = f"forgot:{_client_ip(request)}"
+    wait = ratelimit.retry_after(key)
+    if wait:
+        raise HTTPException(429, f"Too many requests — try again in {wait} seconds")
+    ratelimit.record_failure(key)
     user = await _find_user(db, body.identifier)
     if user is None or user.disabled or not user.email or not mailer.configured():
         return Response(status_code=202)
@@ -201,11 +215,25 @@ async def register(
 async def login(
     body: LoginRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)
 ):
-    """Sign in with a username or email; sets the login cookie."""
+    """Sign in with a username or email; sets the login cookie.
+
+    Wrong passwords count against both the client address and the account
+    name; five in ten minutes locks that pair out for a minute, doubling each
+    time (see ``ratelimit``)."""
+    keys = (f"ip:{_client_ip(request)}", f"user:{body.username.strip().lower()}")
+    wait = ratelimit.retry_after(*keys)
+    if wait:
+        raise HTTPException(
+            429,
+            f"Too many failed sign-in attempts — try again in {wait} seconds",
+            headers={"Retry-After": str(wait)},
+        )
     user = await _find_user(db, body.username)
     # Same error for unknown user and wrong password so accounts can't be probed.
     if user is None or user.disabled or not verify_password(body.password, user.password_hash):
+        ratelimit.record_failure(*keys)
         raise HTTPException(401, "Incorrect username/email or password")
+    ratelimit.record_success(*keys)
     set_login_cookie(response, request, user.id)
     logger.info("User %s signed in", user.username)
     return user

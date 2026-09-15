@@ -3,6 +3,7 @@
 Protocol (one socket per lecture, path ``/ws/session/{session_id}``):
 
 * Browser → server, JSON text frames: ``{"type": "start", "title", "save_storage"}``,
+  ``{"type": "resume", "save_storage"}`` (after a reconnect mid-recording),
   ``{"type": "stop"}``, ``{"type": "ping"}``.
 * Browser → server, binary frames: 5-second WebM/Opus chunks from
   ``MediaRecorder``. Only the first chunk carries the container header, so it
@@ -316,6 +317,20 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                 "type": "status",
                                 "message": "Recording started",
                             },
+                        )
+
+                    elif msg_type == "resume":
+                        # The browser reconnected mid-recording (network blip or a
+                        # server restart): restore the per-session options that
+                        # live only in memory, then keep going without a reset.
+                        manager.save_storage[session_id] = bool(message.get("save_storage", False))
+                        async with AsyncSessionLocal() as db:
+                            used, limit, _ = await quota.status(db, user.id)
+                        manager.quota[session_id] = [used, limit]
+                        manager.start_notes_task(session_id)
+                        await manager.broadcast(
+                            session_id,
+                            {"type": "status", "message": "Reconnected — recording continues"},
                         )
 
                     elif msg_type == "stop":
