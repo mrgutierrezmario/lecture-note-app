@@ -18,6 +18,9 @@ function Login({ onLogin, onRegister }) {
   const [repeat, setRepeat] = useState('')
   const [error, setError] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [pending, setPending] = useState(null) // registration done, waiting for the emailed link
+  const [needsVerify, setNeedsVerify] = useState(false) // login refused: email not confirmed
+  const [resent, setResent] = useState(false)
 
   useEffect(() => {
     fetch('/api/auth/status')
@@ -26,7 +29,7 @@ function Login({ onLogin, onRegister }) {
       .catch(() => { setRegistrationOpen(false); setResetAvailable(false) })
   }, [])
 
-  const switchMode = (next) => { setMode(next); setError(null); setPassword(''); setRepeat(''); setSent(false) }
+  const switchMode = (next) => { setMode(next); setError(null); setPassword(''); setRepeat(''); setSent(false); setPending(null); setNeedsVerify(false); setResent(false) }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -36,6 +39,7 @@ function Login({ onLogin, onRegister }) {
       return
     }
     setBusy(true)
+    setNeedsVerify(false)
     try {
       if (mode === 'login') await onLogin(identifier.trim(), password)
       else if (mode === 'forgot') {
@@ -46,9 +50,27 @@ function Login({ onLogin, onRegister }) {
         })
         setSent(true)
       }
-      else await onRegister(username.trim(), email.trim(), password)
+      else {
+        const result = await onRegister(username.trim(), email.trim(), password)
+        if (result?.pending_verification) { setPending(result); setIdentifier(username.trim()) }
+      }
     } catch (err) {
       setError(err.message)
+      if (err.code === 'verification_required') setNeedsVerify(true)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const resend = async () => {
+    setBusy(true)
+    try {
+      await fetch('/api/auth/verify/resend', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ identifier: (identifier || pending?.email || '').trim() }),
+      })
+      setResent(true)
     } finally {
       setBusy(false)
     }
@@ -71,7 +93,17 @@ function Login({ onLogin, onRegister }) {
             : 'Create your account'}
         </p>
 
-        {mode === 'forgot' && sent ? (
+        {pending ? (
+          <>
+            <p className="login-sent">{pending.message}</p>
+            <p className="login-note">
+              {resent
+                ? 'Sent again.'
+                : <>Didn't get it? <button type="button" className="link-button" disabled={busy} onClick={resend}>Send it again</button></>}
+              {' · '}<button type="button" className="link-button" onClick={() => switchMode('login')}>Back to sign in</button>
+            </p>
+          </>
+        ) : mode === 'forgot' && sent ? (
           <p className="login-sent">
             If that account exists and has an email address, a reset link is on its way. It works for 60 minutes — check your spam folder if it doesn't show up.
           </p>
@@ -145,9 +177,18 @@ function Login({ onLogin, onRegister }) {
           </label>
         )}
 
-        {error && <p className="login-error">{error}</p>}
+        {error && !pending && (
+          <p className="login-error">
+            {error}
+            {needsVerify && (
+              <> {resent
+                ? 'Sent again — check your inbox.'
+                : <button type="button" className="link-button" disabled={busy} onClick={resend}>Send the link again</button>}</>
+            )}
+          </p>
+        )}
 
-        {!(mode === 'forgot' && sent) && (
+        {!(mode === 'forgot' && sent) && !pending && (
           <button type="submit" className="btn-primary login-submit" disabled={busy || !canSubmit}>
             {busy
               ? (mode === 'login' ? 'Signing in…' : mode === 'forgot' ? 'Sending…' : 'Creating account…')

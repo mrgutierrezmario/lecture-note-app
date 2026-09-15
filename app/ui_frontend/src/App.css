@@ -1335,6 +1335,11 @@
   color: var(--primary);
 }
 
+.user-badge-warn {
+  background: var(--warning-tint);
+  color: var(--warning);
+}
+
 .user-badge-you {
   background: var(--surface-2);
   color: var(--muted);

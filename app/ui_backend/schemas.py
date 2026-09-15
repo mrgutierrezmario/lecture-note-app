@@ -248,9 +248,18 @@ class UserResponse(BaseModel):
     is_admin: bool
     disabled: bool
     quota_mb: Optional[int] = None  # None = global default applies
+    email_verified: bool = True
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class RegistrationPending(BaseModel):
+    """Reply to a registration that needs the emailed link first (HTTP 202)."""
+
+    pending_verification: bool = True
+    email: str
+    message: str
 
 
 class UserCreate(BaseModel):

@@ -34,6 +34,8 @@ class User(Base):
     is_admin = Column(Boolean, default=False, nullable=False)
     disabled = Column(Boolean, default=False, nullable=False)
     quota_mb = Column(Integer, nullable=True)  # per-user audio quota; null = global default
+    # False only for self-registered accounts that haven't clicked the emailed link yet.
+    email_verified = Column(Boolean, default=True, nullable=False, server_default="true")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     sessions = relationship("Session", back_populates="user")
@@ -54,6 +56,7 @@ class PasswordReset(Base):
         UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True
     )
     token_hash = Column(String(64), unique=True, nullable=False)  # sha256 of the emailed token
+    purpose = Column(String(16), nullable=False, default="reset")  # "reset" | "verify"
     expires_at = Column(DateTime, nullable=False)
     used_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)

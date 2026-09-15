@@ -75,12 +75,20 @@ function Workspace({ user, onLogout, onUserChange }) {
     } catch (_) {}
   }, [])
 
-  // Back from the Google Drive consent page (/api/drive/callback redirects here).
+  // Back from the Google Drive consent page (/api/drive/callback redirects here),
+  // or from the email-confirmation link (/api/auth/verify).
   useEffect(() => {
     const params = new URLSearchParams(window.location.search)
     const drive = params.get('drive')
-    if (!drive) return
+    const verified = params.get('verified')
+    if (!drive && !verified) return
     window.history.replaceState({}, '', window.location.pathname)
+    if (verified) {
+      dialog.notice(verified === '1'
+        ? { title: 'Email confirmed', message: 'Your account is ready — welcome to AI Lecture Notes.' }
+        : { title: 'Link expired', message: 'That confirmation link is no longer valid. Sign in and use "Send the link again" to get a fresh one.' })
+      return
+    }
     if (drive === 'connected') {
       dialog.notice({
         title: 'Google Drive connected',

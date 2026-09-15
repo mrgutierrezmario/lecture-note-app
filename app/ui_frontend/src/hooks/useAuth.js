@@ -25,7 +25,13 @@ export default function useAuth() {
       body: JSON.stringify({ username, password }),
     })
     const data = await response.json().catch(() => ({}))
-    if (!response.ok) throw new Error(data.detail || `Sign-in failed (${response.status})`)
+    if (!response.ok) {
+      // 403 with a structured detail: right password, email not confirmed yet.
+      const detail = data.detail
+      const err = new Error((detail && detail.message) || detail || `Sign-in failed (${response.status})`)
+      if (detail && detail.code) err.code = detail.code
+      throw err
+    }
     setUser(data)
   }, [])
 
@@ -37,7 +43,10 @@ export default function useAuth() {
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(data.detail || `Registration failed (${response.status})`)
+    // 202: account created but the emailed link must be opened before signing in.
+    if (response.status === 202) return data
     setUser(data)
+    return null
   }, [])
 
   const logout = useCallback(async () => {

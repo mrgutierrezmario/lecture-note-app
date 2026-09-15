@@ -7,6 +7,7 @@ import secrets
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
+from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -32,6 +33,7 @@ from schemas import (
     PasswordReset,
     ProfileUpdate,
     RegisterRequest,
+    RegistrationPending,
     RegistrationStatus,
     ResetPasswordRequest,
     UserCreate,
@@ -85,6 +87,7 @@ def _validate_password(password: str) -> str:
 
 
 RESET_MINUTES = 60
+VERIFY_HOURS = 24
 
 
 @router.get("/status", response_model=RegistrationStatus)
@@ -132,6 +135,7 @@ async def forgot_password(
         select(ResetToken)
         .where(
             ResetToken.user_id == user.id,
+            ResetToken.purpose == "reset",
             ResetToken.created_at > datetime.utcnow() - timedelta(minutes=2),
         )
         .limit(1)
@@ -165,7 +169,11 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     """
     token_hash = hashlib.sha256(body.token.encode()).hexdigest()
     row = (
-        await db.execute(select(ResetToken).where(ResetToken.token_hash == token_hash))
+        await db.execute(
+            select(ResetToken).where(
+                ResetToken.token_hash == token_hash, ResetToken.purpose == "reset"
+            )
+        )
     ).scalar_one_or_none()
     if row is None or row.used_at is not None or row.expires_at < datetime.utcnow():
         raise HTTPException(400, "This reset link is invalid or has expired — request a new one")
@@ -174,7 +182,9 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
         raise HTTPException(400, "This reset link is invalid or has expired — request a new one")
     user.password_hash = hash_password(_validate_password(body.new_password))
     row.used_at = datetime.utcnow()
-    # Any other outstanding links for this account are void now.
+    # Any other outstanding links for this account are void now. A password
+    # reset also proves the mailbox, so it counts as verification.
+    user.email_verified = True
     await db.execute(
         update(ResetToken)
         .where(ResetToken.user_id == user.id, ResetToken.used_at.is_(None))
@@ -185,11 +195,52 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
     return Response(status_code=204)
 
 
-@router.post("/register", response_model=UserResponse, status_code=201)
+async def _send_verification(
+    db: AsyncSession, user: User, request: Request, background: BackgroundTasks
+) -> bool:
+    """Email a confirmation link (at most one every 2 minutes per user)."""
+    recent = await db.scalar(
+        select(ResetToken)
+        .where(
+            ResetToken.user_id == user.id,
+            ResetToken.purpose == "verify",
+            ResetToken.created_at > datetime.utcnow() - timedelta(minutes=2),
+        )
+        .limit(1)
+    )
+    if recent:
+        return False
+    token = secrets.token_urlsafe(32)
+    db.add(
+        ResetToken(
+            user_id=user.id,
+            purpose="verify",
+            token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            expires_at=datetime.utcnow() + timedelta(hours=VERIFY_HOURS),
+        )
+    )
+    await db.commit()
+    link = f"{_public_base(request)}/api/auth/verify?token={token}"
+    subject, text, html_body = mailer.verify_email(user.username, link, VERIFY_HOURS)
+    background.add_task(mailer.send, user.email, subject, text, html_body)
+    logger.info("Verification link issued for %s", user.username)
+    return True
+
+
+@router.post("/register", status_code=201)
 async def register(
-    body: RegisterRequest, request: Request, response: Response, db: AsyncSession = Depends(get_db)
+    body: RegisterRequest,
+    request: Request,
+    response: Response,
+    background: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
 ):
-    """Create a regular account and sign it in (when self-registration is open)."""
+    """Create a regular account (when self-registration is open).
+
+    With outgoing mail configured the account starts unverified: a
+    confirmation link is emailed and the reply is 202 with no login cookie —
+    the link signs the user in. Without mail, the account is signed in at once.
+    """
     if not get_settings().registration_open:
         raise HTTPException(403, "Registration is closed — ask an administrator for an account")
     username = _validate_username(body.username)
@@ -197,18 +248,74 @@ async def register(
     if not email:
         raise HTTPException(400, "Email is required")
     await _ensure_unique(db, username, email)
+    verify = mailer.configured()
     user = User(
         username=username,
         email=email,
         password_hash=hash_password(_validate_password(body.password)),
         is_admin=False,
+        email_verified=not verify,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
+    logger.info("User %s registered%s", username, " (pending verification)" if verify else "")
+    if verify:
+        await _send_verification(db, user, request, background)
+        return JSONResponse(
+            status_code=202,
+            content=RegistrationPending(
+                email=email,
+                message=(
+                    f"We sent a confirmation link to {email}. Open it to finish creating "
+                    "your account (check spam if it doesn't arrive)."
+                ),
+            ).model_dump(),
+        )
     set_login_cookie(response, request, user.id)
-    logger.info("User %s registered", username)
-    return user
+    return UserResponse.model_validate(user)
+
+
+@router.get("/verify")
+async def verify_email(token: str, request: Request, db: AsyncSession = Depends(get_db)):
+    """The emailed confirmation link: mark the address verified and sign in."""
+    row = await db.scalar(
+        select(ResetToken).where(
+            ResetToken.token_hash == hashlib.sha256(token.encode()).hexdigest(),
+            ResetToken.purpose == "verify",
+        )
+    )
+    if row is None or row.used_at is not None or row.expires_at < datetime.utcnow():
+        return RedirectResponse("/?verified=expired", status_code=302)
+    user = await db.get(User, row.user_id)
+    if user is None or user.disabled:
+        return RedirectResponse("/?verified=expired", status_code=302)
+    user.email_verified = True
+    row.used_at = datetime.utcnow()
+    await db.commit()
+    logger.info("User %s verified their email", user.username)
+    response = RedirectResponse("/?verified=1", status_code=302)
+    set_login_cookie(response, request, user.id)
+    return response
+
+
+@router.post("/verify/resend", status_code=202)
+async def resend_verification(
+    body: ForgotPasswordRequest,
+    request: Request,
+    background: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """Send the confirmation link again. Always 202 (never reveals accounts)."""
+    key = f"forgot:{_client_ip(request)}"
+    wait = ratelimit.retry_after(key)
+    if wait:
+        raise HTTPException(429, f"Too many requests — try again in {wait} seconds")
+    ratelimit.record_failure(key)
+    user = await _find_user(db, body.identifier)
+    if user and not user.disabled and not user.email_verified and mailer.configured():
+        await _send_verification(db, user, request, background)
+    return Response(status_code=202)
 
 
 @router.post("/login", response_model=UserResponse)
@@ -234,6 +341,15 @@ async def login(
         ratelimit.record_failure(*keys)
         raise HTTPException(401, "Incorrect username/email or password")
     ratelimit.record_success(*keys)
+    if not user.email_verified:
+        # Right password, so it is safe to say why — and to offer a resend.
+        raise HTTPException(
+            403,
+            {
+                "code": "verification_required",
+                "message": f"Confirm your email first — we sent a link to {user.email}.",
+            },
+        )
     set_login_cookie(response, request, user.id)
     logger.info("User %s signed in", user.username)
     return user

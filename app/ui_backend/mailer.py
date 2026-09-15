@@ -87,3 +87,34 @@ def password_reset_email(username: str, link: str, minutes: int) -> tuple[str, s
   are not monitored.</p>
 </div>"""
     return subject, text, body
+
+
+def verify_email(username: str, link: str, hours: int) -> tuple[str, str, str]:
+    """(subject, text, html) for the address-confirmation link sent on sign-up."""
+    subject = "Confirm your email for AI Lecture Notes"
+    text = (
+        f"Hi {username},\n\n"
+        f"Welcome to AI Lecture Notes. Confirm this email address to finish creating your "
+        f"account — the link works for {hours} hours:\n\n{link}\n\n"
+        "If you didn't sign up, you can ignore this email.\n\n"
+        "This is an automated message; replies are not monitored."
+    )
+    body = f"""
+<div style="font-family:-apple-system,Segoe UI,Helvetica,Arial,sans-serif;max-width:480px;
+            margin:0 auto;padding:24px;color:#0f1f3d">
+  <h2 style="margin:0 0 12px;font-size:20px">Confirm your email</h2>
+  <p style="margin:0 0 16px;line-height:1.5">Hi {html.escape(username)}, welcome to AI Lecture
+  Notes. Confirm this address to finish creating your account. The link works for {hours}
+  hours:</p>
+  <p style="margin:0 0 20px"><a href="{html.escape(link, quote=True)}"
+     style="display:inline-block;background:#0b74f6;color:#fff;text-decoration:none;
+            padding:12px 18px;border-radius:8px;font-weight:600">
+     Confirm email</a></p>
+  <p style="margin:0 0 8px;font-size:13px;color:#5b6b86">Or paste this into your browser:<br>
+     <span style="word-break:break-all">{html.escape(link)}</span></p>
+  <p style="margin:16px 0 0;font-size:13px;color:#5b6b86">If you didn't sign up, ignore this
+  email.</p>
+  <p style="margin:16px 0 0;font-size:12px;color:#8a97ae">This is an automated message; replies
+  are not monitored.</p>
+</div>"""
+    return subject, text, body
