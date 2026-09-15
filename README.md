@@ -37,9 +37,10 @@ optional.
 7. [Recording tips](#recording-tips)
 8. [Configuration reference](#configuration-reference)
 9. [Storage, retention and quotas](#storage-retention-and-quotas)
-10. [Project layout](#project-layout)
-11. [Troubleshooting](#troubleshooting)
-12. [Contributing](#contributing)
+10. [Backups](#backups)
+11. [Project layout](#project-layout)
+12. [Troubleshooting](#troubleshooting)
+13. [Contributing](#contributing)
 
 ---
 
@@ -349,6 +350,56 @@ in the Settings panel and stored in the app-state volume; leave them out of
 
 ---
 
+## Backups
+
+Everything worth keeping is small — the database (users, transcripts, notes,
+history) is a few MB, the audio a few hundred MB — so a nightly copy costs
+nothing. Two scripts, no extra services:
+
+```bash
+deploy/backup-setup.sh        # one time: off-site copy + nightly schedule
+deploy/backup.sh              # what the schedule runs (safe to run any time)
+deploy/restore.sh latest      # put it all back
+```
+
+**What a backup contains** (`deploy/state/backups/`, git-ignored):
+
+| | |
+|---|---|
+| `daily/lecture-notes-DATE.tar.gz` | Postgres dump, `deploy/.env`, the saved settings/API keys, the Tailscale identity. 14 kept. |
+| `weekly/` | Sunday's bundle, 8 kept |
+| `audio/` | mirror of the audio bucket — only new chunks are fetched each night, chunks retention deleted are removed |
+
+**Off-site (recommended):** `deploy/backup-setup.sh` connects
+[rclone](https://rclone.org) to a Google account (a browser window opens; a
+dedicated account is a good idea — the app only gets access to files it
+creates itself), wraps it in an **encrypted** remote so nothing readable ever
+leaves the machine (file names included), schedules the backup nightly at
+03:00 (launchd on macOS, a printed cron line on Linux) and runs the first one.
+It prints a **passphrase once** — store it in a password manager; it is what
+lets you decrypt the backups if the machine is gone. Any rclone-supported
+destination works instead of Google Drive (Dropbox, OneDrive, S3, Backblaze
+B2, a USB drive): create the remote yourself and point `RCLONE_REMOTE` in
+`deploy/.env` at it.
+
+**Restoring:**
+
+- *Same machine, after a bad day:* `deploy/restore.sh latest` (or a specific
+  `daily/…tar.gz`). It replaces the database and settings with the backup and
+  re-uploads the audio — it asks before doing so.
+- *New machine:* install Docker and rclone, clone the repository, run
+  `deploy/backup-setup.sh` (same Google account; enter the saved passphrase
+  when asked instead of generating a new one), then
+  `deploy/restore.sh --from-remote latest`. You get the same accounts,
+  lectures, settings and — because the Tailscale identity is restored — the
+  same public URL.
+
+Set `BACKUP_NOTIFY_EMAIL` in `deploy/.env` to get an email (through the app's
+own mail account) whenever a nightly backup fails. The log is
+`deploy/state/backups/backup.log`.
+
+---
+
 ## Project layout
 
 ```
@@ -365,8 +416,10 @@ app/ui_backend/          FastAPI backend
   quota.py, cleanup.py   storage accounting and retention
   models.py, alembic/    schema and migrations (applied on startup)
   manage_users.py        CLI for accounts
+  audio_backup.py        streams the audio bucket in/out for deploy/backup.sh
 app/ui_frontend/         React + Vite frontend (src/components, src/hooks)
-deploy/                  compose.yml, Dockerfile, start.sh/stop.sh, mac/ launch agent
+deploy/                  compose.yml, Dockerfile, start.sh/stop.sh,
+                         backup.sh/restore.sh/backup-setup.sh, mac/ launch agents
 ```
 
 Backend code is formatted and linted with [ruff](https://docs.astral.sh/ruff/)

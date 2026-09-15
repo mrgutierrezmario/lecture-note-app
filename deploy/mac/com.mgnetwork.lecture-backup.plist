@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Nightly backup at 03:00 (deploy/backup.sh). If the Mac is asleep at 03:00
+     the job runs when it wakes. Installed by deploy/backup-setup.sh, which
+     replaces __REPO__ and __HOME__; to install by hand, do that with sed, copy
+     the file to ~/Library/LaunchAgents/ and `launchctl load` it.
+     Log: deploy/state/backups/backup.log -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.mgnetwork.lecture-backup</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__REPO__/deploy/backup.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- launchd jobs get a minimal PATH; docker and rclone live here. -->
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key>
+    <string>__HOME__</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Hour</key>
+    <integer>3</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>__REPO__/deploy/state/backups/backup.log</string>
+  <key>StandardErrorPath</key>
+  <string>__REPO__/deploy/state/backups/backup.log</string>
+</dict>
+</plist>

@@ -11,6 +11,16 @@ cd "$(dirname "$0")"
 DC="docker compose -f compose.yml"
 
 log() { echo "[start] $*"; }
+# Load deploy/.env without `source` (values may contain spaces, e.g. MAIL_FROM_NAME).
+load_env() {
+  local line key val
+  while IFS= read -r line || [ -n "$line" ]; do
+    case "$line" in ''|'#'*) continue ;; esac
+    key=${line%%=*}; val=${line#*=}
+    case "$val" in \"*\") val=${val#\"}; val=${val%\"} ;; \'*\') val=${val#\'}; val=${val%\'} ;; esac
+    export "$key=$val"
+  done < "$1"
+}
 gen() { python3 -c "import secrets; print(secrets.token_urlsafe(${1:-24}))"; }
 
 command -v docker >/dev/null || { echo "Docker is not installed or not on PATH." >&2; exit 1; }
@@ -23,7 +33,7 @@ if [ ! -f .env ]; then
   sed -i.bak "s|^SECRET_KEY=$|SECRET_KEY=$(gen 32)|; s|^POSTGRES_PASSWORD=$|POSTGRES_PASSWORD=$(gen)|; s|^MINIO_ROOT_PASSWORD=$|MINIO_ROOT_PASSWORD=$(gen)|" .env
   rm -f .env.bak
 fi
-set -a; source .env; set +a
+load_env .env
 
 # Bundled Ollama only when nothing external is configured.
 if [ -z "${OLLAMA_BASE_URL:-}" ] || [ "${OLLAMA_BASE_URL}" = "http://ollama:11434" ]; then

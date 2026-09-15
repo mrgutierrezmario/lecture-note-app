@@ -203,6 +203,34 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   still catch up on the whole backlog each pass).
 - Phone home-screen app re-added from the current URL.
 
+### Reboot resilience and backups (2026-09-15)
+- **FileVault turned off** on the Mac mini so automatic login works; Docker
+  Desktop starts at sign-in; the whole stack came back on its own after the
+  reboot. Trade-off noted: disk is no longer encrypted at rest (matters only
+  if the Mac is physically stolen — rotate `deploy/.env` secrets then).
+- **Dev environment** (`~/mgntsdev`): `dev` container now `restart:
+  unless-stopped`, `shutdownAction: none`. Its Docker Ollama service moved
+  behind `--profile ollama` and the container removed — it published port
+  11434 and raced the native GPU Ollama on every boot (native won this time;
+  had Docker won, the app would silently have run on the CPU).
+- **Backups built**: `deploy/backup.sh` (pg_dump + .env + app-state +
+  Tailscale identity bundle, 14 daily / 8 weekly; incremental audio mirror via
+  `audio_backup.py` running inside the app container, so no bind mounts or
+  MinIO credentials on the host), `deploy/restore.sh` (same machine or blank
+  machine with `--from-remote`; restores the Tailscale identity so the URL
+  survives), `deploy/backup-setup.sh` (rclone → Google Drive `drive.file`
+  scope → encrypted `lecture-backup:` remote, launchd at 03:00, first run).
+  Failure email via `BACKUP_NOTIFY_EMAIL`. Tested: bundle restored into a
+  throwaway Postgres (1 user, 104 lectures, 1567 segments, alembic 007);
+  audio import idempotent. `start.sh`/`backup.sh` no longer `source .env`
+  (a value with spaces, `MAIL_FROM_NAME`, broke it) — safe loader instead.
+- **Data note**: the manual snapshot `deploy/state/backups/lecture_notes-
+  snapshot-2026-09-13.sql.gz` (612 MB uncompressed) still holds 32 sessions
+  that are no longer in the live database — untitled dev/test recordings
+  from March–May plus two untitled ~1.5 h recordings from 2026-09-09 —
+  presumably deleted from History on purpose. Keep the snapshot; individual
+  sessions can be pulled out of it if ever wanted.
+
 ### Public-release preparation (2026-09-14)
 - **PEP 8**: whole backend formatted with ruff (line length 100, isort);
   `pyproject.toml` pins the config and now enforces docstrings (`D1`).
@@ -241,13 +269,17 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
 6. Known limitation: chunks sent while the server itself restarts (deploy,
    crash) are dropped by the browser — ~20 s of audio per restart mid-lecture.
    Fix would be client-side buffering during disconnects; not done.
-7. Reboot behaviour: Docker Desktop only starts after a macOS login. Either
-   enable Docker Desktop → Settings → General → "Start Docker Desktop when
-   you sign in" **and** macOS automatic login (not offered while FileVault is
-   on), or accept one login after each reboot.
-8. Optional: revoke/re-create the two Gmail App Passwords that passed through
+7. ~~Reboot behaviour~~ — FileVault off, auto-login + Docker at sign-in
+   enabled, verified 2026-09-15.
+8. **Run `deploy/backup-setup.sh` on the Mac** (Google sign-in with the
+   do-not-reply account, save the printed passphrase) — the off-site half of
+   backups is not active until then. Local nightly backups need it too (it
+   installs the launchd job).
+9. **Per-user Google Drive export** (next feature): "Connect Google Drive" in
+   Settings, OAuth `drive.file`, upload notes/transcript/MP3 per lecture.
+10. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
-9. stock-tracker's report emails are failing on a revoked App Password —
+11. stock-tracker's report emails are failing on a revoked App Password —
    unrelated to this app, but noticed while diagnosing.
 
 ## Feature Reference (what users have)
