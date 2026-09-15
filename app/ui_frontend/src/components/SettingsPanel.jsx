@@ -231,7 +231,8 @@ function SettingsPanel({ user, onUserChange }) {
 
       <PasswordSection user={user} onUserChange={onUserChange} />
 
-      <DriveSection isAdmin={isAdmin} refreshKey={`${settings?.google_client_id}|${settings?.google_client_secret_masked}`} />
+      {/* Admins get this right after the OAuth client fields (inside the admin block below). */}
+      {!isAdmin && <DriveSection isAdmin={false} />}
 
       {error && <div className="settings-error">{error}</div>}
       {message && <div className="settings-message">{message}</div>}
@@ -374,9 +375,11 @@ function SettingsPanel({ user, onUserChange }) {
               )}
             </div>
             {settings.google_client_id && settings.google_client_secret_masked && (
-              <p className="settings-inline-ok">Configured — users can connect their Drive under Google Drive above.</p>
+              <p className="settings-inline-ok">Configured — users can connect their Drive from Settings.</p>
             )}
           </section>
+
+          <DriveSection isAdmin refreshKey={`${settings.google_client_id}|${settings.google_client_secret_masked}`} />
 
           <section className="settings-section">
             <h3>Models</h3>

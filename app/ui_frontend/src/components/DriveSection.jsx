@@ -71,7 +71,7 @@ function DriveSection({ isAdmin, refreshKey }) {
       {status && !status.available && (
         <p className="settings-note settings-note-full">
           {isAdmin
-            ? 'Not set up yet — add the Google OAuth client under API keys below and users can connect their own Drive.'
+            ? 'Not set up yet — save the Google OAuth client above and users can connect their own Drive.'
             : 'Not available on this server.'}
         </p>
       )}
