@@ -57,6 +57,22 @@
   color: var(--muted);
 }
 
+/* Links styled as icon buttons (the User Guide) need the button's box explicitly. */
+a.btn-icon {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: transparent;
+  text-decoration: none;
+  box-sizing: border-box;
+  transition: background-color 0.15s, border-color 0.15s, color 0.15s;
+}
+
+a.btn-icon:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+  background: var(--surface-2);
+}
+
 .btn-icon:hover:not(:disabled) {
   color: var(--text);
   border-color: var(--border-strong);

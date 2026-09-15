@@ -20,7 +20,7 @@ import SettingsPanel from './components/SettingsPanel'
 import Login from './components/Login'
 import ResetPassword from './components/ResetPassword'
 import HistoryPanel from './components/HistoryPanel'
-import { MicIcon, LogoutIcon, PlusIcon } from './components/Icons'
+import { MicIcon, LogoutIcon, PlusIcon, HelpIcon } from './components/Icons'
 import useAuth from './hooks/useAuth'
 import { prepareMp3, downloadUrl } from './lib/mp3'
 import { useDialog } from './components/Dialog'
@@ -512,6 +512,9 @@ function Workspace({ user, onLogout, onUserChange }) {
           </span>
           <HistoryPanel user={user} currentSessionId={sessionId} onOpen={openPastLecture} />
           <SettingsPanel user={user} onUserChange={onUserChange} />
+          <a className="btn-icon" href="/guide" target="_blank" rel="noreferrer" aria-label="User guide" data-tip="User guide (opens in a new tab)">
+            <HelpIcon size={18} />
+          </a>
           <span className="user-menu">
             <button className="btn-icon" onClick={onLogout} aria-label="Sign out" data-tip="Sign out">
               <LogoutIcon size={18} />
