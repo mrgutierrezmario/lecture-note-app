@@ -14,9 +14,9 @@ optional.
 
 **By M.G. Network and Technology Solutions.**
 
-![A past lecture open in dark mode: full transcript on the left, generated notes in the middle, and the chat answering a question about the lecture on the right](design/screenshots/lecture-dark.png)
+![A past lecture open in dark mode: full transcript on the left, generated notes in the middle, and the chat on the right answering a question and then a follow-up about the lecture](design/screenshots/lecture-dark.png)
 
-<p align="center"><em>Transcript, generated notes, and "Ask about the lecture" — dark mode.</em></p>
+<p align="center"><em>Transcript, generated notes, and "Ask about the lecture" — with a follow-up question, dark mode.</em></p>
 
 | | |
 |---|---|
