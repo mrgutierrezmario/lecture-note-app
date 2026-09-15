@@ -311,37 +311,73 @@ async def _openai_image(b64: str, media_type: str, prompt: str, max_tokens: int)
 _VISION_IMPL = {"claude": _claude_image, "gemini": _gemini_image, "openai": _openai_image}
 
 
+def _cloud_cascade(primary: str, order: tuple[str, ...]) -> list[str]:
+    """The primary provider first, then every other configured cloud provider.
+
+    So a Gemini quota failure tries Claude (if a key is saved) before giving up
+    on the cloud — the user chooses the first; the rest are backups.
+    """
+    rest = [p for p in order if p != primary and p not in ("ollama", "llava") and configured(p)]
+    return [primary] + rest
+
+
 async def describe_image_cloud(
     b64: str, media_type: str, prompt: str, max_tokens: int = 1024
 ) -> tuple[str, str]:
-    """(text, provider label) from the chosen cloud vision provider; raises when
-    none is configured or the call fails — callers fall back to llava/BLIP."""
+    """(text, provider label) from the chosen cloud vision provider, trying the
+    other configured cloud providers if it fails; raises when none is
+    configured or all fail — callers then fall back to llava/BLIP."""
     provider = active_vision_provider()
     if provider == "llava":
         raise ProviderError("No cloud vision provider configured")
     s = get_settings()
-    model = {"claude": s.vision_model, "gemini": s.gemini_model, "openai": s.openai_model}[provider]
-    text = await _VISION_IMPL[provider](b64, media_type, prompt, max_tokens)
-    return text, f"{provider}/{model}"
+    models = {"claude": s.vision_model, "gemini": s.gemini_model, "openai": s.openai_model}
+    last: Exception | None = None
+    for candidate in _cloud_cascade(provider, ("gemini", "claude", "openai")):
+        try:
+            text = await _VISION_IMPL[candidate](b64, media_type, prompt, max_tokens)
+            if candidate != provider:
+                logger.info("Vision: %s answered after %s failed", candidate, provider)
+            return text, f"{candidate}/{models[candidate]}"
+        except Exception as e:  # noqa: BLE001 — try the next provider
+            last = e
+            logger.warning("%s vision failed (%s: %s)", candidate, type(e).__name__, str(e)[:200])
+    raise ProviderError(f"All cloud vision providers failed: {last}")
 
 
 async def generate_text(
     prompt: str, *, max_tokens: int = 800, temperature: float = 0.1, timeout: float = 120.0
 ) -> Generation:
-    """Generate with the configured provider; on a cloud failure fall back to Ollama."""
+    """Generate with the configured provider.
+
+    A cloud failure tries the other configured cloud providers, then Ollama,
+    so notes never stop. The returned ``Generation`` records the first
+    provider that failed and why, for the UI.
+    """
     provider = active_provider()
-    try:
-        return await _IMPL[provider](prompt, max_tokens, temperature, timeout)
-    except Exception as e:
-        if provider == "ollama":
-            raise
-        logger.warning(
-            "%s failed (%s: %s) — falling back to ollama", provider, type(e).__name__, str(e)[:200]
-        )
-        result = await _ollama(prompt, max_tokens, temperature, timeout)
-        result.fallback = provider
-        result.fallback_reason = describe_failure(e)
-        return result
+    if provider == "ollama":
+        return await _ollama(prompt, max_tokens, temperature, timeout)
+
+    first_error: Exception | None = None
+    for candidate in _cloud_cascade(provider, ("gemini", "claude", "openai")):
+        try:
+            result = await _IMPL[candidate](prompt, max_tokens, temperature, timeout)
+            if candidate != provider:
+                result.fallback = provider
+                result.fallback_reason = describe_failure(first_error)
+            return result
+        except Exception as e:  # noqa: BLE001 — try the next provider
+            first_error = first_error or e
+            logger.warning(
+                "%s failed (%s: %s) — trying next provider",
+                candidate,
+                type(e).__name__,
+                str(e)[:200],
+            )
+    result = await _ollama(prompt, max_tokens, temperature, timeout)
+    result.fallback = provider
+    result.fallback_reason = describe_failure(first_error)
+    return result
 
 
 async def test_provider(provider: str) -> tuple[bool, str]:
