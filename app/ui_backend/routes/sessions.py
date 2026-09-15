@@ -483,11 +483,36 @@ async def chat(
     )
     docs = docs_result.scalars().all()
 
+    # Latest notes: a compact summary of the whole lecture so far, so questions
+    # about earlier material can be answered even when the transcript is trimmed.
+    notes_result = await db.execute(
+        select(NotesVersion)
+        .where(NotesVersion.session_id == session_id)
+        .order_by(NotesVersion.version.desc())
+        .limit(1)
+    )
+    latest_notes = notes_result.scalar_one_or_none()
+
+    # How much transcript the active text provider can take. Cloud models have
+    # very large context windows; local Ollama is bounded by num_ctx (set in
+    # providers.py), so keep its share modest.
+    from providers import active_provider
+
+    transcript_budget = 16_000 if active_provider() == "ollama" else 300_000
+
     context_parts = []
+    if latest_notes and latest_notes.notes_md.strip():
+        context_parts.append(f"## Lecture Notes (so far)\n{latest_notes.notes_md[:20_000]}")
     if transcript_text:
-        context_parts.append(f"## Lecture Transcript\n{transcript_text[-4000:]}")
+        window = transcript_text[-transcript_budget:]
+        label = (
+            "Lecture Transcript"
+            if len(window) == len(transcript_text)
+            else "Lecture Transcript (most recent part)"
+        )
+        context_parts.append(f"## {label}\n{window}")
     for doc in docs:
-        context_parts.append(f"## Document: {doc.filename}\n{doc.extracted_text[:6000]}")
+        context_parts.append(f"## Document: {doc.filename}\n{doc.extracted_text[:20_000]}")
 
     context = "\n\n".join(context_parts) if context_parts else "No lecture content available yet."
 

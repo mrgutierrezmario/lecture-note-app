@@ -165,7 +165,9 @@ async def _ollama(prompt: str, max_tokens: int, temperature: float, timeout: flo
                 "model": s.ollama_model,
                 "prompt": prompt,
                 "stream": False,
-                "options": {"temperature": temperature, "num_predict": max_tokens},
+                # num_ctx: Ollama defaults to ~2k tokens, which would silently
+                # truncate the lecture context; 8k fits the transcript window.
+                "options": {"temperature": temperature, "num_predict": max_tokens, "num_ctx": 8192},
             },
         )
     if r.status_code != 200:
