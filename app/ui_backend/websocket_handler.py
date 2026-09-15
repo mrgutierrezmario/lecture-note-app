@@ -363,6 +363,11 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                             manager.webm_headers[session_id] = header
                     data_to_transcribe = header + audio_data if header else audio_data
 
+                # A reconnect cancels the notes loop (last socket closed) and the
+                # browser keeps streaming without re-sending "start" — so make
+                # the loop self-healing: audio arriving means we are recording.
+                manager.start_notes_task(session_id)
+
                 q = manager.quota.get(session_id)
                 if q and q[1] and not manager.save_storage.get(session_id, False):
                     q[0] += len(audio_data)
