@@ -271,12 +271,22 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    Fix would be client-side buffering during disconnects; not done.
 7. ~~Reboot behaviour~~ — FileVault off, auto-login + Docker at sign-in
    enabled, verified 2026-09-15.
-8. **Run `deploy/backup-setup.sh` on the Mac** (Google sign-in with the
-   do-not-reply account, save the printed passphrase) — the off-site half of
-   backups is not active until then. Local nightly backups need it too (it
-   installs the launchd job).
-9. **Per-user Google Drive export** (next feature): "Connect Google Drive" in
-   Settings, OAuth `drive.file`, upload notes/transcript/MP3 per lecture.
+8. ~~Run `deploy/backup-setup.sh`~~ — done 2026-09-15: rclone → do-not-reply
+   Google Drive (`LectureNotesBackups`, encrypted), launchd 03:00, first sync
+   completed (~150 MB, 5 min). Passphrase is in the operator's password
+   manager. rclone uses its own OAuth client ("Lecture App rclone backups",
+   Desktop type) from the Google Cloud project `lecture-notes` owned by the
+   do-not-reply account — rclone's shared client_id is being retired in 2026
+   and was heavily throttled. Note: `drive.file` scope means rclone only sees
+   the folder it created; a half-uploaded folder from the shared client was
+   trashed by hand.
+9. **Per-user Google Drive export** (feature B, in progress): OAuth client
+   "Lecture Notes App" (Web type, redirect
+   `<PUBLIC_URL>/api/drive/callback`) exists in the same project. The
+   consent screen is still in **Testing** (only listed test users can
+   connect) — Branding must be completed (no logo: a logo forces the
+   verification review; no authorized domain: `ts.net` is not ours) and then
+   Audience → Publish app, so any Google account can connect.
 10. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
 11. stock-tracker's report emails are failing on a revoked App Password —
