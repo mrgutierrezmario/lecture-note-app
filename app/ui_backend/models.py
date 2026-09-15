@@ -36,6 +36,8 @@ class User(Base):
     quota_mb = Column(Integer, nullable=True)  # per-user audio quota; null = global default
     # False only for self-registered accounts that haven't clicked the emailed link yet.
     email_verified = Column(Boolean, default=True, nullable=False, server_default="true")
+    # False while a self-registered account waits for an admin (registration_approval on).
+    approved = Column(Boolean, default=True, nullable=False, server_default="true")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     sessions = relationship("Session", back_populates="user")

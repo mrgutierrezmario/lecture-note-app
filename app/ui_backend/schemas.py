@@ -174,6 +174,7 @@ class SettingsResponse(BaseModel):
     storage_quota_mb: int
     audio_retention_days: int
     registration_open: bool
+    registration_approval: bool = False
     mail_configured: bool
     max_locked_lectures: int
     text_provider: str
@@ -212,6 +213,7 @@ class SettingsUpdate(BaseModel):
     storage_quota_mb: Optional[int] = None
     audio_retention_days: Optional[int] = None
     registration_open: Optional[bool] = None
+    registration_approval: Optional[bool] = None
     max_locked_lectures: Optional[int] = None
     text_provider: Optional[str] = None
     vision_provider: Optional[str] = None
@@ -259,6 +261,7 @@ class UserResponse(BaseModel):
     disabled: bool
     quota_mb: Optional[int] = None  # None = global default applies
     email_verified: bool = True
+    approved: bool = True  # False = waiting for an admin (Settings → Users → Approve)
     created_at: Optional[datetime] = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -299,6 +302,7 @@ class RegistrationStatus(BaseModel):
     """What the sign-in page may offer (read without a login)."""
 
     registration_open: bool
+    registration_approval: bool = False  # new accounts wait for an admin
     password_reset_available: bool  # True when outgoing mail is configured
 
 

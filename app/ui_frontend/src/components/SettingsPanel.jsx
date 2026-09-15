@@ -99,6 +99,7 @@ function SettingsPanel({ user, onUserChange }) {
         storage_quota_mb: data.storage_quota_mb,
         audio_retention_days: data.audio_retention_days,
         registration_open: data.registration_open,
+        registration_approval: data.registration_approval,
         max_locked_lectures: data.max_locked_lectures,
       })
       setError(null)
@@ -143,6 +144,7 @@ function SettingsPanel({ user, onUserChange }) {
         storage_quota_mb: data.storage_quota_mb,
         audio_retention_days: data.audio_retention_days,
         registration_open: data.registration_open,
+        registration_approval: data.registration_approval,
         max_locked_lectures: data.max_locked_lectures,
       })
       setMessage(
@@ -579,8 +581,20 @@ function SettingsPanel({ user, onUserChange }) {
               <span className="switch-track" />
               Allow anyone with the link to create an account
             </label>
+            <label className="switch settings-switch">
+              <input
+                type="checkbox"
+                checked={Boolean(draft.registration_approval)}
+                disabled={!draft.registration_open}
+                onChange={e => setDraft({ ...draft, registration_approval: e.target.checked })}
+              />
+              <span className="switch-track" />
+              Require my approval before a new account can sign in
+            </label>
             <p className="settings-note settings-note-full">
-              Turn this off once everyone is enrolled; admins can still add accounts below.
+              With approval on, a new account confirms its email, then every admin with an email address gets
+              an "Approve this account" link; pending accounts also show under Users below. Turn sign-up off
+              once everyone is enrolled — admins can always add accounts below.
               {dirty && ' Save with the Save models button above.'}
             </p>
           </section>

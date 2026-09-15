@@ -81,12 +81,24 @@ function Workspace({ user, onLogout, onUserChange }) {
     const params = new URLSearchParams(window.location.search)
     const drive = params.get('drive')
     const verified = params.get('verified')
-    if (!drive && !verified) return
+    const approved = params.get('approved')
+    if (!drive && !verified && !approved) return
     window.history.replaceState({}, '', window.location.pathname)
     if (verified) {
       dialog.notice(verified === '1'
         ? { title: 'Email confirmed', message: 'Your account is ready! — Welcome to AI Lecture Notes.' }
-        : { title: 'Link expired', message: 'That confirmation link is no longer valid. Sign in and use "Send the link again" to get a fresh one.' })
+        : verified === 'pending'
+          ? { title: 'Email confirmed', message: 'Thanks — your account now needs to be approved by an administrator. You will get an email as soon as it is active.' }
+          : { title: 'Link expired', message: 'That confirmation link is no longer valid. Sign in and use "Send the link again" to get a fresh one.' })
+      return
+    }
+    if (approved) {
+      const who = params.get('user') || 'The account'
+      dialog.notice(approved === '1'
+        ? { title: 'Account approved', message: `${who} can sign in now and has been emailed.` }
+        : approved === 'already'
+          ? { title: 'Already approved', message: `${who} was approved earlier — nothing to do.` }
+          : { title: 'Link expired', message: 'That approval link is no longer valid. You can approve the account under Settings → Users.' })
       return
     }
     if (drive === 'connected') {

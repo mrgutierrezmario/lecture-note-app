@@ -41,6 +41,7 @@ EDITABLE: dict[str, tuple[type, bool]] = {
     "whisper_model": (str, False),
     "storage_quota_mb": (int, True),
     "registration_open": (bool, True),
+    "registration_approval": (bool, True),
     "max_locked_lectures": (int, True),
     "text_provider": (str, True),
     "vision_provider": (str, True),

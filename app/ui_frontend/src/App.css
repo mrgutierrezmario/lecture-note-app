@@ -1395,6 +1395,19 @@ a.btn-icon:hover {
   color: var(--primary);
 }
 
+.btn-approve {
+  height: var(--control-h);
+  padding: 0 12px;
+  font-size: 13px;
+  font-weight: 600;
+  background: var(--primary);
+  color: var(--primary-ink);
+}
+
+.btn-approve:hover:not(:disabled) {
+  background: var(--primary-hover);
+}
+
 .user-badge-warn {
   background: var(--warning-tint);
   color: var(--warning);

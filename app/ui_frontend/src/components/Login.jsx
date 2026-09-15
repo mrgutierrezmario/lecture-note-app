@@ -21,6 +21,19 @@ function Login({ onLogin, onRegister }) {
   const [pending, setPending] = useState(null) // registration done, waiting for the emailed link
   const [needsVerify, setNeedsVerify] = useState(false) // login refused: email not confirmed
   const [resent, setResent] = useState(false)
+  // Landing here from an emailed link while signed out (approve link opened on
+  // a phone, say): say what happened above the form. The Workspace shows the
+  // full notice once signed in, since the query string is left in place.
+  const params = new URLSearchParams(window.location.search)
+  const banner = params.get('approved') === '1'
+    ? `Account "${params.get('user') || ''}" approved — sign in to manage users.`
+    : params.get('approved') === 'already'
+      ? `Account "${params.get('user') || ''}" was already approved.`
+      : params.get('approved') === 'expired'
+        ? 'That approval link has expired — sign in and approve the account under Settings → Users.'
+        : params.get('verified') === 'pending'
+          ? 'Email confirmed. Your account is waiting for an administrator to approve it — you will get an email when it is active.'
+          : null
 
   useEffect(() => {
     fetch('/api/auth/status')
@@ -57,6 +70,7 @@ function Login({ onLogin, onRegister }) {
     } catch (err) {
       setError(err.message)
       if (err.code === 'verification_required') setNeedsVerify(true)
+      // approval_pending: the message says it all, nothing the user can do yet.
     } finally {
       setBusy(false)
     }
@@ -92,6 +106,8 @@ function Login({ onLogin, onRegister }) {
             : mode === 'forgot' ? 'Reset your password'
             : 'Create your account'}
         </p>
+
+        {banner && <p className="login-sent">{banner}</p>}
 
         {pending ? (
           <>

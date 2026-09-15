@@ -4,6 +4,7 @@ import hashlib
 import logging
 import re
 import secrets
+import uuid
 from datetime import datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
@@ -88,6 +89,7 @@ def _validate_password(password: str) -> str:
 
 RESET_MINUTES = 60
 VERIFY_HOURS = 24
+APPROVE_DAYS = 7
 
 
 @router.get("/status", response_model=RegistrationStatus)
@@ -95,6 +97,7 @@ async def registration_status():
     """What the sign-in page may offer; readable without a login."""
     return RegistrationStatus(
         registration_open=get_settings().registration_open,
+        registration_approval=get_settings().registration_approval,
         password_reset_available=mailer.configured(),
     )
 
@@ -227,6 +230,66 @@ async def _send_verification(
     return True
 
 
+async def _request_approval(
+    db: AsyncSession, user: User, request: Request, background: BackgroundTasks
+) -> None:
+    """Email every admin who has an address an approve link for ``user``."""
+    if not mailer.configured():
+        return
+    admins = (
+        (
+            await db.execute(
+                select(User).where(
+                    User.is_admin.is_(True), User.disabled.is_(False), User.email.isnot(None)
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not admins:
+        return
+    token = secrets.token_urlsafe(32)
+    db.add(
+        ResetToken(
+            user_id=user.id,
+            purpose="approve",
+            token_hash=hashlib.sha256(token.encode()).hexdigest(),
+            expires_at=datetime.utcnow() + timedelta(days=APPROVE_DAYS),
+        )
+    )
+    await db.commit()
+    link = f"{_public_base(request)}/api/auth/approve?token={token}"
+    subject, text, html_body = mailer.approval_request_email(
+        user.username, user.email or "", link, APPROVE_DAYS
+    )
+    for admin in admins:
+        background.add_task(mailer.send, admin.email, subject, text, html_body)
+    logger.info("Approval requested for %s (%d admin(s) emailed)", user.username, len(admins))
+
+
+async def _approve(user: User, db: AsyncSession, request: Request, background: BackgroundTasks):
+    """Activate a pending account and tell the user (if mail is configured)."""
+    user.approved = True
+    # Any other approve links for this account are void now.
+    await db.execute(
+        update(ResetToken)
+        .where(
+            ResetToken.user_id == user.id,
+            ResetToken.purpose == "approve",
+            ResetToken.used_at.is_(None),
+        )
+        .values(used_at=datetime.utcnow())
+    )
+    await db.commit()
+    if user.email and mailer.configured():
+        subject, text, html_body = mailer.account_approved_email(
+            user.username, f"{_public_base(request)}/"
+        )
+        background.add_task(mailer.send, user.email, subject, text, html_body)
+    logger.info("User %s approved", user.username)
+
+
 @router.post("/register", status_code=201)
 async def register(
     body: RegisterRequest,
@@ -249,18 +312,27 @@ async def register(
         raise HTTPException(400, "Email is required")
     await _ensure_unique(db, username, email)
     verify = mailer.configured()
+    needs_approval = get_settings().registration_approval
     user = User(
         username=username,
         email=email,
         password_hash=hash_password(_validate_password(body.password)),
         is_admin=False,
         email_verified=not verify,
+        approved=not needs_approval,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    logger.info("User %s registered%s", username, " (pending verification)" if verify else "")
+    logger.info(
+        "User %s registered%s%s",
+        username,
+        " (pending verification)" if verify else "",
+        " (needs approval)" if needs_approval else "",
+    )
     if verify:
+        # Admins are asked to approve only once the address is confirmed
+        # (see verify_email), so they never get requests for junk sign-ups.
         await _send_verification(db, user, request, background)
         return JSONResponse(
             status_code=202,
@@ -269,6 +341,24 @@ async def register(
                 message=(
                     f"We sent a confirmation link to {email}. Open it to finish creating "
                     "your account (check spam if it doesn't arrive)."
+                    + (
+                        " After that, an administrator has to approve the account before "
+                        "you can sign in."
+                        if needs_approval
+                        else ""
+                    )
+                ),
+            ).model_dump(),
+        )
+    if needs_approval:
+        await _request_approval(db, user, request, background)
+        return JSONResponse(
+            status_code=202,
+            content=RegistrationPending(
+                email=email,
+                message=(
+                    "Your account has been created and is waiting for an administrator to "
+                    "approve it. You'll be able to sign in once that's done."
                 ),
             ).model_dump(),
         )
@@ -277,7 +367,12 @@ async def register(
 
 
 @router.get("/verify")
-async def verify_email(token: str, request: Request, db: AsyncSession = Depends(get_db)):
+async def verify_email(
+    token: str,
+    request: Request,
+    background: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
     """The emailed confirmation link: mark the address verified and sign in."""
     row = await db.scalar(
         select(ResetToken).where(
@@ -294,6 +389,9 @@ async def verify_email(token: str, request: Request, db: AsyncSession = Depends(
     row.used_at = datetime.utcnow()
     await db.commit()
     logger.info("User %s verified their email", user.username)
+    if not user.approved:
+        await _request_approval(db, user, request, background)
+        return RedirectResponse("/?verified=pending", status_code=302)
     response = RedirectResponse("/?verified=1", status_code=302)
     set_login_cookie(response, request, user.id)
     return response
@@ -316,6 +414,53 @@ async def resend_verification(
     if user and not user.disabled and not user.email_verified and mailer.configured():
         await _send_verification(db, user, request, background)
     return Response(status_code=202)
+
+
+@router.get("/approve")
+async def approve_by_link(
+    token: str,
+    request: Request,
+    background: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """The approve link emailed to admins. One-time; no sign-in needed, the
+    token itself is the authority (only admins' mailboxes receive it)."""
+    row = await db.scalar(
+        select(ResetToken).where(
+            ResetToken.token_hash == hashlib.sha256(token.encode()).hexdigest(),
+            ResetToken.purpose == "approve",
+        )
+    )
+    if row is None or row.expires_at < datetime.utcnow():
+        return RedirectResponse("/?approved=expired", status_code=302)
+    user = await db.get(User, row.user_id)
+    if user is None:
+        return RedirectResponse("/?approved=expired", status_code=302)
+    if user.approved:
+        return RedirectResponse(f"/?approved=already&user={user.username}", status_code=302)
+    await _approve(user, db, request, background)
+    return RedirectResponse(f"/?approved=1&user={user.username}", status_code=302)
+
+
+@router.post(
+    "/users/{user_id}/approve", response_model=UserResponse, dependencies=[Depends(require_admin)]
+)
+async def approve_user(
+    user_id: str,
+    request: Request,
+    background: BackgroundTasks,
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: activate a pending account from Settings → Users."""
+    try:
+        user = await db.get(User, uuid.UUID(user_id))
+    except ValueError:
+        raise HTTPException(404, "User not found")
+    if user is None:
+        raise HTTPException(404, "User not found")
+    if not user.approved:
+        await _approve(user, db, request, background)
+    return user
 
 
 @router.post("/login", response_model=UserResponse)
@@ -348,6 +493,17 @@ async def login(
             {
                 "code": "verification_required",
                 "message": f"Confirm your email first — we sent a link to {user.email}.",
+            },
+        )
+    if not user.approved:
+        raise HTTPException(
+            403,
+            {
+                "code": "approval_pending",
+                "message": (
+                    "Your account is waiting for an administrator to approve it. "
+                    "You'll get an email when it's active."
+                ),
             },
         )
     set_login_cookie(response, request, user.id)

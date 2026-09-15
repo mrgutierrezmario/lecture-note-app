@@ -100,6 +100,7 @@ function UsersSection({ currentUser }) {
                 </span>
                 {u.is_admin && <span className="user-badge">admin</span>}
                 {u.email_verified === false && <span className="user-badge user-badge-warn" data-tip="Signed up but hasn't opened the confirmation email yet">unverified</span>}
+                {u.approved === false && <span className="user-badge user-badge-warn" data-tip="Waiting for an admin to approve the account">pending</span>}
                 {u.id === currentUser.id && <span className="user-badge user-badge-you">you</span>}
                 {u.quota_mb != null && <span className="user-badge user-badge-you">{u.quota_mb === 0 ? 'unlimited' : `${u.quota_mb} MB`}</span>}
               </span>
@@ -107,6 +108,11 @@ function UsersSection({ currentUser }) {
                 <button className="btn-icon" onClick={() => setQuota(u)} disabled={busy} data-tip="Storage quota" aria-label={`Set storage quota for ${u.username}`}>
                   <AudioIcon size={16} />
                 </button>
+                {u.approved === false && (
+                  <button className="btn-approve" onClick={() => run(() => api(`/api/auth/users/${u.id}/approve`, { method: 'POST' }))} disabled={busy} data-tip="Activate this account and email the user">
+                    Approve
+                  </button>
+                )}
                 <button className="btn-icon" onClick={() => resetPassword(u)} disabled={busy} data-tip="Reset password" aria-label={`Reset password for ${u.username}`}>
                   <KeyIcon size={16} />
                 </button>

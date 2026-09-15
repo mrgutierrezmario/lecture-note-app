@@ -93,6 +93,9 @@ class Settings(BaseSettings):
     # Whether the sign-in page offers "Create account". Turn off once everyone
     # who should have an account has one.
     registration_open: bool = True
+    # With registration open: new accounts wait for an admin to approve them
+    # (admins are emailed an approve link) before they can sign in.
+    registration_approval: bool = False
 
     # Largest document/image upload accepted (MB). Uploads are read into memory.
     max_upload_mb: int = 50
