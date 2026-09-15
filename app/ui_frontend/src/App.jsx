@@ -22,6 +22,7 @@ import ResetPassword from './components/ResetPassword'
 import HistoryPanel from './components/HistoryPanel'
 import { MicIcon, LogoutIcon, PlusIcon } from './components/Icons'
 import useAuth from './hooks/useAuth'
+import { prepareMp3, downloadUrl } from './lib/mp3'
 import { useDialog } from './components/Dialog'
 import useWebSocket from './hooks/useWebSocket'
 import './App.css'
@@ -344,12 +345,25 @@ function Workspace({ user, onLogout, onUserChange }) {
       'Exporting transcript…',
     ), [sessionId, triggerDownload])
 
-  const exportAudio = useCallback(() =>
-    triggerDownload(
-      `/api/session/${sessionId}/export/audio.mp3`,
-      `recording-${sessionId.slice(0, 8)}.mp3`,
-      'Converting audio to MP3 — the download begins when it is ready…',
-    ), [sessionId, triggerDownload])
+  // MP3: build on the server with a visible progress state, then download.
+  const [mp3Progress, setMp3Progress] = useState(null) // null | { percent, phase }
+  const exportAudio = useCallback(async () => {
+    if (mp3Progress) return
+    setMp3Progress({ percent: 0, phase: 'fetching' })
+    setStatus('Preparing MP3…')
+    try {
+      const { url, filename } = await prepareMp3(sessionId, job => {
+        setMp3Progress({ percent: job.percent ?? 0, phase: job.phase })
+        setStatus(job.phase === 'converting' ? 'Converting to MP3…' : `Preparing MP3… ${job.percent ?? 0}%`)
+      })
+      downloadUrl(url, filename || `recording-${sessionId.slice(0, 8)}.mp3`)
+      setStatus('MP3 ready — check your downloads')
+    } catch (err) {
+      setStatus(`MP3 export failed: ${err.message}`)
+    } finally {
+      setMp3Progress(null)
+    }
+  }, [sessionId, mp3Progress])
 
   useEffect(() => {
     return () => {
@@ -459,6 +473,7 @@ function Workspace({ user, onLogout, onUserChange }) {
           onExport={exportNotes}
           onExportTranscript={exportTranscript}
           onExportAudio={exportAudio}
+          mp3Progress={mp3Progress}
           hasNotes={notesVersion > 0}
           hasTranscript={transcript.length > 0}
           isConnected={isConnected}

@@ -8,14 +8,14 @@ local llava and BLIP as fallbacks.
 
 import base64
 import logging
-import os
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
-from fastapi.responses import Response, StreamingResponse
+from fastapi.responses import FileResponse, Response, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import mp3_export
 from auth import CurrentUser, current_user
 from config import get_settings
 from database import get_db
@@ -187,76 +187,55 @@ async def export_transcript(session_id: str, db: AsyncSession = Depends(get_db))
     )
 
 
-@router.get("/{session_id}/export/audio.mp3")
-async def export_audio(session_id: str, db: AsyncSession = Depends(get_db)):
-    """Download the whole recording as one MP3.
-
-    Every retained chunk is fetched from object storage and concatenated with
-    ffmpeg on demand (the first chunk carries the WebM header the rest need),
-    so a long lecture takes a few seconds before the download starts.
-    """
-    import asyncio
-    import subprocess
-    import tempfile
-    from concurrent.futures import ThreadPoolExecutor
-
+async def _mp3_inputs(session_id: str, db: AsyncSession) -> tuple[list[str], str]:
+    """Object keys of the retained chunks (in order) and the download filename."""
     result = await db.execute(select(Session).where(Session.id == session_id))
     session = result.scalar_one_or_none()
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
-
     chunks_result = await db.execute(
         select(AudioChunk)
         .where(AudioChunk.session_id == session_id, AudioChunk.deleted_from_s3.is_(False))
         .order_by(AudioChunk.chunk_index)
     )
-    chunks = chunks_result.scalars().all()
-    if not chunks:
+    keys = [c.s3_key for c in chunks_result.scalars().all() if c.s3_key]
+    if not keys:
         raise HTTPException(status_code=404, detail="No audio chunks found for this session")
-
-    def build_mp3() -> bytes:
-        with tempfile.TemporaryDirectory() as tmpdir:
-            # Write chunks as a single concatenated webm
-            combined_webm = os.path.join(tmpdir, "combined.webm")
-            with open(combined_webm, "wb") as f:
-                for chunk in chunks:
-                    data = s3_client.download_chunk(chunk.s3_key)
-                    f.write(data)
-
-            mp3_path = os.path.join(tmpdir, "output.mp3")
-            result = subprocess.run(
-                [
-                    "ffmpeg",
-                    "-y",
-                    "-i",
-                    combined_webm,
-                    "-ar",
-                    "44100",
-                    "-ac",
-                    "2",
-                    "-b:a",
-                    "192k",
-                    mp3_path,
-                ],
-                capture_output=True,
-                timeout=120,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(f"ffmpeg failed: {result.stderr.decode()}")
-            with open(mp3_path, "rb") as f:
-                return f.read()
-
-    loop = asyncio.get_event_loop()
-    executor = ThreadPoolExecutor(max_workers=1)
-    try:
-        mp3_data = await loop.run_in_executor(executor, build_mp3)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Audio conversion failed: {e}")
-
     title_slug = (session.title or session_id[:8]).replace(" ", "-")
-    filename = f"recording-{title_slug[:30]}.mp3"
-    return Response(
-        content=mp3_data,
+    return keys, f"recording-{title_slug[:30]}.mp3"
+
+
+@router.post("/{session_id}/export/audio.mp3/prepare")
+async def prepare_audio(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Start building the MP3 in the background and return its progress.
+
+    The UI polls ``…/status`` and shows a spinner until ``status`` is
+    ``ready``, then fetches ``…/export/audio.mp3`` which serves instantly.
+    """
+    keys, filename = await _mp3_inputs(session_id, db)
+    return mp3_export.start(session_id, keys, filename).progress()
+
+
+@router.get("/{session_id}/export/audio.mp3/status")
+async def audio_status(session_id: str):
+    """Progress of the MP3 build for a session (``status: none`` if not started)."""
+    job = mp3_export.status(session_id)
+    return job.progress() if job else {"status": "none"}
+
+
+@router.get("/{session_id}/export/audio.mp3")
+async def export_audio(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Download the whole recording as one MP3.
+
+    Serves the prepared file when one exists; otherwise builds it first (so a
+    plain link still works, it just waits).
+    """
+    keys, filename = await _mp3_inputs(session_id, db)
+    job = await mp3_export.wait(mp3_export.start(session_id, keys, filename))
+    if job.status != "ready" or not job.path:
+        raise HTTPException(status_code=500, detail=f"Audio conversion failed: {job.error}")
+    return FileResponse(
+        job.path,
         media_type="audio/mpeg",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

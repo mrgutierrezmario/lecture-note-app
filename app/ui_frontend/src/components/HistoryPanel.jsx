@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon } from './Icons'
 import { useDialog } from './Dialog'
+import { prepareMp3, downloadUrl } from '../lib/mp3'
 
 const formatMB = bytes => `${Math.round(bytes / 1048576)} MB`
 
@@ -26,6 +27,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
   const [items, setItems] = useState(null)
   const [usage, setUsage] = useState(null)
   const [error, setError] = useState(null)
+  const [mp3Busy, setMp3Busy] = useState({}) // session id -> progress label
 
   const load = useCallback(async () => {
     try {
@@ -64,6 +66,21 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
       body: JSON.stringify({ title }),
     })
     if (response.ok) load()
+  }
+
+  const downloadMp3 = async (item) => {
+    if (mp3Busy[item.id]) return
+    setMp3Busy(b => ({ ...b, [item.id]: 'Preparing…' }))
+    try {
+      const { url, filename } = await prepareMp3(item.id, job => {
+        setMp3Busy(b => ({ ...b, [item.id]: job.phase === 'converting' ? 'Converting…' : `Preparing ${job.percent ?? 0}%` }))
+      })
+      downloadUrl(url, filename || `recording-${item.id.slice(0, 8)}.mp3`)
+    } catch (err) {
+      await dialog.notice({ title: "Couldn't build the MP3", message: err.message })
+    } finally {
+      setMp3Busy(b => { const n = { ...b }; delete n[item.id]; return n })
+    }
   }
 
   const toggleLock = async (item) => {
@@ -187,8 +204,8 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                           <span className="disabled"><NotesIcon size={14} /> Notes (none)</span>
                         )}
                         {item.has_audio ? (
-                          <a href={`/api/session/${item.id}/export/audio.mp3`} download={`recording-${item.id.slice(0, 8)}.mp3`}>
-                            <AudioIcon size={14} /> MP3
+                          <a href={`/api/session/${item.id}/export/audio.mp3`} onClick={e => { e.preventDefault(); downloadMp3(item) }}>
+                            <AudioIcon size={14} /> {mp3Busy[item.id] || 'MP3'}
                           </a>
                         ) : (
                           <span className="disabled"><AudioIcon size={14} /> MP3 (audio deleted)</span>

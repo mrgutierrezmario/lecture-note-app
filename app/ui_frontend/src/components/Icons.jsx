@@ -195,3 +195,11 @@ export const UnlockIcon = p => (
     <path d="M8 11V7a4 4 0 0 1 7.5-2" />
   </Svg>
 )
+
+
+// Indeterminate spinner: an arc that rotates via the .spin CSS animation.
+export const SpinnerIcon = p => (
+  <Svg strokeWidth={2.2} className="spin" {...p}>
+    <path d="M21 12a9 9 0 1 1-6.2-8.6" />
+  </Svg>
+)

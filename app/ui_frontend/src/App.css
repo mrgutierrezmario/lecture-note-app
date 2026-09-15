@@ -1878,3 +1878,18 @@
 .chat-provider-fallback {
   color: var(--warning);
 }
+
+/* Spinner + busy button state (MP3 export). */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spin {
+  animation: spin 0.9s linear infinite;
+}
+
+.btn-group button.btn-busy:disabled {
+  opacity: 1;
+  color: var(--primary);
+  cursor: progress;
+}
