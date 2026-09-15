@@ -38,9 +38,10 @@ optional.
 8. [Configuration reference](#configuration-reference)
 9. [Storage, retention and quotas](#storage-retention-and-quotas)
 10. [Backups](#backups)
-11. [Project layout](#project-layout)
-12. [Troubleshooting](#troubleshooting)
-13. [Contributing](#contributing)
+11. [Google Drive for users](#google-drive-for-users)
+12. [Project layout](#project-layout)
+13. [Troubleshooting](#troubleshooting)
+14. [Contributing](#contributing)
 
 ---
 
@@ -400,6 +401,36 @@ own mail account) whenever a nightly backup fails. The log is
 
 ---
 
+## Google Drive for users
+
+Each user can connect their **own** Google Drive from Settings and keep a
+copy of every lecture there: an "AI Lecture Notes" folder (or any path they
+choose, e.g. `School/Fall 2026`) with one subfolder per lecture holding
+`notes.md`, `transcript.txt` and `recording.mp3`. Saving happens
+automatically when a recording stops (switchable) or on demand from
+History → Download → **Save to Google Drive**; saving again updates the same
+files. The app asks Google only for the `drive.file` permission, so it can
+see nothing in the user's Drive except the files it created.
+
+**One-time setup (admin)** in [Google Cloud console](https://console.cloud.google.com):
+
+1. Create a project and enable the **Google Drive API** (APIs & Services → Library).
+2. **Google Auth Platform → Branding**: app name, support email, developer
+   contact. Skip the logo (a logo forces Google's verification review) and
+   leave the domain fields empty unless you own the domain.
+3. **Audience**: External. While it says *Testing*, only listed **test users**
+   can connect — add yourself to try it, then **Publish app** so anyone can.
+   With only the `drive.file` scope there is no verification review.
+4. **Clients → Create client**: type **Web application**, authorised redirect
+   URI `https://<your host>/api/drive/callback` (Settings shows the exact
+   value). Paste the Client ID and secret into **Settings → API keys → Google
+   Drive (OAuth client)**.
+
+Refresh tokens are stored encrypted with `SECRET_KEY`; disconnecting revokes
+them at Google.
+
+---
+
 ## Project layout
 
 ```
@@ -417,6 +448,7 @@ app/ui_backend/          FastAPI backend
   models.py, alembic/    schema and migrations (applied on startup)
   manage_users.py        CLI for accounts
   audio_backup.py        streams the audio bucket in/out for deploy/backup.sh
+  google_drive.py, routes/drive.py  per-user Google Drive connection and exports
 app/ui_frontend/         React + Vite frontend (src/components, src/hooks)
 deploy/                  compose.yml, Dockerfile, start.sh/stop.sh,
                          backup.sh/restore.sh/backup-setup.sh, mac/ launch agents

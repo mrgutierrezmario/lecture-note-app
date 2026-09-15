@@ -203,6 +203,23 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   still catch up on the whole backlog each pass).
 - Phone home-screen app re-added from the current URL.
 
+### Google Drive for users (2026-09-15)
+- Settings → Google Drive: connect own Google account (OAuth, `drive.file` +
+  email scopes), auto-save switch (default on), folder path with **Create
+  folder** (created immediately; nested paths OK; moving the folder in Drive
+  is fine — tracked by id), disconnect (revokes at Google).
+- Export = `notes.md`, `transcript.txt`, `recording.mp3` into
+  `<folder>/<date title>/`; re-export updates in place (`drive_files` table).
+  Background job (`google_drive.py`), History row shows a spinning "Saving to
+  Drive: <step>" badge, auto-saves report steps on the recorder status line.
+- Admin config: Settings → API keys → Google Drive (OAuth client); the
+  Google Drive section sits right under it for admins. `google_client_id` in
+  overrides, `GOOGLE_CLIENT_SECRET` in STATE_DIR/.env. Migrations 008, 009.
+- Refresh tokens Fernet-encrypted with SECRET_KEY. `index.html` now served
+  `no-cache` (stale UI after deploys was confusing).
+- Tested end to end by the operator (connected with the do-not-reply
+  account; files landed; folder creation works).
+
 ### Reboot resilience and backups (2026-09-15)
 - **FileVault turned off** on the Mac mini so automatic login works; Docker
   Desktop starts at sign-in; the whole stack came back on its own after the
@@ -280,13 +297,11 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    and was heavily throttled. Note: `drive.file` scope means rclone only sees
    the folder it created; a half-uploaded folder from the shared client was
    trashed by hand.
-9. **Per-user Google Drive export** (feature B, in progress): OAuth client
-   "Lecture Notes App" (Web type, redirect
-   `<PUBLIC_URL>/api/drive/callback`) exists in the same project. The
-   consent screen is still in **Testing** (only listed test users can
-   connect) — Branding must be completed (no logo: a logo forces the
-   verification review; no authorized domain: `ts.net` is not ours) and then
-   Audience → Publish app, so any Google account can connect.
+9. ~~Per-user Google Drive export~~ — built and working 2026-09-15 (see
+   below). Still to do on Google's side: the consent screen is in
+   **Testing** (only listed test users can connect). Finish Branding (no
+   logo — it forces the verification review; no authorized domain — `ts.net`
+   is not ours) and Audience → **Publish app** before other users try it.
 10. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
 11. stock-tracker's report emails are failing on a revoked App Password —
