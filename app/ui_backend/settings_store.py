@@ -48,6 +48,7 @@ EDITABLE: dict[str, tuple[type, bool]] = {
     "gemini_model": (str, True),
     "openai_model": (str, True),
     "google_client_id": (str, True),
+    "audio_retention_days": (int, True),
 }
 # String fields that may legitimately be cleared to "".
 _MAY_BE_EMPTY = {"google_client_id"}
@@ -149,6 +150,8 @@ def update_overrides(updates: dict[str, Any]) -> tuple[dict[str, Any], list[str]
             value = value.strip()
         if name == "notes_interval_seconds" and value < 10:
             raise ValueError("notes_interval_seconds must be at least 10")
+        if name == "audio_retention_days" and value < 1:
+            raise ValueError("audio_retention_days must be at least 1")
 
         overrides[name] = value
         applied[name] = value

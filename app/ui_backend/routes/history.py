@@ -128,6 +128,7 @@ async def storage_usage(
         quota_bytes=limit,
         locked_count=await _locked_count(db, user.id),
         lock_limit=0 if user.is_admin else get_settings().max_locked_lectures,
+        retention_days=get_settings().audio_retention_days,
     )  # 0 = unlimited
 
 

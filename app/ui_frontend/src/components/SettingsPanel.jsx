@@ -97,6 +97,7 @@ function SettingsPanel({ user, onUserChange }) {
         whisper_model: data.whisper_model,
         notes_interval_seconds: data.notes_interval_seconds,
         storage_quota_mb: data.storage_quota_mb,
+        audio_retention_days: data.audio_retention_days,
         registration_open: data.registration_open,
         max_locked_lectures: data.max_locked_lectures,
       })
@@ -140,6 +141,7 @@ function SettingsPanel({ user, onUserChange }) {
         whisper_model: data.whisper_model,
         notes_interval_seconds: data.notes_interval_seconds,
         storage_quota_mb: data.storage_quota_mb,
+        audio_retention_days: data.audio_retention_days,
         registration_open: data.registration_open,
         max_locked_lectures: data.max_locked_lectures,
       })
@@ -501,6 +503,18 @@ function SettingsPanel({ user, onUserChange }) {
             </label>
 
             <label className="settings-field">
+              <span>Audio retention (days)</span>
+              <input
+                type="number"
+                min="1"
+                value={draft.audio_retention_days}
+                onChange={e => setDraft({ ...draft, audio_retention_days: Number(e.target.value) })}
+              />
+            </label>
+            <p className="settings-note">
+              Recordings older than this are deleted automatically (transcripts and notes stay). Kept lectures are exempt.
+            </p>
+            <label className="settings-field">
               <span>Audio storage per user (MB)</span>
               <input
                 type="number"
@@ -519,11 +533,11 @@ function SettingsPanel({ user, onUserChange }) {
               />
             </label>
             <p className="settings-note">
-              A kept lecture's audio skips the 14-day cleanup and it can't be deleted until unlocked. 0 disables keeping for regular users. Admins are never limited.
+              A kept lecture's audio skips the {draft.audio_retention_days}-day cleanup and it can't be deleted until unlocked. 0 disables keeping for regular users. Admins are never limited.
             </p>
             <p className="settings-note">
               Retained audio only — transcripts and notes never count. 0 means unlimited.
-              About 5 MB per lecture hour; audio is also deleted after 14 days. Per-user overrides are set under Users.
+              About 5 MB per lecture hour; audio is also deleted after {draft.audio_retention_days} days. Per-user overrides are set under Users.
             </p>
 
             <div className="settings-actions">

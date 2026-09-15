@@ -36,6 +36,7 @@ _OVERRIDE_FIELDS = (
     "gemini_model",
     "openai_model",
     "google_client_id",
+    "audio_retention_days",
 )
 
 
@@ -77,6 +78,7 @@ async def _current(restart_required: list[str] | None = None) -> SettingsRespons
         whisper_model=value("whisper_model"),
         notes_interval_seconds=value("notes_interval_seconds"),
         storage_quota_mb=value("storage_quota_mb"),
+        audio_retention_days=value("audio_retention_days"),
         registration_open=value("registration_open"),
         mail_configured=mailer.configured(),
         max_locked_lectures=value("max_locked_lectures"),

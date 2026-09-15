@@ -87,7 +87,7 @@ Browser (React) ──WebSocket: 5 s WebM chunks──▶ FastAPI backend
                                                        ├─ text provider (Ollama/…)    notes on an interval, chat
                                                        ├─ vision provider (…/llava)   slides & images
                                                        ├─ Postgres                    sessions, transcripts, notes, users
-                                                       └─ MinIO (S3)                  audio chunks (14-day retention)
+                                                       └─ MinIO (S3)                  audio chunks (deleted after N days)
 ```
 
 - The browser records with `MediaRecorder` and streams 5-second chunks over a
@@ -99,7 +99,8 @@ Browser (React) ──WebSocket: 5 s WebM chunks──▶ FastAPI backend
   notes.
 - Uploaded PDFs/PowerPoint/Word files are text-extracted; images are read by a
   vision model. All of it becomes context for "Ask about the lecture".
-- Audio is deleted after 14 days (transcripts and notes are kept) unless the
+- Audio is deleted after a configurable number of days — 14 by default,
+  **Settings → Audio retention** — (transcripts and notes are kept) unless the
   user marks a lecture as *kept*.
 
 ---
@@ -312,7 +313,7 @@ and re-run `deploy/start.sh`. On a 16 GB machine, the launch agent in
 | Tab audio | Also record a browser tab (Zoom in a browser, a video) alongside the mic — desktop only |
 | Mute mic | Pause the microphone without stopping the recording |
 | Don't keep audio | Transcribe without storing the recording: no MP3 later, no quota used |
-| Keep (lock) in History | Exempt a lecture from the 14-day audio cleanup and from deletion |
+| Keep (lock) in History | Exempt a lecture from the audio cleanup and from deletion |
 
 **Zoom on macOS:** setting Zoom's speaker to BlackHole silences your own
 output. Create a *Multi-Output Device* in Audio MIDI Setup containing both
@@ -356,7 +357,7 @@ runtime from the admin Settings panel and persist in the app-state volume.
 | `STORAGE_QUOTA_MB` *(panel)* | `500` | Retained audio per user (0 = unlimited) |
 | `MAX_LOCKED_LECTURES` *(panel)* | `5` | Kept lectures per regular user (admins unlimited) |
 | `MAX_UPLOAD_MB` | `50` | Largest document/image upload |
-| `AUDIO_RETENTION_DAYS` | `14` | Audio deleted after this many days |
+| `AUDIO_RETENTION_DAYS` *(panel)* | `14` | Audio deleted after this many days (Settings → Audio retention) |
 | `REGISTRATION_OPEN` *(panel)* | `true` | Whether the sign-in page offers "Create account" |
 | `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_REPLY_TO` | — | SMTP (Gmail App Password) for reset emails |
 | `PUBLIC_URL` | — | Base URL used in emailed links |

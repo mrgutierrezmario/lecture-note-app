@@ -26,6 +26,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
   const [open, setOpen] = useState(false)
   const [items, setItems] = useState(null)
   const [usage, setUsage] = useState(null)
+  const retentionDays = usage?.retention_days ?? 14
   const [error, setError] = useState(null)
   const [mp3Busy, setMp3Busy] = useState({}) // session id -> progress label
   const [driveBusy, setDriveBusy] = useState({}) // session id -> step label
@@ -258,7 +259,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                     <button
                       className={`btn-icon${item.locked ? ' btn-icon-active' : ''}`}
                       onClick={() => toggleLock(item)}
-                      data-tip={item.locked ? 'Unlock (allow deletion and 14-day cleanup)' : 'Keep (protect from deletion and 14-day cleanup)'}
+                      data-tip={item.locked ? `Unlock (allow deletion and ${retentionDays}-day cleanup)` : `Keep (protect from deletion and ${retentionDays}-day cleanup)`}
                       aria-label={item.locked ? 'Unlock lecture' : 'Keep lecture'}
                     >
                       {item.locked ? <LockIcon size={16} /> : <UnlockIcon size={16} />}
@@ -278,7 +279,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
               ? 'This view includes every lecture on the system. '
               : 'This view includes the lectures you have recorded. '}
             Transcripts and notes are retained indefinitely. Audio recordings are removed automatically
-            after 14 days and count toward the storage shown above. To preserve a recording, download the
+            after {retentionDays} days and count toward the storage shown above. To preserve a recording, download the
             MP3 or mark the lecture as kept — kept lectures are excluded from the cleanup and cannot be
             deleted until unlocked.
           </p>

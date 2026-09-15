@@ -164,6 +164,7 @@ class SettingsResponse(BaseModel):
     whisper_model: str
     notes_interval_seconds: int
     storage_quota_mb: int
+    audio_retention_days: int
     registration_open: bool
     mail_configured: bool
     max_locked_lectures: int
@@ -201,6 +202,7 @@ class SettingsUpdate(BaseModel):
     whisper_model: Optional[str] = None
     notes_interval_seconds: Optional[int] = None
     storage_quota_mb: Optional[int] = None
+    audio_retention_days: Optional[int] = None
     registration_open: Optional[bool] = None
     max_locked_lectures: Optional[int] = None
     text_provider: Optional[str] = None
@@ -332,6 +334,7 @@ class StorageUsage(BaseModel):
     quota_bytes: int  # 0 = unlimited
     locked_count: int = 0
     lock_limit: int = 0  # 0 = unlimited (admins)
+    retention_days: int = 14  # audio is deleted after this many days unless kept
 
 
 # ── History ───────────────────────────────────────────────────────────────────

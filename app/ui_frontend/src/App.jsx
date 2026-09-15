@@ -427,8 +427,14 @@ function Workspace({ user, onLogout, onUserChange }) {
     }
   }, [])
 
+  // Which lecture is on screen; lets a slow fetch for one lecture be ignored
+  // once the user has moved on (opened another, or started a new one).
+  const currentSessionRef = useRef(null)
+  currentSessionRef.current = sessionId
+
   const openPastLecture = useCallback(async (item) => {
     if (isRecording) return
+    currentSessionRef.current = item.id
     setSessionId(item.id)
     setViewingPast(true)
     setTitle(item.title || '')
@@ -441,6 +447,7 @@ function Workspace({ user, onLogout, onUserChange }) {
         fetch(`/api/session/${item.id}/transcript`),
         fetch(`/api/session/${item.id}/notes`),
       ])
+      if (currentSessionRef.current !== item.id) return // user moved on meanwhile
       if (t.ok) {
         const data = await t.json()
         if (data.text) setTranscript([{ id: `${item.id}-full`, text: data.text }])
@@ -450,6 +457,7 @@ function Workspace({ user, onLogout, onUserChange }) {
         setNotes(data.notes_md || '')
         setNotesVersion(data.version || 0)
       }
+      if (currentSessionRef.current !== item.id) return
       setStatus(`Viewing lecture from ${new Date(item.created_at).toLocaleDateString()}`)
     } catch (err) {
       setStatus(`Could not load lecture: ${err.message}`)
@@ -458,7 +466,9 @@ function Workspace({ user, onLogout, onUserChange }) {
 
   const startNewLecture = useCallback(() => {
     if (isRecording) return
-    setSessionId(uuidv4())
+    const fresh = uuidv4()
+    currentSessionRef.current = fresh
+    setSessionId(fresh)
     setViewingPast(false)
     setTitle('')
     setTranscript([])
