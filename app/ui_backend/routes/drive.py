@@ -31,6 +31,7 @@ def _status(link: DriveLink | None) -> DriveStatus:
         connected=link is not None,
         email=link.google_email if link else None,
         auto_export=bool(link.auto_export) if link else False,
+        folder_name=link.folder_name if link else "AI Lecture Notes",
         folder_url=(
             f"https://drive.google.com/drive/folders/{link.folder_id}"
             if link and link.folder_id
@@ -91,11 +92,22 @@ async def update(
     user: CurrentUser = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    """Turn automatic saving after each recording on or off."""
+    """Turn automatic saving on or off, or change the folder path in Drive.
+
+    A new path takes effect for the next save (the folder is created then);
+    lectures already saved keep updating where they are."""
     link = await db.get(DriveLink, user.id)
     if link is None:
         raise HTTPException(status_code=400, detail="Google Drive is not connected")
-    link.auto_export = body.auto_export
+    if body.auto_export is not None:
+        link.auto_export = body.auto_export
+    if body.folder_name is not None:
+        name = google_drive.clean_folder_path(body.folder_name)
+        if not name:
+            raise HTTPException(status_code=422, detail="Folder name can't be empty")
+        if name != link.folder_name:
+            link.folder_name = name
+            link.folder_id = None  # resolved (created) on the next export
     await db.commit()
     return _status(link)
 

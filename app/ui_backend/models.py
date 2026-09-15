@@ -194,6 +194,8 @@ class DriveLink(Base):
     )
     google_email = Column(String(254), nullable=True)
     refresh_token = Column(Text, nullable=False)
+    # Path the user wants, e.g. "School/Fall 2026"; created on first export.
+    folder_name = Column(String(255), nullable=False, default="AI Lecture Notes")
     folder_id = Column(String(128), nullable=True)
     auto_export = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)

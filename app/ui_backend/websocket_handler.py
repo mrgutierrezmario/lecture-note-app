@@ -334,7 +334,7 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                             },
                         )
                         # Owner opted in to "save to my Google Drive after each lecture".
-                        asyncio.create_task(google_drive.auto_export(session_id))
+                        asyncio.create_task(google_drive.auto_export(session_id, manager.broadcast))
 
                 except json.JSONDecodeError:
                     logger.warning("Received invalid JSON")

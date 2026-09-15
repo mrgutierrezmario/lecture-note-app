@@ -363,10 +363,12 @@ class DriveStatus(BaseModel):
     connected: bool
     email: Optional[str] = None
     auto_export: bool = False
+    folder_name: str = "AI Lecture Notes"
     folder_url: Optional[str] = None
 
 
 class DriveUpdate(BaseModel):
-    """Toggle automatic saving after each recording."""
+    """Change automatic saving and/or the folder path in Drive."""
 
-    auto_export: bool
+    auto_export: Optional[bool] = None
+    folder_name: Optional[str] = None

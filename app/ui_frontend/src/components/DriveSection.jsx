@@ -5,7 +5,7 @@
  * (/api/drive/connect → consent → /api/drive/callback → back here).
  */
 import { useState, useEffect, useCallback } from 'react'
-import { CheckIcon, DriveIcon } from './Icons'
+import { CheckIcon, DriveIcon, SpinnerIcon } from './Icons'
 import { useDialog } from './Dialog'
 
 // `refreshKey` changes when an admin saves/clears the OAuth client, so the section re-checks availability.
@@ -14,12 +14,16 @@ function DriveSection({ isAdmin, refreshKey }) {
   const [status, setStatus] = useState(null) // { available, connected, email, auto_export, folder_url }
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
+  const [folder, setFolder] = useState('') // draft of the folder path
+  const [folderSaved, setFolderSaved] = useState(false)
 
   const load = useCallback(async () => {
     try {
       const response = await fetch('/api/drive')
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      setStatus(await response.json())
+      const data = await response.json()
+      setStatus(data)
+      setFolder(data.folder_name || '')
     } catch (err) {
       setError(`Could not load Google Drive status: ${err.message}`)
     }
@@ -27,20 +31,32 @@ function DriveSection({ isAdmin, refreshKey }) {
 
   useEffect(() => { load() }, [load, refreshKey])
 
-  const setAuto = async (auto_export) => {
+  const patch = async (body) => {
     setBusy(true)
+    setError(null)
     try {
       const response = await fetch('/api/drive', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ auto_export }),
+        body: JSON.stringify(body),
       })
-      if (!response.ok) throw new Error(`HTTP ${response.status}`)
-      setStatus(await response.json())
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`)
+      setStatus(data)
+      setFolder(data.folder_name || '')
+      return true
     } catch (err) {
       setError(err.message)
+      return false
     } finally {
       setBusy(false)
+    }
+  }
+  const setAuto = (auto_export) => patch({ auto_export })
+  const saveFolder = async () => {
+    if (await patch({ folder_name: folder })) {
+      setFolderSaved(true)
+      setTimeout(() => setFolderSaved(false), 3000)
     }
   }
 
@@ -117,7 +133,25 @@ function DriveSection({ isAdmin, refreshKey }) {
           <p className="settings-note settings-note-full">
             You can also save any lecture from History → Download → Save to Google Drive. Saving again updates the same files.
           </p>
+          <label className="settings-field">
+            <span>Folder in Drive</span>
+            <input
+              type="text"
+              value={folder}
+              placeholder="AI Lecture Notes"
+              onChange={e => setFolder(e.target.value)}
+              onKeyDown={e => { if (e.key === 'Enter') saveFolder() }}
+            />
+          </label>
+          <p className="settings-note">
+            Use "/" for a path, e.g. <code>School/Fall 2026</code>. Applies to the next save; lectures already
+            saved keep updating where they are. You can also move the folder anywhere in your Drive — the app
+            follows it.
+          </p>
           <div className="settings-actions">
+            <button disabled={busy || !folder.trim() || folder.trim() === status.folder_name} onClick={saveFolder}>
+              {folderSaved ? 'Folder saved' : 'Save folder'}
+            </button>
             <button className="btn-secondary" disabled={busy} onClick={disconnect}>Disconnect</button>
           </div>
         </>

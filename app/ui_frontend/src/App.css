@@ -1666,6 +1666,10 @@
   cursor: default;
 }
 
+.history-tag-busy {
+  color: var(--primary);
+}
+
 .history-download-menu .history-menu-divider {
   margin-top: 4px;
   border-top: 1px solid var(--border);

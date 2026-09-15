@@ -5,7 +5,7 @@
  * lectures with an owner tag.
  */
 import { useState, useEffect, useCallback } from 'react'
-import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon } from './Icons'
+import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon, SpinnerIcon } from './Icons'
 import { useDialog } from './Dialog'
 import { prepareMp3, downloadUrl } from '../lib/mp3'
 
@@ -74,13 +74,13 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
   // Save notes/transcript/MP3 into the owner's Google Drive; poll until done.
   const saveToDrive = async (item) => {
     if (driveBusy[item.id]) return
-    setDriveBusy(b => ({ ...b, [item.id]: 'Starting…' }))
+    setDriveBusy(b => ({ ...b, [item.id]: 'starting' }))
     try {
       let response = await fetch(`/api/session/${item.id}/drive`, { method: 'POST' })
       let data = await response.json().catch(() => ({}))
       if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`)
       while (data.status === 'running') {
-        setDriveBusy(b => ({ ...b, [item.id]: `${data.step}…` }))
+        setDriveBusy(b => ({ ...b, [item.id]: data.step }))
         await new Promise(r => setTimeout(r, 1500))
         response = await fetch(`/api/session/${item.id}/drive/status`)
         data = await response.json()
@@ -214,7 +214,9 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                       {item.notes_version > 0 && <span className="history-tag"><NotesIcon size={12} /> notes</span>}
                       {item.has_audio && <span className="history-tag"><AudioIcon size={12} /> audio</span>}
                       {item.locked && <span className="history-tag history-tag-kept"><LockIcon size={12} /> kept</span>}
-                      {item.drive_saved_at && <span className="history-tag" data-tip={`Saved to Google Drive ${formatDate(item.drive_saved_at)}`}><DriveIcon size={12} /> Drive</span>}
+                      {driveBusy[item.id]
+                        ? <span className="history-tag history-tag-busy"><SpinnerIcon size={12} /> Saving to Drive: {driveBusy[item.id]}</span>
+                        : item.drive_saved_at && <span className="history-tag" data-tip={`Saved to Google Drive ${formatDate(item.drive_saved_at)}`}><DriveIcon size={12} /> Drive</span>}
                       {user.is_admin && item.owner && <span className="history-tag history-owner">{item.owner}</span>}
                     </span>
                   </button>
@@ -242,9 +244,13 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                           <span className="disabled"><AudioIcon size={14} /> MP3 (audio deleted)</span>
                         )}
                         {drive?.available && (drive.connected || user.is_admin) && (
-                          <a href="#drive" className="history-menu-divider" onClick={e => { e.preventDefault(); saveToDrive(item) }}>
-                            <DriveIcon size={14} /> {driveBusy[item.id] || (item.drive_saved_at ? 'Update in Google Drive' : 'Save to Google Drive')}
-                          </a>
+                          driveBusy[item.id]
+                            ? <span className="disabled history-menu-divider"><SpinnerIcon size={14} /> Saving to Drive…</span>
+                            : (
+                              <a href="#drive" className="history-menu-divider" onClick={e => { e.preventDefault(); e.currentTarget.closest('details').removeAttribute('open'); saveToDrive(item) }}>
+                                <DriveIcon size={14} /> {item.drive_saved_at ? 'Update in Google Drive' : 'Save to Google Drive'}
+                              </a>
+                            )
                         )}
                       </div>
                     </details>

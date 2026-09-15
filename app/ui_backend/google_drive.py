@@ -24,7 +24,7 @@ import time
 import uuid
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Optional
+from typing import Awaitable, Callable, Optional
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -48,6 +48,7 @@ UPLOAD_API = "https://www.googleapis.com/upload/drive/v3"
 SCOPES = "https://www.googleapis.com/auth/drive.file openid email"
 FOLDER_MIME = "application/vnd.google-apps.folder"
 ROOT_FOLDER_NAME = "AI Lecture Notes"
+StatusCallback = Callable[[str, dict], Awaitable[None]]
 STATE_TTL = 600  # seconds a sign-in attempt stays valid
 
 
@@ -67,6 +68,16 @@ def redirect_uri() -> str:
     """Where Google sends the user back; must match the OAuth client exactly."""
     base = settings.public_url.rstrip("/")
     return f"{base}/api/drive/callback"
+
+
+def clean_folder_path(raw: str) -> str:
+    """Normalise a user-typed path: trim, drop empty parts and unsafe characters."""
+    parts = []
+    for part in raw.replace("\\", "/").split("/"):
+        part = "".join(ch for ch in part if ch not in ':*?"<>|').strip()
+        if part:
+            parts.append(part[:100])
+    return "/".join(parts)[:255]
 
 
 # ── Token encryption ──────────────────────────────────────────────────────────
@@ -229,6 +240,13 @@ class Drive:
         """Find-or-create a folder."""
         return await self.find_folder(name, parent) or await self.create_folder(name, parent)
 
+    async def ensure_path(self, path: str) -> str:
+        """Find-or-create each level of ``a/b/c`` under the Drive root; returns the last id."""
+        parent: Optional[str] = None
+        for part in path.split("/"):
+            parent = await self.ensure_folder(part, parent)
+        return parent or await self.ensure_folder(ROOT_FOLDER_NAME, None)
+
     async def upload(
         self, name: str, mime: str, content: bytes, parent: str, existing: Optional[str]
     ) -> str:
@@ -268,6 +286,7 @@ class Job:
     session_id: str
     status: str = "running"  # running | done | error
     step: str = "Preparing"
+    notify: Optional[StatusCallback] = None  # broadcast to the live recorder
     files: dict[str, str] = field(default_factory=dict)  # kind -> Drive file id
     folder_url: Optional[str] = None
     error: Optional[str] = None
@@ -292,19 +311,21 @@ def status(session_id: str) -> Optional[Job]:
     return _jobs.get(session_id)
 
 
-def start(session_id: str) -> Job:
+def start(session_id: str, notify: Optional[StatusCallback] = None) -> Job:
     """Kick off an export unless one is already running."""
     job = _jobs.get(session_id)
     if job and job.status == "running":
         return job
-    job = Job(session_id=session_id)
+    job = Job(session_id=session_id, notify=notify)
     _jobs[session_id] = job
     asyncio.create_task(_run(job))
     return job
 
 
-async def auto_export(session_id: str) -> None:
-    """Export after a recording stops, if the owner turned that on."""
+async def auto_export(session_id: str, notify: Optional[StatusCallback] = None) -> None:
+    """Export after a recording stops, if the owner turned that on.
+
+    ``notify`` (the websocket broadcast) lets the recorder show progress."""
     async with AsyncSessionLocal() as db:
         session = await db.get(Session, session_id)
         if session is None or session.user_id is None:
@@ -312,7 +333,18 @@ async def auto_export(session_id: str) -> None:
         link = await db.get(DriveLink, session.user_id)
     if link and link.auto_export:
         logger.info("Auto-saving session %s to Google Drive", session_id)
-        start(session_id)
+        start(session_id, notify)
+
+
+async def _set_step(job: Job, step: str) -> None:
+    job.step = step
+    if job.notify:
+        try:
+            await job.notify(
+                job.session_id, {"type": "status", "message": f"Saving to Google Drive: {step}…"}
+            )
+        except Exception:  # noqa: BLE001 — a dead socket must not fail the export
+            pass
 
 
 def _slug(title: Optional[str], created_at: datetime) -> str:
@@ -342,10 +374,10 @@ async def _run(job: Job) -> None:
             notes, transcript, keys = await _contents(db, session)
             drive = Drive(await _access_token(decrypt(link.refresh_token)))
 
-            job.step = "Creating folder"
+            await _set_step(job, "creating folder")
             root = link.folder_id
             if not root or not await drive.exists(root):
-                root = await drive.ensure_folder(ROOT_FOLDER_NAME, None)
+                root = await drive.ensure_path(link.folder_name or ROOT_FOLDER_NAME)
                 link.folder_id = root
                 await db.commit()
             folder_name = _slug(session.title, session.created_at)
@@ -355,7 +387,7 @@ async def _run(job: Job) -> None:
             job.folder_url = f"https://drive.google.com/drive/folders/{folder}"
 
             async def put(kind: str, name: str, mime: str, content: bytes) -> None:
-                job.step = f"Uploading {name}"
+                await _set_step(job, f"uploading {name}")
                 file_id = await drive.upload(
                     name,
                     mime,
@@ -380,7 +412,7 @@ async def _run(job: Job) -> None:
             if notes:
                 await put("notes", "notes.md", "text/markdown", notes.encode())
             if keys:
-                job.step = "Converting audio to MP3"
+                await _set_step(job, "converting audio to MP3")
                 mp3 = await mp3_export.wait(mp3_export.start(session.id, keys, "recording.mp3"))
                 if mp3.status != "ready" or not mp3.path:
                     raise DriveError(f"Audio conversion failed: {mp3.error}")
@@ -389,9 +421,15 @@ async def _run(job: Job) -> None:
         job.status = "done"
         job.step = "Saved"
         logger.info("Session %s saved to Google Drive (%s)", job.session_id, list(job.files))
+        if job.notify:
+            await job.notify(job.session_id, {"type": "status", "message": "Saved to Google Drive"})
     except DriveError as e:
         job.status, job.error = "error", str(e)
         logger.warning("Drive export failed for %s: %s", job.session_id, e)
+        if job.notify:
+            await job.notify(
+                job.session_id, {"type": "status", "message": f"Google Drive save failed: {e}"}
+            )
     except Exception as e:  # noqa: BLE001 — any failure is reported to the UI
         job.status, job.error = "error", f"{type(e).__name__}: {e}"[:300]
         logger.exception("Drive export crashed for %s", job.session_id)
