@@ -92,10 +92,36 @@ def _gemini_text(data: dict) -> str:
 
 @dataclass
 class Generation:
-    """A text result and the ``provider/model`` label that produced it."""
+    """A text result and the ``provider/model`` label that produced it.
+
+    When a cloud provider failed and Ollama answered instead, ``fallback``
+    names the provider that failed and ``fallback_reason`` says why, in plain
+    words for the UI.
+    """
 
     text: str
     provider: str  # e.g. "gemini/gemini-2.5-flash", "ollama/llama3"
+    fallback: str | None = None  # e.g. "gemini"
+    fallback_reason: str | None = None  # e.g. "quota or rate limit exceeded"
+
+
+def describe_failure(exc: Exception) -> str:
+    """Turn a provider exception into a short reason a user can act on."""
+    msg = str(exc)
+    low = msg.lower()
+    if "429" in msg or "quota" in low or "rate" in low:
+        return "quota or rate limit exceeded"
+    if "503" in msg or "overloaded" in low or "high demand" in low:
+        return "temporarily overloaded"
+    if "credit" in low:
+        return "no API credits"
+    if "401" in msg or "403" in msg or "api key" in low or "permission_denied" in low:
+        return "API key rejected"
+    if "404" in msg or "not found" in low:
+        return "model not available"
+    if "timeout" in low or "timed out" in low:
+        return "timed out"
+    return "unavailable"
 
 
 def key_for(provider: str) -> str:
@@ -312,7 +338,10 @@ async def generate_text(
         logger.warning(
             "%s failed (%s: %s) — falling back to ollama", provider, type(e).__name__, str(e)[:200]
         )
-        return await _ollama(prompt, max_tokens, temperature, timeout)
+        result = await _ollama(prompt, max_tokens, temperature, timeout)
+        result.fallback = provider
+        result.fallback_reason = describe_failure(e)
+        return result
 
 
 async def test_provider(provider: str) -> tuple[bool, str]:

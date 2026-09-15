@@ -1866,3 +1866,15 @@
 .btn-icon:disabled {
   opacity: 0.35;
 }
+
+/* Which model answered a chat message; amber when it was a fallback. */
+.chat-provider {
+  display: block;
+  margin-top: 6px;
+  font-size: 11px;
+  color: var(--faint);
+}
+
+.chat-provider-fallback {
+  color: var(--warning);
+}

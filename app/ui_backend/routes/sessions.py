@@ -614,6 +614,7 @@ Instructions:
   "I don't see that covered in the lecture materials"
 - Do not make up information not present in the content above"""
 
+    fallback = None
     try:
         from providers import generate_text
 
@@ -622,7 +623,9 @@ Instructions:
             result.text or "Sorry, I could not generate an answer at this time.",
             result.provider,
         )
+        if result.fallback:
+            fallback = f"{result.fallback.capitalize()} unavailable: {result.fallback_reason}"
     except Exception as e:
         answer, provider = f"Error connecting to AI: {str(e)}", "none"
 
-    return ChatResponse(answer=answer, session_id=session_id, provider=provider)
+    return ChatResponse(answer=answer, session_id=session_id, provider=provider, fallback=fallback)

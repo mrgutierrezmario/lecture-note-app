@@ -6,6 +6,21 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { ChatIcon, SendIcon, CloseIcon } from './Icons'
 
+// "gemini/gemini-3.6-flash" → "Gemini", "ollama/llama3" → "local model (llama3)", etc.
+const providerLabel = (p) => {
+  const [name, model] = String(p).split('/')
+  switch (name) {
+    case 'gemini': return 'Gemini'
+    case 'claude': return 'Claude'
+    case 'openai': return 'OpenAI'
+    case 'ollama': return `local model${model ? ` (${model})` : ''}`
+    case 'llava': return 'local vision model (llava)'
+    case 'blip': return 'local caption model'
+    case 'no-credits': return 'no API credits'
+    default: return name
+  }
+}
+
 function ChatPane({ sessionId }) {
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -71,7 +86,12 @@ function ChatPane({ sessionId }) {
         const detail = data?.detail || `Server error (${response.status})`
         setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${detail}` }])
       } else {
-        setMessages(prev => [...prev, { role: 'assistant', text: data.answer || 'No response received.' }])
+        setMessages(prev => [...prev, {
+          role: 'assistant',
+          text: data.answer || 'No response received.',
+          provider: data.provider,
+          fallback: data.fallback,
+        }])
       }
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${err.message}` }])
@@ -108,6 +128,12 @@ function ChatPane({ sessionId }) {
               <img src={msg.imageUrl} alt="pasted" className="chat-image-preview" />
             )}
             <p>{msg.text !== '(image)' ? msg.text : ''}</p>
+            {msg.role === 'assistant' && msg.provider && (
+              <span className={`chat-provider${msg.fallback ? ' chat-provider-fallback' : ''}`}>
+                {providerLabel(msg.provider)}
+                {msg.fallback && <> — {msg.fallback}</>}
+              </span>
+            )}
           </div>
         ))}
         {isLoading && (
