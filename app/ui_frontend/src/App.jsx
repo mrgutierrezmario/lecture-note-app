@@ -85,7 +85,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     window.history.replaceState({}, '', window.location.pathname)
     if (verified) {
       dialog.notice(verified === '1'
-        ? { title: 'Email confirmed', message: 'Your account is ready — welcome to AI Lecture Notes.' }
+        ? { title: 'Email confirmed', message: 'Your account is ready! — Welcome to AI Lecture Notes.' }
         : { title: 'Link expired', message: 'That confirmation link is no longer valid. Sign in and use "Send the link again" to get a fresh one.' })
       return
     }
