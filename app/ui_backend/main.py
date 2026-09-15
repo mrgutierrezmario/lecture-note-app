@@ -107,7 +107,11 @@ if (UI_DIST / "index.html").exists():
         candidate = (UI_DIST / path).resolve()
         if path and candidate.is_relative_to(UI_DIST) and candidate.is_file():
             return FileResponse(candidate)
-        return FileResponse(UI_DIST / "index.html")
+        # index.html must never be cached: it names the hashed JS/CSS bundles,
+        # and a stale copy keeps showing the previous release after a deploy.
+        return FileResponse(
+            UI_DIST / "index.html", headers={"Cache-Control": "no-cache, must-revalidate"}
+        )
 
     logger.info("Serving built UI from %s", UI_DIST)
 else:
