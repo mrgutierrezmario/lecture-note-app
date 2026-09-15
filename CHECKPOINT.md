@@ -242,10 +242,19 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   commit — history rewritten (2 commits) and force-pushed, verified clean.
 - **Chat**: replies render Markdown; the last 8 exchanges are sent with each
   question so follow-ups ("when is that due?") resolve.
-- **Privacy policy** at `/privacy` (public, no sign-in): what is stored,
-  AI providers, Google Drive scope/tokens/revocation, backups, controls,
-  contact (`SUPPORT_EMAIL` in `deploy/.env`, blank = generic). Linked from
-  the sign-in page and the Settings footer.
+- **Privacy policy** at `/privacy` (public, no sign-in): formal, numbered
+  sections — what is stored, AI providers, Google Drive scope/tokens/
+  revocation, backups, choices, contact. Contact line comes from
+  `SUPPORT_EMAIL` in `deploy/.env` (set to the business address; blank =
+  generic wording in the public repo).
+- **User guide** at `/guide` (public): 11 sections — getting started,
+  recording controls, online classes/calls (speakerphone rule), slides,
+  asking questions (follow-ups, pasted images), downloads, History/keep/
+  quota/retention, Google Drive, phone install, account, privacy. Both
+  static pages share `public/pages.css`; `/name` serves `name.html`.
+- **Links**: sign-in page footer (guide · privacy), Settings footer, and a
+  **?** icon button in the app bar right of Settings (opens the guide in a
+  new tab so a recording is never interrupted).
 - **Audio retention** is now a live admin setting (Settings → Audio
   retention); set to **7 days** on this server. UI texts read the value.
 - **Fixed**: stale transcript/notes/status painted over a new session when
