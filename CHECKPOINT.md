@@ -220,6 +220,33 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Hardening and polish (2026-09-15, evening)
+- **Sign-up closed** (Settings → Sign-up off; admins add accounts).
+- **Audio buffering across disconnects**: the browser queues chunks (and
+  start/stop, in order) while the socket is down and replays them on
+  reconnect; status pill shows "Buffering Ns"; a `resume` message restores
+  the server's in-memory per-session options. Reconnect backoff 1 s → 15 s.
+- **Sign-in rate limiting** (`ratelimit.py`): 5 failures / 10 min per client
+  address *and* per account → 60 s lockout, doubling, 429 + Retry-After;
+  forgot-password and resend-verification limited per address. Verified the
+  Funnel passes real client IPs (so it is per-client, not global).
+- **Email verification** for self-registration (migration 010:
+  `users.email_verified`, `password_resets.purpose`): 202 + emailed link
+  (24 h) that signs the user in; login refused (403 + resend) until then;
+  admin-created accounts and password resets count as verified; "unverified"
+  badge in Users. Tested end to end with a plus-address; test user deleted.
+- **README screenshots**: hero (dark lecture with transcript, notes and a
+  follow-up chat question) + collapsible gallery. Raw captures live in
+  `design/screenshots/raw/` (git-ignored: browser chrome shows personal
+  tabs); `Untitled*.pdf` ignored everywhere after two raw PDFs slipped into a
+  commit — history rewritten (2 commits) and force-pushed, verified clean.
+- **Chat**: replies render Markdown; the last 8 exchanges are sent with each
+  question so follow-ups ("when is that due?") resolve.
+- **Audio retention** is now a live admin setting (Settings → Audio
+  retention); set to **7 days** on this server. UI texts read the value.
+- **Fixed**: stale transcript/notes/status painted over a new session when
+  the user moved on before a past lecture finished loading.
+
 ### Reboot resilience and backups (2026-09-15)
 - **FileVault turned off** on the Mac mini so automatic login works; Docker
   Desktop starts at sign-in; the whole stack came back on its own after the
@@ -276,16 +303,15 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
 1. Optional: **Claude API credits** at console.anthropic.com → Plans &
    Billing. Claude is the second link in the cascade; without credits it is
    skipped in about a second and the local model answers instead.
-2. **Turn off Settings → Sign-up** once the intended users have accounts
-   (or build invite codes / admin approval — under discussion).
+2. ~~Turn off Settings → Sign-up~~ — closed 2026-09-15 (admins add
+   accounts; invite codes not built).
 3. ~~Re-add the phone home-screen app from the new URL~~ — done 2026-09-15.
 4. ~~Flip the GitHub repository to public~~ — done 2026-09-14; description,
    topics and badges set. Ask GitHub Support to GC old commits if desired.
 5. ~~Notes interval 120 s~~ — set 2026-09-15. Pay-as-you-go on the Google AI
    project is still the only way to remove the free-tier daily caps.
-6. Known limitation: chunks sent while the server itself restarts (deploy,
-   crash) are dropped by the browser — ~20 s of audio per restart mid-lecture.
-   Fix would be client-side buffering during disconnects; not done.
+6. ~~Chunks dropped while the server restarts~~ — client-side buffering
+   built 2026-09-15 (up to 30 min queued in the browser).
 7. ~~Reboot behaviour~~ — FileVault off, auto-login + Docker at sign-in
    enabled, verified 2026-09-15.
 8. ~~Run `deploy/backup-setup.sh`~~ — done 2026-09-15: rclone → do-not-reply
@@ -302,9 +328,9 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    **Testing** (only listed test users can connect). Finish Branding (no
    logo — it forces the verification review; no authorized domain — `ts.net`
    is not ours) and Audience → **Publish app** before other users try it.
-10. Optional: revoke/re-create the two Gmail App Passwords that passed through
+11. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
-11. stock-tracker's report emails are failing on a revoked App Password —
+12. stock-tracker's report emails are failing on a revoked App Password —
    unrelated to this app, but noticed while diagnosing.
 
 ## Feature Reference (what users have)
