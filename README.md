@@ -279,7 +279,18 @@ your speakers and BlackHole, set it as the system output, and pick BlackHole
 as the app's microphone.
 
 The app warns after 15 seconds of digital silence (typically the OS holding
-the mic for a call).
+the mic for a call). If the connection drops mid-lecture, the browser
+reconnects and both transcription and notes resume; a backlog of transcript
+is caught up in the next notes passes.
+
+**Exports:** notes (Markdown) and transcript (text) download immediately; the
+MP3 is assembled on the server first — the button shows progress, and the
+finished file is cached for 30 minutes so a repeat download is instant.
+
+**Which model answered:** every chat reply shows the provider under it, and
+in amber when a cloud provider failed and the local model answered instead
+(quota exceeded, overloaded, no credits…). The status line reports the same
+for notes.
 
 ---
 

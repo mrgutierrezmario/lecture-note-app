@@ -163,6 +163,32 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   ever be wanted. The Sept 9 lectures that appeared in earlier notes tests are
   therefore gone from the live DB.
 
+### After the public release (2026-09-14 late → 2026-09-15)
+- `app/ui` renamed **`app/ui_frontend`** (Dockerfile, start.sh, main.py, README
+  updated); `.gitattributes` keeps design mockups out of GitHub language stats;
+  README status badges; repo description and topics set via `gh`.
+- **Chat context**: was capped at the last 4,000 transcript characters and
+  never included the notes → now latest notes + full transcript for cloud
+  providers (300k chars), notes + 16k chars for Ollama (num_ctx raised to 8192).
+- **Notes reliability** (found on a 113-minute recording where notes stopped
+  at minute 26 while the transcript continued): the notes loop was only
+  started by the Record button and died on a WebSocket reconnect; audio
+  arriving now restarts it. Backlog catch-up was truncated to 3k chars → now
+  processed in provider-sized windows, re-sliced if a cloud call falls back
+  to Ollama; merge skips repeated bullets/terms. That lecture's notes were
+  regenerated (v26 covers the full recording).
+- **Fallback visibility**: chat replies show which model answered and, in
+  amber, why a cloud provider fell back (quota, overloaded, no credits, key
+  rejected…); a notes pass that fell back reports on the status line.
+- **MP3 export with progress**: built in the background
+  (`POST …/export/audio.mp3/prepare`, `GET …/status`), spinner with percent
+  on the toolbar button and in History; finished files cached 30 min; mono
+  80 kbps (a third the size of the old 192k stereo); longer ffmpeg limit.
+- **Gemini free tier**: one long lecture at 60-second notes exhausts a
+  model's daily request quota; the app fell back to llama3 correctly. Model
+  switched to `gemini-flash-latest` (its own quota). Options: notes every
+  120 s, rotate models, or enable pay-as-you-go on the Google project.
+
 ### Public-release preparation (2026-09-14)
 - **PEP 8**: whole backend formatted with ruff (line length 100, isort);
   `pyproject.toml` pins the config and now enforces docstrings (`D1`).
@@ -194,8 +220,13 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
 2. **Turn off Settings → Sign-up** once the intended users have accounts.
 3. Re-add the phone home-screen app from the new URL and update bookmarks
    (the URL itself is confirmed live).
-4. Flip the GitHub repository to public when ready (Settings → Danger Zone).
-   Optionally ask GitHub Support to GC unreachable old commits first.
+4. ~~Flip the GitHub repository to public~~ — done 2026-09-14; description,
+   topics and badges set. Ask GitHub Support to GC old commits if desired.
+5. Decide on **notes interval 120 s** (halves Gemini quota use) or enable
+   pay-as-you-go on the Google AI project.
+6. Known limitation: chunks sent while the server itself restarts (deploy,
+   crash) are dropped by the browser — ~20 s of audio per restart mid-lecture.
+   Fix would be client-side buffering during disconnects; not done.
 4. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
 5. stock-tracker's report emails are failing on a revoked App Password —
