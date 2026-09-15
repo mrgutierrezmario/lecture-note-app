@@ -1286,6 +1286,16 @@
   color: var(--faint);
 }
 
+.login-legal {
+  margin-top: 14px;
+  font-size: 11px;
+}
+
+.login-legal a {
+  color: var(--faint);
+}
+
+
 /* ── User menu ──────────────────────────────────────────────────────────── */
 
 .user-menu {

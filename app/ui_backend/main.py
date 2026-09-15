@@ -107,6 +107,11 @@ if (UI_DIST / "index.html").exists():
         candidate = (UI_DIST / path).resolve()
         if path and candidate.is_relative_to(UI_DIST) and candidate.is_file():
             return FileResponse(candidate)
+        # Static pages linked from outside (privacy policy) may be requested
+        # without their extension.
+        page = (UI_DIST / f"{path}.html").resolve()
+        if path and page.is_relative_to(UI_DIST) and page.is_file():
+            return FileResponse(page)
         # index.html must never be cached: it names the hashed JS/CSS bundles,
         # and a stale copy keeps showing the previous release after a deploy.
         return FileResponse(

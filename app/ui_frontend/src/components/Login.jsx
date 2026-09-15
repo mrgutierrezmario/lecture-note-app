@@ -216,6 +216,7 @@ function Login({ onLogin, onRegister }) {
             Already have an account? <button type="button" className="link-button" onClick={() => switchMode('login')}>Sign in</button>
           </p>
         )}
+        <p className="login-note login-legal"><a href="/privacy.html" target="_blank" rel="noreferrer">Privacy policy</a></p>
       </form>
     </div>
   )
