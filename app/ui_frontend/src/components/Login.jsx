@@ -65,7 +65,7 @@ function Login({ onLogin, onRegister }) {
       }
       else {
         const result = await onRegister(username.trim(), email.trim(), password)
-        if (result?.pending_verification) { setPending(result); setIdentifier(username.trim()) }
+        if (result?.pending_verification) { setPending(result); setIdentifier(username.trim()); setPassword(''); setRepeat('') }
       }
     } catch (err) {
       setError(err.message)
@@ -166,7 +166,7 @@ function Login({ onLogin, onRegister }) {
           </>
         )}
 
-        {mode !== 'forgot' && (
+        {mode !== 'forgot' && !pending && (
         <label className="login-field">
           <span>Password</span>
           <input
@@ -179,7 +179,7 @@ function Login({ onLogin, onRegister }) {
           />
         </label>
         )}
-        {mode === 'register' && (
+        {mode === 'register' && !pending && (
           <label className="login-field">
             <span>Repeat password</span>
             <input
@@ -227,7 +227,7 @@ function Login({ onLogin, onRegister }) {
               <> · <button type="button" className="link-button" onClick={() => switchMode('forgot')}>Forgot password?</button></>
             )}
           </p>
-        ) : (
+        ) : !pending && (
           <p className="login-note">
             Already have an account? <button type="button" className="link-button" onClick={() => switchMode('login')}>Sign in</button>
           </p>
