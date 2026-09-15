@@ -248,7 +248,10 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   with an email gets "New account request" with a one-time approve link
   (7 days, `/api/auth/approve?token=`) → also a **pending** badge +
   Approve button in Settings → Users → user emailed "Your account is
-  active". Login meanwhile: 403 `approval_pending`. Tested end to end.
+  active". Login meanwhile: 403 `approval_pending`. Tested end to end by
+  the operator from a phone (sign-up → confirm → approve link → active
+  email); test accounts deleted. Sign-up form hides the password fields
+  once the account is created.
 - **Email addresses**: sender stays `mgnetwork.donotreply@gmail.com`
   (App Password); Reply-To, backup-failure alerts, the admin account's
   email (→ approval requests, admin password reset) and the privacy
