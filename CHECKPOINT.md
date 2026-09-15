@@ -141,7 +141,7 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
     with whichever knob the model accepts (`thinkingLevel` vs
     `thinkingBudget`, probed once per model) and uses a 2048-token floor,
     else answers come back empty (`MAX_TOKENS`). One retry on 503/429.
-  - Images still go Claude first (falls back to llava until credits exist).
+  - Slides & images now go Gemini first as well (see the cascade below).
 - **Hostname renamed**: the original name → the current `TS_HOSTNAME`, so the URL is
   **https://<TS_HOSTNAME>.<tailnet>.ts.net** (cert issued 02:57; public DNS
   propagating). `PUBLIC_URL` in `deploy/.env` updated. The old URL is dead;
@@ -185,9 +185,23 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   on the toolbar button and in History; finished files cached 30 min; mono
   80 kbps (a third the size of the old 192k stereo); longer ffmpeg limit.
 - **Gemini free tier**: one long lecture at 60-second notes exhausts a
-  model's daily request quota; the app fell back to llama3 correctly. Model
-  switched to `gemini-flash-latest` (its own quota). Options: notes every
-  120 s, rotate models, or enable pay-as-you-go on the Google project.
+  model's daily request quota; the app fell back to llama3 correctly. Each
+  model has its own quota, so the model was rotated (`gemini-flash-latest`,
+  then `gemini-flash-lite-latest` on 2026-09-15 after both `flash` variants
+  returned 503/429). Pay-as-you-go on the Google project removes the cap.
+
+### Provider cascade and 120-second notes (2026-09-15)
+- **Cloud cascade**: every text and vision request tries the chosen provider,
+  then any *other* cloud provider that has a saved key, then the local
+  Ollama/llava models (`providers._cloud_cascade`). With Gemini chosen and a
+  Claude key saved, Gemini → Claude → local. Claude stays a selectable option
+  in Settings; nothing was removed. The reply records which provider answered
+  and why the primary was skipped, so the amber fallback notice is accurate.
+  First real run: Gemini 503 → Claude "no credits" → llava, exactly as designed.
+- **Settings now**: notes/chat = Gemini, slides & images = Gemini, notes
+  interval **120 s** (halves request volume against free-tier quotas; notes
+  still catch up on the whole backlog each pass).
+- Phone home-screen app re-added from the current URL.
 
 ### Public-release preparation (2026-09-14)
 - **PEP 8**: whole backend formatted with ruff (line length 100, isort);
@@ -214,22 +228,26 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
 
 ## Open Items
 
-1. **Add API credits** at console.anthropic.com → Plans & Billing, then verify
-   an image upload logs `provider: claude/claude-opus-5` (or switch
-   Slides & images to Gemini, which already works).
-2. **Turn off Settings → Sign-up** once the intended users have accounts.
-3. Re-add the phone home-screen app from the new URL and update bookmarks
-   (the URL itself is confirmed live).
+1. Optional: **Claude API credits** at console.anthropic.com → Plans &
+   Billing. Claude is the second link in the cascade; without credits it is
+   skipped in about a second and the local model answers instead.
+2. **Turn off Settings → Sign-up** once the intended users have accounts
+   (or build invite codes / admin approval — under discussion).
+3. ~~Re-add the phone home-screen app from the new URL~~ — done 2026-09-15.
 4. ~~Flip the GitHub repository to public~~ — done 2026-09-14; description,
    topics and badges set. Ask GitHub Support to GC old commits if desired.
-5. Decide on **notes interval 120 s** (halves Gemini quota use) or enable
-   pay-as-you-go on the Google AI project.
+5. ~~Notes interval 120 s~~ — set 2026-09-15. Pay-as-you-go on the Google AI
+   project is still the only way to remove the free-tier daily caps.
 6. Known limitation: chunks sent while the server itself restarts (deploy,
    crash) are dropped by the browser — ~20 s of audio per restart mid-lecture.
    Fix would be client-side buffering during disconnects; not done.
-4. Optional: revoke/re-create the two Gmail App Passwords that passed through
+7. Reboot behaviour: Docker Desktop only starts after a macOS login. Either
+   enable Docker Desktop → Settings → General → "Start Docker Desktop when
+   you sign in" **and** macOS automatic login (not offered while FileVault is
+   on), or accept one login after each reboot.
+8. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
-5. stock-tracker's report emails are failing on a revoked App Password —
+9. stock-tracker's report emails are failing on a revoked App Password —
    unrelated to this app, but noticed while diagnosing.
 
 ## Feature Reference (what users have)

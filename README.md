@@ -49,7 +49,7 @@ optional.
 Browser (React) ──WebSocket: 5 s WebM chunks──▶ FastAPI backend
                 ◀── transcript segments, notes ──      │
                                                        ├─ ffmpeg → Whisper (CPU)      transcript
-                                                       ├─ text provider (Ollama/…)    notes every 60 s, chat
+                                                       ├─ text provider (Ollama/…)    notes on an interval, chat
                                                        ├─ vision provider (…/llava)   slides & images
                                                        ├─ Postgres                    sessions, transcripts, notes, users
                                                        └─ MinIO (S3)                  audio chunks (14-day retention)
@@ -58,8 +58,10 @@ Browser (React) ──WebSocket: 5 s WebM chunks──▶ FastAPI backend
 - The browser records with `MediaRecorder` and streams 5-second chunks over a
   WebSocket. Each chunk is stored, transcribed, and its text pushed back
   immediately.
-- Every 60 seconds the new transcript is sent to the text provider, which
-  returns Markdown sections that are merged into the running notes.
+- On an interval (**Settings → Notes interval**, 60 s by default; 120 s is a
+  good choice on free cloud tiers) the new transcript is sent to the text
+  provider, which returns Markdown sections that are merged into the running
+  notes.
 - Uploaded PDFs/PowerPoint/Word files are text-extracted; images are read by a
   vision model. All of it becomes context for "Ask about the lecture".
 - Audio is deleted after 14 days (transcripts and notes are kept) unless the
@@ -228,14 +230,18 @@ hashed). Logins last 30 days.
 
 Two jobs, each with its own provider selector in **Settings → Models**:
 
-| Job | Options | Fallback |
+| Job | Options | Fallback chain |
 |---|---|---|
-| **Notes & chat** | Local Ollama (default, private) · Claude · Gemini · OpenAI | Ollama |
-| **Slides & images** | Claude (best on dense slides) · Gemini · OpenAI · local llava | llava, then a BLIP caption |
+| **Notes & chat** | Local Ollama (default, private) · Claude · Gemini · OpenAI | other cloud providers with a saved key → Ollama |
+| **Slides & images** | Claude (best on dense slides) · Gemini · OpenAI · local llava | other cloud providers with a saved key → llava → BLIP caption |
 
 Paste API keys under **Settings → API keys**; all three can be saved at once
 and each job picks independently. A cloud failure (bad key, quota, outage)
-falls back automatically so a lecture never loses its notes.
+cascades automatically: the chosen provider first, then any other cloud
+provider you have a key for, then the local model — so a lecture never loses
+its notes. Chat replies show which model answered and, when it was not the
+one you chose, why. Saving a Gemini *and* a Claude key with Gemini selected
+gives "Gemini first, Claude as backup".
 
 - **Gemini** has a free, rate-limited tier — get a key at
   [aistudio.google.com](https://aistudio.google.com). The model dropdown is
@@ -375,7 +381,7 @@ Backend code is formatted and linted with [ruff](https://docs.astral.sh/ruff/)
 | "Microphone needs HTTPS" | Phones and remote browsers require HTTPS; use the Tailscale URL or `npm run dev:https` |
 | Mic blocked in the installed phone app | Long-press the app icon → App info → Permissions → Microphone → Allow |
 | Transcript lags behind | Too many simultaneous recordings, or Whisper model too large for the CPU — use `small` |
-| Notes never appear | The first pass runs 60 s after recording starts; check **Settings → Models** for the active provider and the app log (`docker compose … logs app`) |
+| Notes never appear | The first pass runs one notes interval (60–120 s) after recording starts; check **Settings → Models** for the active provider and the app log (`docker compose … logs app`) |
 | Ollama "killed" / notes fall back to heuristics | Not enough memory to load the model — raise Docker's memory or use a smaller model |
 | Gemini "model not available" | Google retired that model name; pick another from the dropdown (or "Gemini Flash Latest") |
 | Empty Gemini answers (`MAX_TOKENS`) | Handled automatically (thinking is disabled per model); update if it recurs |
