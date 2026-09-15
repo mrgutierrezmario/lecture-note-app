@@ -144,13 +144,13 @@ function DriveSection({ isAdmin, refreshKey }) {
             />
           </label>
           <p className="settings-note">
-            Use "/" for a path, e.g. <code>School/Fall 2026</code>. Applies to the next save; lectures already
-            saved keep updating where they are. You can also move the folder anywhere in your Drive — the app
-            follows it.
+            Use "/" for a path, e.g. <code>School/Fall 2026</code>. The folder is created in your Drive right
+            away and new saves go there; lectures already saved keep updating where they are. You can also
+            move the folder anywhere in your Drive — the app follows it.
           </p>
           <div className="settings-actions">
             <button disabled={busy || !folder.trim() || folder.trim() === status.folder_name} onClick={saveFolder}>
-              {folderSaved ? 'Folder saved' : 'Save folder'}
+              {busy ? 'Creating…' : folderSaved ? 'Folder created' : 'Create folder'}
             </button>
             <button className="btn-secondary" disabled={busy} onClick={disconnect}>Disconnect</button>
           </div>

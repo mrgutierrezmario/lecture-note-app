@@ -94,8 +94,8 @@ async def update(
 ):
     """Turn automatic saving on or off, or change the folder path in Drive.
 
-    A new path takes effect for the next save (the folder is created then);
-    lectures already saved keep updating where they are."""
+    A new path is created in the user's Drive right away, so the folder link
+    works immediately; lectures already saved keep updating where they are."""
     link = await db.get(DriveLink, user.id)
     if link is None:
         raise HTTPException(status_code=400, detail="Google Drive is not connected")
@@ -105,9 +105,12 @@ async def update(
         name = google_drive.clean_folder_path(body.folder_name)
         if not name:
             raise HTTPException(status_code=422, detail="Folder name can't be empty")
-        if name != link.folder_name:
+        if name != link.folder_name or not link.folder_id:
             link.folder_name = name
-            link.folder_id = None  # resolved (created) on the next export
+            try:
+                link.folder_id = await google_drive.create_folder_now(link)
+            except google_drive.DriveError as e:
+                raise HTTPException(status_code=502, detail=str(e))
     await db.commit()
     return _status(link)
 

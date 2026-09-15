@@ -336,6 +336,15 @@ async def auto_export(session_id: str, notify: Optional[StatusCallback] = None) 
         start(session_id, notify)
 
 
+async def create_folder_now(link: DriveLink) -> str:
+    """Make the user's chosen folder path exist in their Drive; returns its id."""
+    drive = Drive(await _access_token(decrypt(link.refresh_token)))
+    try:
+        return await drive.ensure_path(link.folder_name or ROOT_FOLDER_NAME)
+    finally:
+        await drive.close()
+
+
 async def _set_step(job: Job, step: str) -> None:
     job.step = step
     if job.notify:
