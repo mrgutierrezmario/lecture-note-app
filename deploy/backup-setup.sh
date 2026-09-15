@@ -40,7 +40,8 @@ else
   echo "  browser, rclone prints a link to open elsewhere.)"
   echo
   read -r -p "  Press Enter to continue..." _
-  rclone config create "$GDRIVE_REMOTE" drive scope drive.file
+  # rclone prints the finished section, token included, so keep it off the screen.
+  rclone config create "$GDRIVE_REMOTE" drive scope drive.file >/dev/null
 fi
 rclone lsd "$GDRIVE_REMOTE:" >/dev/null 2>&1 || { echo "Google Drive is not reachable — run: rclone config reconnect $GDRIVE_REMOTE:" >&2; exit 1; }
 log "Google Drive connected."
