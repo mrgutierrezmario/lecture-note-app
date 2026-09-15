@@ -3,7 +3,8 @@
 One ``Session`` is one lecture recording. Everything else hangs off it:
 audio chunks (5-second uploads), transcript segments (Whisper output), notes
 versions (one per generation pass) and uploaded documents. ``User`` owns
-sessions; ``PasswordReset`` holds hashed reset tokens.
+sessions; ``PasswordReset`` holds hashed reset tokens; ``DriveLink`` is a
+user's connected Google Drive and ``DriveFile`` what has been saved there.
 
 Schema changes go through Alembic (``alembic/versions``); the app applies
 pending migrations on startup.
@@ -175,3 +176,42 @@ class DocumentUpload(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
 
     session = relationship("Session", back_populates="documents")
+
+
+class DriveLink(Base):
+    """A user's connected Google Drive (one per user).
+
+    ``refresh_token`` is encrypted with the app's SECRET_KEY (see
+    ``google_drive``). ``folder_id`` is the "AI Lecture Notes" folder the app
+    created in that Drive; the ``drive.file`` scope means the app can see
+    nothing else there.
+    """
+
+    __tablename__ = "drive_links"
+
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    google_email = Column(String(254), nullable=True)
+    refresh_token = Column(Text, nullable=False)
+    folder_id = Column(String(128), nullable=True)
+    auto_export = Column(Boolean, default=True, nullable=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class DriveFile(Base):
+    """One file the app put in a user's Drive for a lecture — remembered so a
+    later export updates it in place instead of creating a duplicate."""
+
+    __tablename__ = "drive_files"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(
+        String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    kind = Column(String(16), nullable=False)  # "notes" | "transcript" | "audio"
+    file_id = Column(String(128), nullable=False)
+    folder_id = Column(String(128), nullable=True)  # the lecture's own subfolder
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    __table_args__ = (Index("ix_drive_files_session_kind", "session_id", "kind", unique=True),)

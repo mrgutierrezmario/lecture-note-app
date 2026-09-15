@@ -167,6 +167,13 @@ export const PlusIcon = p => (
   </Svg>
 )
 
+export const DriveIcon = p => (
+  <Svg {...p}>
+    <path d="M8 3h8l6 10-4 7H6l-4-7z" />
+    <path d="M8 3l4 7M16 3l-4 7M2 13h20M12 10l-6 10" />
+  </Svg>
+)
+
 export const DownloadIcon = p => (
   <Svg {...p}>
     <path d="M12 4v12M6 10l6 6 6-6M4 20h16" />

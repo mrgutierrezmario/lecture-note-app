@@ -10,7 +10,15 @@ import quota
 from auth import CurrentUser, current_user
 from config import get_settings
 from database import get_db
-from models import AudioChunk, DocumentUpload, NotesVersion, Session, TranscriptSegment, User
+from models import (
+    AudioChunk,
+    DocumentUpload,
+    DriveFile,
+    NotesVersion,
+    Session,
+    TranscriptSegment,
+    User,
+)
 from s3_client import s3_client
 from schemas import SessionLock, SessionRename, SessionSummary, StorageUsage
 
@@ -56,11 +64,24 @@ async def list_sessions(
         .group_by(AudioChunk.session_id)
         .subquery()
     )
+    drive = (
+        select(DriveFile.session_id, func.max(DriveFile.updated_at).label("saved_at"))
+        .group_by(DriveFile.session_id)
+        .subquery()
+    )
     query = (
-        select(Session, seg_count.c.segments, chunks.c.chunks, chunks.c.kept, User.username)
+        select(
+            Session,
+            seg_count.c.segments,
+            chunks.c.chunks,
+            chunks.c.kept,
+            User.username,
+            drive.c.saved_at,
+        )
         .join(seg_count, seg_count.c.session_id == Session.id)
         .outerjoin(chunks, chunks.c.session_id == Session.id)
         .outerjoin(User, User.id == Session.user_id)
+        .outerjoin(drive, drive.c.session_id == Session.id)
         .order_by(Session.created_at.desc())
     )
     if not user.is_admin:
@@ -79,8 +100,9 @@ async def list_sessions(
             has_audio=bool(kept),
             locked=bool(s.locked),
             owner=username if user.is_admin else None,
+            drive_saved_at=saved_at,
         )
-        for s, segments, chunk_count, kept, username in rows
+        for s, segments, chunk_count, kept, username, saved_at in rows
     ]
 
 

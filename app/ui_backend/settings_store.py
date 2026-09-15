@@ -47,13 +47,17 @@ EDITABLE: dict[str, tuple[type, bool]] = {
     "claude_text_model": (str, True),
     "gemini_model": (str, True),
     "openai_model": (str, True),
+    "google_client_id": (str, True),
 }
+# String fields that may legitimately be cleared to "".
+_MAY_BE_EMPTY = {"google_client_id"}
 
 # Secrets kept in STATE_DIR/.env rather than the overrides file: env var -> settings attr.
 SECRET_FIELDS = {
     "ANTHROPIC_API_KEY": "anthropic_api_key",
     "GEMINI_API_KEY": "gemini_api_key",
     "OPENAI_API_KEY": "openai_api_key",
+    "GOOGLE_CLIENT_SECRET": "google_client_secret",
 }
 
 
@@ -139,8 +143,10 @@ def update_overrides(updates: dict[str, Any]) -> tuple[dict[str, Any], list[str]
             value = expected(raw)
         except (TypeError, ValueError):
             raise ValueError(f"{name} must be {expected.__name__}")
-        if expected is str and not value.strip():
+        if expected is str and not value.strip() and name not in _MAY_BE_EMPTY:
             raise ValueError(f"{name} must not be empty")
+        if expected is str:
+            value = value.strip()
         if name == "notes_interval_seconds" and value < 10:
             raise ValueError("notes_interval_seconds must be at least 10")
 

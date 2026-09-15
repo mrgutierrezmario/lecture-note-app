@@ -9,6 +9,7 @@ import useTheme from '../hooks/useTheme'
 import { GearIcon, CloseIcon, CheckIcon, AlertIcon, KeyIcon, MonitorIcon, SunIcon, MoonIcon } from './Icons'
 import UsersSection from './UsersSection'
 import PasswordSection from './PasswordSection'
+import DriveSection from './DriveSection'
 
 const VISION_MODELS = [
   { id: 'claude-opus-5', label: 'Claude Opus 5 — best at dense slides' },
@@ -71,6 +72,7 @@ function SettingsPanel({ user, onUserChange }) {
   const [draft, setDraft] = useState({})
   const [keyInput, setKeyInput] = useState('')
   const [providerKeys, setProviderKeys] = useState({ gemini: '', openai: '' })
+  const [googleClient, setGoogleClient] = useState({ id: '', secret: '' })
   const [providerTest, setProviderTest] = useState({})
   const [geminiModels, setGeminiModels] = useState(null) // null = not loaded, [] = failed
   const [saving, setSaving] = useState(false)
@@ -229,6 +231,8 @@ function SettingsPanel({ user, onUserChange }) {
 
       <PasswordSection user={user} onUserChange={onUserChange} />
 
+      <DriveSection isAdmin={isAdmin} />
+
       {error && <div className="settings-error">{error}</div>}
       {message && <div className="settings-message">{message}</div>}
       {isAdmin && !settings && !error && <p className="settings-loading">Loading…</p>}
@@ -325,6 +329,53 @@ function SettingsPanel({ user, onUserChange }) {
               saving={saving}
               help="Key at platform.openai.com → API keys (prepaid credits required)."
             />
+
+            <h4 className="settings-subheading">Google Drive (OAuth client)</h4>
+            <p className="settings-note settings-note-full">
+              Lets users connect their own Google Drive. In Google Cloud console create an OAuth client of type
+              <strong> Web application</strong> with this redirect URI: <code>{settings.google_redirect_uri}</code>
+            </p>
+            <label className="settings-field">
+              <span>Client ID</span>
+              <input
+                type="text"
+                placeholder={settings.google_client_id || '….apps.googleusercontent.com'}
+                value={googleClient.id}
+                onChange={e => setGoogleClient({ ...googleClient, id: e.target.value })}
+                autoComplete="off"
+              />
+            </label>
+            <label className="settings-field">
+              <span>Client secret</span>
+              <input
+                type="password"
+                placeholder={settings.google_client_secret_masked ? `Saved (${settings.google_client_secret_masked}) — paste to replace` : 'GOCSPX-…'}
+                value={googleClient.secret}
+                onChange={e => setGoogleClient({ ...googleClient, secret: e.target.value })}
+                autoComplete="off"
+              />
+            </label>
+            <div className="settings-actions">
+              <button
+                disabled={saving || (!googleClient.id.trim() && !googleClient.secret.trim())}
+                onClick={async () => {
+                  const payload = {}
+                  if (googleClient.id.trim()) payload.google_client_id = googleClient.id.trim()
+                  if (googleClient.secret.trim()) payload.google_client_secret = googleClient.secret.trim()
+                  if (await save(payload, 'Google OAuth client saved.')) setGoogleClient({ id: '', secret: '' })
+                }}
+              >
+                Save Google client
+              </button>
+              {(settings.google_client_id || settings.google_client_secret_masked) && (
+                <button className="btn-secondary" disabled={saving} onClick={() => save({ google_client_id: '', google_client_secret: '' }, 'Google OAuth client cleared.')}>
+                  Clear
+                </button>
+              )}
+            </div>
+            {settings.google_client_id && settings.google_client_secret_masked && (
+              <p className="settings-inline-ok">Configured — users can connect their Drive under Google Drive above.</p>
+            )}
           </section>
 
           <section className="settings-section">

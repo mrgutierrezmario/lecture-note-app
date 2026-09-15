@@ -9,6 +9,7 @@ import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
+import google_drive
 import mailer
 import providers
 import settings_store
@@ -34,6 +35,7 @@ _OVERRIDE_FIELDS = (
     "claude_text_model",
     "gemini_model",
     "openai_model",
+    "google_client_id",
 )
 
 
@@ -87,6 +89,9 @@ async def _current(restart_required: list[str] | None = None) -> SettingsRespons
         gemini_key_masked=settings_store.masked(settings.gemini_api_key),
         openai_model=value("openai_model"),
         openai_key_masked=settings_store.masked(settings.openai_api_key),
+        google_client_id=settings.google_client_id,
+        google_client_secret_masked=settings_store.masked(settings.google_client_secret),
+        google_redirect_uri=google_drive.redirect_uri(),
         ollama_base_url=settings.ollama_base_url,
         ollama_reachable=await _ollama_reachable(settings.ollama_base_url),
         restart_required=restart_required,
@@ -114,6 +119,8 @@ async def write_settings(update: SettingsUpdate):
         settings_store.set_secret("GEMINI_API_KEY", update.gemini_api_key)
     if update.openai_api_key is not None:
         settings_store.set_secret("OPENAI_API_KEY", update.openai_api_key)
+    if update.google_client_secret is not None:
+        settings_store.set_secret("GOOGLE_CLIENT_SECRET", update.google_client_secret)
     if update.text_provider is not None and update.text_provider not in providers.PROVIDERS:
         raise HTTPException(
             status_code=422, detail=f"text_provider must be one of {', '.join(providers.PROVIDERS)}"

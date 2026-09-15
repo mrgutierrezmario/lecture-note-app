@@ -75,6 +75,30 @@ function Workspace({ user, onLogout, onUserChange }) {
     } catch (_) {}
   }, [])
 
+  // Back from the Google Drive consent page (/api/drive/callback redirects here).
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const drive = params.get('drive')
+    if (!drive) return
+    window.history.replaceState({}, '', window.location.pathname)
+    if (drive === 'connected') {
+      dialog.notice({
+        title: 'Google Drive connected',
+        message: 'Finished lectures will be saved to an "AI Lecture Notes" folder in your Drive. You can turn automatic saving off in Settings → Google Drive.',
+      })
+    } else {
+      const reason = params.get('reason')
+      dialog.notice({
+        title: 'Google Drive was not connected',
+        message: reason === 'expired'
+          ? 'The sign-in took too long — please try again from Settings.'
+          : reason === 'access_denied' || reason === 'cancelled'
+            ? 'The Google sign-in was cancelled.'
+            : 'Google did not complete the connection. Try again from Settings → Google Drive.',
+      })
+    }
+  }, [dialog])
+
   useEffect(() => {
     loadDevices()
     navigator.mediaDevices?.addEventListener('devicechange', loadDevices)

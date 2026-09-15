@@ -26,6 +26,7 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import google_drive
 import quota
 from auth import websocket_user
 from config import get_settings
@@ -332,6 +333,8 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                 "message": "Recording stopped",
                             },
                         )
+                        # Owner opted in to "save to my Google Drive after each lecture".
+                        asyncio.create_task(google_drive.auto_export(session_id))
 
                 except json.JSONDecodeError:
                     logger.warning("Received invalid JSON")

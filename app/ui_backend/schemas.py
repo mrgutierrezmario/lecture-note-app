@@ -176,6 +176,9 @@ class SettingsResponse(BaseModel):
     gemini_key_masked: Optional[str] = None
     openai_model: str
     openai_key_masked: Optional[str] = None
+    google_client_id: str = ""
+    google_client_secret_masked: Optional[str] = None
+    google_redirect_uri: str = ""
     ollama_base_url: str
     ollama_reachable: bool
     restart_required: list[str] = []  # saved fields that only apply after a restart
@@ -207,6 +210,8 @@ class SettingsUpdate(BaseModel):
     gemini_api_key: Optional[str] = None
     openai_model: Optional[str] = None
     openai_api_key: Optional[str] = None
+    google_client_id: Optional[str] = None
+    google_client_secret: Optional[str] = None
 
 
 class ProviderTest(BaseModel):
@@ -336,6 +341,7 @@ class SessionSummary(BaseModel):
     has_audio: bool  # any chunk still in object storage
     locked: bool = False  # "kept": exempt from cleanup and deletion
     owner: Optional[str] = None  # username; only filled in for admins
+    drive_saved_at: Optional[datetime] = None  # last "save to Google Drive"
 
 
 class SessionRename(BaseModel):
@@ -348,3 +354,19 @@ class SessionLock(BaseModel):
     """Keep (``true``) or release (``false``) a lecture."""
 
     locked: bool
+
+
+class DriveStatus(BaseModel):
+    """The signed-in user's Google Drive connection (``GET /api/drive``)."""
+
+    available: bool  # an admin has configured a Google OAuth client
+    connected: bool
+    email: Optional[str] = None
+    auto_export: bool = False
+    folder_url: Optional[str] = None
+
+
+class DriveUpdate(BaseModel):
+    """Toggle automatic saving after each recording."""
+
+    auto_export: bool

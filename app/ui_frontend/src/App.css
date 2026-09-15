@@ -1666,6 +1666,38 @@
   cursor: default;
 }
 
+.history-download-menu .history-menu-divider {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+}
+
+/* A link styled as the primary button (used for full-page redirects). */
+.btn-primary-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 14px;
+  border-radius: var(--radius);
+  background: var(--primary);
+  color: var(--primary-ink);
+  font-weight: 600;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.btn-primary-link:hover {
+  background: var(--primary-hover);
+  color: var(--primary-ink);
+}
+
+.auth-warning-soft {
+  display: flex;
+  gap: 6px;
+  align-items: flex-start;
+}
+
 .btn-icon-danger:hover:not(:disabled) {
   color: var(--danger);
   background: var(--danger-tint);

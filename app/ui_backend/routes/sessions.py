@@ -15,13 +15,14 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import google_drive
 import mp3_export
 from auth import CurrentUser, current_user
 from config import get_settings
 from database import get_db
 from document_processor import extract_text, image_media_type
 from image_analyzer import caption_image as blip_caption
-from models import AudioChunk, DocumentUpload, NotesVersion, Session, TranscriptSegment
+from models import AudioChunk, DocumentUpload, DriveLink, NotesVersion, Session, TranscriptSegment
 from s3_client import s3_client
 from schemas import (
     AudioChunkResponse,
@@ -220,6 +221,34 @@ async def prepare_audio(session_id: str, db: AsyncSession = Depends(get_db)):
 async def audio_status(session_id: str):
     """Progress of the MP3 build for a session (``status: none`` if not started)."""
     job = mp3_export.status(session_id)
+    return job.progress() if job else {"status": "none"}
+
+
+@router.post("/{session_id}/drive")
+async def save_to_drive(
+    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    """Save notes, transcript and MP3 to the *owner's* Google Drive (background).
+
+    Poll ``…/drive/status``. Admins may trigger it for another user's lecture;
+    the files still land in that user's Drive, never the admin's.
+    """
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if session.user_id is None:
+        raise HTTPException(status_code=400, detail="This lecture has no owner")
+    link = await db.get(DriveLink, session.user_id)
+    if link is None:
+        raise HTTPException(status_code=400, detail="Google Drive is not connected (Settings)")
+    return google_drive.start(session_id).progress()
+
+
+@router.get("/{session_id}/drive/status")
+async def drive_status(session_id: str):
+    """Progress of the last "save to Drive" for this lecture (``status: none`` if never)."""
+    job = google_drive.status(session_id)
     return job.progress() if job else {"status": "none"}
 
 

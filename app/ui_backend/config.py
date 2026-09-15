@@ -82,6 +82,12 @@ class Settings(BaseSettings):
     # Base URL used in emailed links, e.g. https://notes.example.com
     public_url: str = ""
 
+    # Google OAuth client ("Web application" type) that lets users connect
+    # their own Google Drive. Set from the Settings panel; the secret lives in
+    # STATE_DIR/.env. Redirect URI to register: <public_url>/api/drive/callback
+    google_client_id: str = ""
+    google_client_secret: Optional[str] = None
+
     # Whether the sign-in page offers "Create account". Turn off once everyone
     # who should have an account has one.
     registration_open: bool = True

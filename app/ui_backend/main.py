@@ -18,7 +18,14 @@ import settings_store
 from auth import AuthMiddleware
 from cleanup import start_cleanup_background_task
 from config import get_settings
-from routes import admin_router, auth_router, history_router, sessions_router, settings_router
+from routes import (
+    admin_router,
+    auth_router,
+    drive_router,
+    history_router,
+    sessions_router,
+    settings_router,
+)
 from websocket_handler import handle_websocket
 
 logging.basicConfig(
@@ -65,6 +72,7 @@ app.include_router(admin_router)
 app.include_router(settings_router)
 app.include_router(auth_router)
 app.include_router(history_router)
+app.include_router(drive_router)
 
 
 @app.websocket("/ws/session/{session_id}")
