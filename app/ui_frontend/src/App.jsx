@@ -307,15 +307,12 @@ function Workspace({ user, onLogout, onUserChange }) {
       mediaRecorderRef.current = mediaRecorder
 
       mediaRecorder.ondataavailable = (event) => {
-        // Sent even while disconnected: the socket hook queues chunks and
-        // replays them in order once it reconnects.
-        if (event.data.size > 0) {
-          const track = micTrackRef.current
-          const micMutedAndNoTab = track && !track.enabled && !tabAudioActiveRef.current
-          if (!micMutedAndNoTab) {
-            sendBinary(event.data)
-          }
-        }
+        // Every chunk is sent — even while disconnected (the socket hook queues
+        // and replays them) and even while the mic is muted. A muted track
+        // yields silence, which the server skips before transcription; dropping
+        // chunks instead would break the stream: the first chunk carries the
+        // WebM header every later chunk needs, and gaps shift the timestamps.
+        if (event.data.size > 0) sendBinary(event.data)
       }
 
       mediaRecorder.start(5000)
@@ -333,11 +330,16 @@ function Workspace({ user, onLogout, onUserChange }) {
     }
   }, [sendMessage, sendBinary, title, saveStorage, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, startLevelMeter])
 
+  // Mute only disables the mic track: the recorder and the stream keep going,
+  // so the transcript resumes the moment the mic is enabled again.
   const toggleMicMute = useCallback(() => {
     setMicMuted(prev => {
       const next = !prev
       if (micTrackRef.current) {
         micTrackRef.current.enabled = !next
+      }
+      if (isRecordingRef.current) {
+        setStatus(next ? 'Recording — mic muted (transcript paused)' : 'Recording — mic on')
       }
       return next
     })
