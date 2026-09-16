@@ -43,6 +43,8 @@ function Workspace({ user, onLogout, onUserChange }) {
   const [status, setStatus] = useState('Ready')
   const [saveStorage, setSaveStorage] = useState(false)
   const [micMuted, setMicMuted] = useState(false)
+  const [isPaused, setIsPaused] = useState(false)
+  const isPausedRef = useRef(false)
   const [audioDevices, setAudioDevices] = useState([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
   const [captureTabAudio, setCaptureTabAudio] = useState(false)
@@ -182,7 +184,7 @@ function Workspace({ user, onLogout, onUserChange }) {
         for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i]
         const rms = Math.sqrt(sum / buf.length)
         // Ignore while the user has muted the mic on purpose.
-        if (micTrackRef.current && !micTrackRef.current.enabled && !tabAudioActiveRef.current) { silentFor = 0; setNoAudio(false); return }
+        if (isPausedRef.current || (micTrackRef.current && !micTrackRef.current.enabled && !tabAudioActiveRef.current)) { silentFor = 0; setNoAudio(false); return }
         silentFor = rms < 0.0005 ? silentFor + 1 : 0
         setNoAudio(silentFor >= SILENCE_SECONDS)
       }, 1000)
@@ -345,8 +347,31 @@ function Workspace({ user, onLogout, onUserChange }) {
     })
   }, [])
 
+  // Pause freezes the MediaRecorder: no chunks are produced until resume, and
+  // the next chunk after resume is a plain continuation, so the server needs
+  // nothing special. The lecture stays open — no final notes, no export.
+  const pauseRecording = useCallback(() => {
+    const rec = mediaRecorderRef.current
+    if (!rec || rec.state !== 'recording') return
+    rec.pause()
+    isPausedRef.current = true
+    setIsPaused(true)
+    setStatus('Paused — press Resume to keep recording')
+  }, [])
+
+  const resumeRecording = useCallback(() => {
+    const rec = mediaRecorderRef.current
+    if (!rec || rec.state !== 'paused') return
+    rec.resume()
+    isPausedRef.current = false
+    setIsPaused(false)
+    setStatus(micMuted ? 'Recording — mic muted (transcript paused)' : 'Recording resumed')
+  }, [micMuted])
+
   const stopRecording = useCallback(() => {
     stopLevelMeter()
+    isPausedRef.current = false
+    setIsPaused(false)
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
       mediaRecorderRef.current.stop()
     }
@@ -547,8 +572,11 @@ function Workspace({ user, onLogout, onUserChange }) {
         <RecordingControls
           readOnly={viewingPast}
           isRecording={isRecording}
+          isPaused={isPaused}
           onStart={startRecording}
           onStop={stopRecording}
+          onPause={pauseRecording}
+          onResume={resumeRecording}
           onExport={exportNotes}
           onExportTranscript={exportTranscript}
           onExportAudio={exportAudio}

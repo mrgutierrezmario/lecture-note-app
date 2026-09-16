@@ -33,6 +33,18 @@ export const GearIcon = p => (
   </Svg>
 )
 
+export const PauseIcon = p => (
+  <Svg {...p}>
+    <path d="M8 5v14M16 5v14" strokeWidth="2.4" />
+  </Svg>
+)
+
+export const PlayIcon = p => (
+  <Svg {...p}>
+    <path d="M7 4l13 8-13 8z" fill="currentColor" stroke="none" />
+  </Svg>
+)
+
 export const MicIcon = p => (
   <Svg {...p}>
     <rect x="9" y="2" width="6" height="12" rx="3" />

@@ -272,6 +272,15 @@ a.btn-icon:hover {
   filter: brightness(0.92);
 }
 
+.btn-pause {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 38px;
+  padding: 0 14px;
+  font-weight: 600;
+}
+
 .record-dot.recording {
   animation: pulse 1.5s ease-in-out infinite;
 }
