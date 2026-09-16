@@ -519,7 +519,8 @@ function Workspace({ user, onLogout, onUserChange }) {
   // What the Mute switch actually silences: the selected input device. With a
   // virtual device (BlackHole, Loopback) that is the meeting audio, not the user.
   const inputLabel = audioDevices.find(d => d.deviceId === selectedDeviceId)?.label || 'microphone'
-  const inputShort = /blackhole|loopback|soundflower|virtual|aggregate/i.test(inputLabel)
+  const inputIsVirtual = /blackhole|loopback|soundflower|virtual|aggregate/i.test(inputLabel)
+  const inputShort = inputIsVirtual
     ? inputLabel.replace(/\s*\(.*?\)\s*/g, '').split(' ').slice(0, 2).join(' ')
     : 'mic'
 
@@ -636,7 +637,9 @@ function Workspace({ user, onLogout, onUserChange }) {
           )}
           <label
             className="switch"
-            data-tip={`Silence the selected input (${inputLabel}) without stopping the recording — tab audio keeps recording. To mute yourself in a Zoom call, use Zoom's mute.`}
+            data-tip={inputIsVirtual
+              ? `Silences ${inputShort} — the meeting audio, not you. The recording keeps running. To mute yourself in the call, use Zoom's mute button.`
+              : `Silences your microphone; the recording keeps running and the transcript resumes when you unmute${captureTabAudio ? ' (tab audio is unaffected)' : ''}.`}
           >
             <input type="checkbox" checked={micMuted} onChange={toggleMicMute} />
             <span className="switch-track" />
