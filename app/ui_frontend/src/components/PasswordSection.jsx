@@ -1,7 +1,10 @@
-// "Your account" in Settings: change your email and your password.
+// "Your account" in Settings: change your email and your password, or delete
+// the account (password-confirmed; removes every lecture and the Drive link).
 import { useState } from 'react'
+import { useDialog } from './Dialog'
 
-function PasswordSection({ user, onUserChange }) {
+function PasswordSection({ user, onUserChange, onDeleted }) {
+  const dialog = useDialog()
   const [email, setEmail] = useState(user?.email || '')
   const [emailStatus, setEmailStatus] = useState(null)
   const [emailBusy, setEmailBusy] = useState(false)
@@ -31,6 +34,36 @@ function PasswordSection({ user, onUserChange }) {
   const [repeat, setRepeat] = useState('')
   const [status, setStatus] = useState(null) // { ok, text }
   const [busy, setBusy] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+
+  const deleteAccount = async () => {
+    const pw = await dialog.prompt({
+      title: 'Delete your account?',
+      message: 'Everything you recorded will be removed permanently. Enter your password to confirm.',
+      label: 'Password',
+      type: 'password',
+      confirmLabel: 'Delete my account',
+      danger: true,
+    })
+    if (pw === null || pw === undefined || pw === '') return
+    setDeleting(true)
+    try {
+      const response = await fetch('/api/auth/me', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: pw }),
+      })
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.detail || `HTTP ${response.status}`)
+      }
+      onDeleted?.()
+    } catch (err) {
+      dialog.notice({ title: 'Account not deleted', message: err.message })
+    } finally {
+      setDeleting(false)
+    }
+  }
 
   const submit = async (e) => {
     e.preventDefault()
@@ -101,6 +134,17 @@ function PasswordSection({ user, onUserChange }) {
           </button>
         </div>
       </form>
+
+      <h4 className="settings-subheading settings-danger-heading">Delete account</h4>
+      <p className="settings-note settings-note-full">
+        Removes your account and every lecture in it — transcripts, notes, documents and recordings — and
+        disconnects Google Drive (files already saved there stay in your Drive). This cannot be undone.
+      </p>
+      <div className="settings-actions">
+        <button type="button" className="btn-danger-outline" disabled={deleting} onClick={deleteAccount}>
+          {deleting ? 'Deleting…' : 'Delete my account…'}
+        </button>
+      </div>
     </section>
   )
 }

@@ -287,6 +287,12 @@ class UserResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
 
+class AccountDelete(BaseModel):
+    """Password confirmation for deleting one's own account."""
+
+    password: str
+
+
 class RegistrationPending(BaseModel):
     """Reply to a registration that needs the emailed link first (HTTP 202)."""
 

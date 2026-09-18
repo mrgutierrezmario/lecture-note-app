@@ -9,9 +9,10 @@ from datetime import datetime, timedelta
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, Response
 from fastapi.responses import JSONResponse, RedirectResponse
-from sqlalchemy import or_, select, update
+from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import google_drive
 import mailer
 import ratelimit
 from auth import (
@@ -25,9 +26,20 @@ from auth import (
 )
 from config import get_settings
 from database import get_db
+from models import (
+    AudioChunk,
+    DocumentUpload,
+    DriveFile,
+    DriveLink,
+    NotesVersion,
+    Session,
+    TranscriptSegment,
+    User,
+)
 from models import PasswordReset as ResetToken
-from models import Session, User
+from s3_client import s3_client
 from schemas import (
+    AccountDelete,
     ForgotPasswordRequest,
     LoginRequest,
     PasswordChange,
@@ -513,6 +525,65 @@ async def login(
     set_login_cookie(response, request, user.id)
     logger.info("User %s signed in", user.username)
     return user
+
+
+@router.delete("/me", status_code=204)
+async def delete_own_account(
+    body: AccountDelete,
+    response: Response,
+    user: CurrentUser = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Delete your own account and everything in it: lectures (transcripts,
+    notes, documents, audio objects), the Google Drive link (revoked at
+    Google; files already in the Drive are the user's and stay). Requires
+    the current password. The last admin cannot delete themselves."""
+    row = await db.get(User, user.id)
+    if row is None or not verify_password(body.password, row.password_hash):
+        raise HTTPException(403, "Incorrect password")
+    if row.is_admin:
+        admins = await db.scalar(
+            select(func.count()).select_from(User).where(User.is_admin.is_(True))
+        )
+        if (admins or 0) <= 1:
+            raise HTTPException(400, "You are the only administrator — add another before deleting")
+
+    # Google Drive: revoke and forget.
+    link = await db.get(DriveLink, row.id)
+    if link is not None:
+        try:
+            await google_drive.revoke(google_drive.decrypt(link.refresh_token))
+        except google_drive.DriveError:
+            pass
+        await db.delete(link)
+
+    # Lectures and their audio objects.
+    session_ids = (
+        (await db.execute(select(Session.id).where(Session.user_id == row.id))).scalars().all()
+    )
+    if session_ids:
+        chunks = (
+            (await db.execute(select(AudioChunk).where(AudioChunk.session_id.in_(session_ids))))
+            .scalars()
+            .all()
+        )
+        for chunk in chunks:
+            if chunk.s3_key and not chunk.deleted_from_s3:
+                try:
+                    s3_client.delete_object(chunk.s3_bucket, chunk.s3_key)
+                except Exception as e:  # noqa: BLE001 — best effort; the row goes anyway
+                    logger.warning("Could not delete %s: %s", chunk.s3_key, e)
+        for model in (TranscriptSegment, AudioChunk, NotesVersion, DocumentUpload, DriveFile):
+            await db.execute(delete(model).where(model.session_id.in_(session_ids)))
+        await db.execute(delete(Session).where(Session.id.in_(session_ids)))
+    await db.execute(delete(ResetToken).where(ResetToken.user_id == row.id))
+    await db.delete(row)
+    await db.commit()
+    clear_login_cookie(response)
+    logger.info(
+        "User %s deleted their own account (%d lectures removed)", row.username, len(session_ids)
+    )
+    return Response(status_code=204)
 
 
 @router.post("/logout", status_code=204)

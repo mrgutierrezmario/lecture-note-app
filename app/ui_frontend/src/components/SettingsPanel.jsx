@@ -81,7 +81,7 @@ function ProviderKey({ label, keyMasked, keyInput, onKeyInput, onSaveKey, onClea
   )
 }
 
-function SettingsPanel({ user, onUserChange }) {
+function SettingsPanel({ user, onUserChange, onLogout }) {
   const isAdmin = user?.is_admin
   const [open, setOpen] = useState(false)
   const [settings, setSettings] = useState(null)
@@ -253,7 +253,7 @@ function SettingsPanel({ user, onUserChange }) {
         </div>
       </section>
 
-      <PasswordSection user={user} onUserChange={onUserChange} />
+      <PasswordSection user={user} onUserChange={onUserChange} onDeleted={() => { setOpen(false); onLogout?.() }} />
 
       {/* Admins get this right after the OAuth client fields (inside the admin block below). */}
       {!isAdmin && <DriveSection isAdmin={false} />}

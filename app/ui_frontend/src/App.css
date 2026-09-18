@@ -1437,6 +1437,21 @@ a.btn-icon:hover {
   background: var(--primary-hover);
 }
 
+.settings-danger-heading {
+  margin-top: 22px;
+  color: var(--danger);
+}
+
+.settings-actions .btn-danger-outline {
+  border-color: var(--danger);
+  color: var(--danger);
+  background: transparent;
+}
+
+.settings-actions .btn-danger-outline:hover:not(:disabled) {
+  background: var(--danger-tint);
+}
+
 .user-badge-warn {
   background: var(--warning-tint);
   color: var(--warning);

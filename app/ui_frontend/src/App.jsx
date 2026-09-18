@@ -618,7 +618,7 @@ function Workspace({ user, onLogout, onUserChange }) {
             <span className="status-label">{isConnected ? 'Connected' : (isRecording && queuedChunks ? `Buffering ${queuedChunks * 5}s` : 'Disconnected')}</span>
           </span>
           <HistoryPanel user={user} currentSessionId={sessionId} onOpen={openPastLecture} />
-          <SettingsPanel user={user} onUserChange={onUserChange} />
+          <SettingsPanel user={user} onUserChange={onUserChange} onLogout={onLogout} />
           <a className="btn-icon" href="/guide" target="_blank" rel="noreferrer" aria-label="User guide" data-tip="User guide (opens in a new tab)">
             <HelpIcon size={18} />
           </a>
