@@ -1,5 +1,6 @@
 # AI Lecture Notes
 
+[![CI](https://github.com/mrgutierrezmario/lecture-note-app/actions/workflows/ci.yml/badge.svg)](https://github.com/mrgutierrezmario/lecture-note-app/actions/workflows/ci.yml)
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](app/ui_backend)
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688.svg?logo=fastapi&logoColor=white)](app/ui_backend)
@@ -500,6 +501,13 @@ deploy/                  compose.yml, Dockerfile, start.sh/stop.sh,
 
 Backend code is formatted and linted with [ruff](https://docs.astral.sh/ruff/)
 (`app/ui_backend/pyproject.toml`): `venv/bin/ruff format . && venv/bin/ruff check .`.
+
+**Tests:** `app/ui_backend/tests/` — pure-Python unit tests (auth tokens, rate
+limiting, notes merging, WebM header slicing, Whisper prompt, Drive helpers,
+settings validation, provider cascade) plus API smoke tests that need no
+database. Run with `pip install -r requirements-dev.txt && python -m pytest`
+from `app/ui_backend`. GitHub Actions runs lint, tests and the frontend build
+on every push and pull request.
 
 ---
 

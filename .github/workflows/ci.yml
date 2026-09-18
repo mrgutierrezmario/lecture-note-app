@@ -1,0 +1,50 @@
+# Lint + tests on every push and pull request. No services are needed: the
+# backend tests are pure Python and the API smoke tests assert how the app
+# behaves *without* a database (503 from /health, 401 on protected paths).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    name: Backend (ruff + pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/ui_backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: |
+            app/ui_backend/requirements.txt
+            app/ui_backend/requirements-dev.txt
+      - name: Install
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt -r requirements-dev.txt ruff
+      - name: Lint
+        run: ruff check . && ruff format --check .
+      - name: Test
+        run: python -m pytest
+
+  frontend:
+    name: Frontend (build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app/ui_frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: app/ui_frontend/package-lock.json
+      - run: npm ci
+      - run: npm run build

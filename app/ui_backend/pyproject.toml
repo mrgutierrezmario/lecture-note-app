@@ -7,10 +7,19 @@ extend-exclude = ["venv", "alembic/versions"]
 # pycodestyle (E, W), pyflakes (F), import ordering (I)
 select = ["E", "W", "F", "I", "D1"]  # D1: every public module/class/function needs a docstring
 
+[tool.ruff.lint.per-file-ignores]
+# Test functions describe themselves by name; module docstrings still apply.
+"tests/*" = ["D103"]
+
 [tool.ruff.lint.isort]
-known-first-party = ["auth", "cleanup", "config", "database", "document_processor", "image_analyzer",
-  "mailer", "models", "notes_generator", "providers", "quota", "routes", "s3_client",
-  "schemas", "settings_store", "transcriber", "websocket_handler"]
+known-first-party = ["audio_backup", "auth", "cleanup", "config", "database", "document_processor",
+  "google_drive", "image_analyzer", "mailer", "models", "mp3_export", "notes_generator",
+  "providers", "quota", "ratelimit", "routes", "s3_client", "schemas", "settings_store",
+  "transcriber", "websocket_handler"]
 
 [tool.ruff.format]
 quote-style = "double"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
