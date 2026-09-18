@@ -245,6 +245,12 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   v26 content).
 - **Per-user caps** (`ratelimit.allow`): 40 chat / 15 image / 20 uploads
   per 10 min, admins exempt, 429 + Retry-After.
+- **Speaker separation (gap 9) — deliberately not built.** Discussed
+  2026-09-18: pyannote diarization would double CPU load live; in the real
+  setups (Zoom via BlackHole = one mixed channel without the user's own
+  voice; in-person = far, quiet students lumped together) labels add little.
+  If ever wanted: post-lecture background job after Stop, opt-in per
+  lecture, ~1 day + Hugging Face model access.
 
 ### Recording controls and onboarding email (2026-09-16 → 18)
 - **Mute no longer drops chunks**: it disabled the mic track *and* stopped
@@ -405,10 +411,14 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    app's own Funnel host was used as the domain. Any Google account can
    now connect a Drive.
 10. Optional next features: Google Picker folder chooser (~3 h, needs an API
-    key); Claude API credits.
-11. Optional: revoke/re-create the two Gmail App Passwords that passed through
+    key); Claude API credits; speaker separation (post-lecture, see above);
+    automated tests + CI (gap 1 — the biggest remaining one for the public
+    repo); PDF/DOCX export; self-service account deletion; Dependabot.
+11. Operator to run once on the Mac: `deploy/restore-drill.sh --from-remote`
+    (the real disaster-recovery path via Google Drive).
+12. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
-12. stock-tracker's report emails are failing on a revoked App Password —
+13. stock-tracker's report emails are failing on a revoked App Password —
    unrelated to this app, but noticed while diagnosing.
 
 ## Feature Reference (what users have)
