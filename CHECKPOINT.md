@@ -220,6 +220,26 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Recording controls and onboarding email (2026-09-16 → 18)
+- **Mute no longer drops chunks**: it disabled the mic track *and* stopped
+  sending; muting in the first 5 s lost the WebM header chunk so nothing
+  after it decoded, and any mute shifted timestamps. Chunks are always
+  sent now (muted = silence, skipped by the server's RMS gate). Status line
+  reports "mic muted" / "mic on".
+- **Pause / Resume** while recording (`MediaRecorder.pause()`; next chunk
+  after resume is a plain continuation). Lecture stays open — no final
+  notes, no export. After Stop the button reads **Continue recording**
+  when the lecture has content (server already accepted a fresh header).
+- **Mute names its device**: with a virtual input (BlackHole, Loopback,
+  aggregate) the switch reads "Mute BlackHole 2ch" and the tooltip says it
+  silences the meeting audio, not the user — use Zoom's own mute for that.
+  Guide gained a Mac virtual-audio-device paragraph (routing, two mutes,
+  aggregate device to capture own questions).
+- **Approved-account email** now carries onboarding: audio kept N days
+  (from Settings), download or Keep (limit from Settings), connect Google
+  Drive, tab audio / speakerphone tip, link to `/guide`. Preview sent to
+  the business inbox and checked.
+
 ### Hardening and polish (2026-09-15, evening)
 - **Sign-up closed** (Settings → Sign-up off; admins add accounts).
 - **Audio buffering across disconnects**: the browser queues chunks (and
