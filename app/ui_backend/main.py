@@ -13,15 +13,14 @@ from pathlib import Path
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
-from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy import text
 
 import settings_store
 from auth import AuthMiddleware
 from cleanup import start_cleanup_background_task
 from config import get_settings
 from database import AsyncSessionLocal
-from s3_client import s3_client
 from routes import (
     admin_router,
     auth_router,
@@ -30,6 +29,7 @@ from routes import (
     sessions_router,
     settings_router,
 )
+from s3_client import s3_client
 from websocket_handler import handle_websocket
 
 logging.basicConfig(
