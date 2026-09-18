@@ -30,7 +30,9 @@ from schemas import (
     ChatRequest,
     ChatResponse,
     DocumentUploadResponse,
+    NotesEdit,
     NotesResponse,
+    SessionDetails,
     SessionResponse,
     TranscriptResponse,
 )
@@ -63,6 +65,33 @@ async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
 
+    return session
+
+
+@router.patch("/{session_id}", response_model=SessionResponse)
+async def update_session_details(
+    session_id: str, body: SessionDetails, db: AsyncSession = Depends(get_db)
+):
+    """Change a lecture's title, key terms or notes focus (also for past lectures).
+
+    While a recording is live the websocket applies the same changes; this
+    endpoint is what History and the details dialog use afterwards."""
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    if body.title is not None:
+        session.title = body.title.strip() or None
+    if body.vocabulary is not None:
+        session.vocabulary = body.vocabulary.strip() or None
+    if body.notes_focus is not None:
+        session.notes_focus = body.notes_focus.strip()[:500] or None
+    await db.commit()
+    await db.refresh(session)
+    # A live recording picks the new spelling hints up from the next chunk.
+    from websocket_handler import apply_prompt
+
+    apply_prompt(session.id, session.title, session.vocabulary)
     return session
 
 
@@ -121,6 +150,60 @@ async def get_notes(session_id: str, db: AsyncSession = Depends(get_db)):
         version=notes.version,
         notes_md=notes.notes_md,
         created_at=notes.created_at,
+    )
+
+
+@router.put("/{session_id}/notes", response_model=NotesResponse)
+async def edit_notes(session_id: str, body: NotesEdit, db: AsyncSession = Depends(get_db)):
+    """Save the user's edited notes as a new version.
+
+    Later generation passes merge into this version, so edits made during a
+    lecture survive; earlier versions stay in the table."""
+    result = await db.execute(select(Session).where(Session.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    latest = (
+        await db.execute(
+            select(NotesVersion)
+            .where(NotesVersion.session_id == session_id)
+            .order_by(NotesVersion.version.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    version = NotesVersion(
+        session_id=session_id,
+        version=(latest.version + 1) if latest else 1,
+        notes_md=body.notes_md.strip(),
+    )
+    db.add(version)
+    session.last_notes_version = version.version
+    await db.commit()
+    await db.refresh(version)
+    return NotesResponse(
+        session_id=session_id,
+        version=version.version,
+        notes_md=version.notes_md,
+        created_at=version.created_at,
+    )
+
+
+@router.post("/{session_id}/notes/regenerate", response_model=NotesResponse)
+async def regenerate_notes(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Rebuild the notes from the whole transcript — e.g. after setting a focus
+    on a past lecture. Takes a while for a long lecture; the reply is the
+    finished version."""
+    from notes_generator import regenerate_notes_for_session
+    from websocket_handler import manager
+
+    version = await regenerate_notes_for_session(db, session_id, manager.broadcast)
+    if version is None:
+        raise HTTPException(status_code=404, detail="No transcript to generate notes from")
+    return NotesResponse(
+        session_id=session_id,
+        version=version.version,
+        notes_md=version.notes_md,
+        created_at=version.created_at,
     )
 
 

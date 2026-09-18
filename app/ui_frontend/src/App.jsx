@@ -24,6 +24,7 @@ import { MicIcon, LogoutIcon, PlusIcon, HelpIcon } from './components/Icons'
 import useAuth from './hooks/useAuth'
 import { prepareMp3, downloadUrl } from './lib/mp3'
 import { useDialog } from './components/Dialog'
+import LectureDetailsDialog from './components/LectureDetailsDialog'
 import useWebSocket from './hooks/useWebSocket'
 import './App.css'
 
@@ -46,6 +47,8 @@ function Workspace({ user, onLogout, onUserChange }) {
   // Names/terms the user typed for this lecture; sent to the server, which
   // feeds them to Whisper as spelling hints. Editable before or during recording.
   const [vocabulary, setVocabulary] = useState('')
+  const [notesFocus, setNotesFocus] = useState('')
+  const [detailsOpen, setDetailsOpen] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const isPausedRef = useRef(false)
   // Screen Wake Lock: phones suspend the page when the screen sleeps, which
@@ -349,14 +352,14 @@ function Workspace({ user, onLogout, onUserChange }) {
       saveStorageRef.current = saveStorage
       acquireWakeLock()
       if (micState !== 'granted') { setMicState('granted'); loadDevices() }
-      sendMessage({ type: 'start', title: title || undefined, save_storage: saveStorage, vocabulary })
+      sendMessage({ type: 'start', title: title || undefined, save_storage: saveStorage, vocabulary, notes_focus: notesFocus })
       setStatus(`Recording (${statusLabel})${micMuted ? ' — mic muted' : ''}...`)
     } catch (error) {
       console.error('Error starting recording:', error)
       if (error?.name === 'NotAllowedError') setMicState('denied')
       setStatus(micErrorMessage(error))
     }
-  }, [sendMessage, sendBinary, title, saveStorage, vocabulary, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, startLevelMeter, acquireWakeLock])
+  }, [sendMessage, sendBinary, title, saveStorage, vocabulary, notesFocus, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, startLevelMeter, acquireWakeLock])
 
   // Mute only disables the mic track: the recorder and the stream keep going,
   // so the transcript resumes the moment the mic is enabled again.
@@ -504,15 +507,23 @@ function Workspace({ user, onLogout, onUserChange }) {
     setSessionId(item.id)
     setViewingPast(true)
     setTitle(item.title || '')
+    setVocabulary('')
+    setNotesFocus('')
     setTranscript([])
     setNotes('')
     setNotesVersion(0)
     setStatus('Loading lecture…')
     try {
-      const [t, n] = await Promise.all([
+      const [t, n, d] = await Promise.all([
         fetch(`/api/session/${item.id}/transcript`),
         fetch(`/api/session/${item.id}/notes`),
+        fetch(`/api/session/${item.id}`),
       ])
+      if (d.ok && currentSessionRef.current === item.id) {
+        const details = await d.json()
+        setVocabulary(details.vocabulary || '')
+        setNotesFocus(details.notes_focus || '')
+      }
       if (currentSessionRef.current !== item.id) return // user moved on meanwhile
       if (t.ok) {
         const data = await t.json()
@@ -530,20 +541,22 @@ function Workspace({ user, onLogout, onUserChange }) {
     }
   }, [isRecording])
 
-  const editVocabulary = useCallback(async () => {
-    const next = await dialog.prompt({
-      title: 'Key terms for this lecture',
-      label: 'Names, acronyms, course terms — comma separated. The transcriber uses them to get spellings right.',
-      defaultValue: vocabulary,
-      placeholder: 'e.g. Porter\'s five forces, SWOT, Nvidia, Prof. Ramirez',
-      confirmLabel: 'Save terms',
+  // Save the per-lecture hints. PATCH covers every state (before, during and
+  // after a recording): the server re-prompts Whisper itself.
+  const saveDetails = useCallback(async ({ vocabulary: terms, notes_focus }) => {
+    const response = await fetch(`/api/session/${sessionId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ vocabulary: terms, notes_focus }),
     })
-    if (next === null || next === undefined) return
-    const cleaned = next.trim()
-    setVocabulary(cleaned)
-    // Live update while recording; before start it simply rides along with "start".
-    if (isRecordingRef.current) sendMessage({ type: 'vocabulary', text: cleaned })
-  }, [dialog, vocabulary, sendMessage])
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}))
+      dialog.notice({ title: 'Could not save', message: data.detail || `HTTP ${response.status}` })
+      return
+    }
+    setVocabulary(terms)
+    setNotesFocus(notes_focus)
+  }, [sessionId, dialog])
 
   const startNewLecture = useCallback(() => {
     if (isRecording) return
@@ -553,6 +566,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     setViewingPast(false)
     setTitle('')
     setVocabulary('')
+    setNotesFocus('')
     setTranscript([])
     setNotes('')
     setNotesVersion(0)
@@ -586,7 +600,8 @@ function Workspace({ user, onLogout, onUserChange }) {
           onTitleChange={setTitle}
           disabled={isRecording || viewingPast}
           vocabulary={vocabulary}
-          onEditVocabulary={viewingPast ? undefined : editVocabulary}
+          notesFocus={notesFocus}
+          onEditDetails={() => setDetailsOpen(true)}
         />
 
         <div className="app-bar-actions">
@@ -614,6 +629,15 @@ function Workspace({ user, onLogout, onUserChange }) {
           </span>
         </div>
       </header>
+
+      {detailsOpen && (
+        <LectureDetailsDialog
+          vocabulary={vocabulary}
+          notesFocus={notesFocus}
+          onSave={saveDetails}
+          onClose={() => setDetailsOpen(false)}
+        />
+      )}
 
       <div className="toolbar">
         {viewingPast && (
@@ -730,7 +754,13 @@ function Workspace({ user, onLogout, onUserChange }) {
 
       <main className="main-content">
         <TranscriptPane transcript={transcript} />
-        <NotesPane notes={notes} version={notesVersion} />
+        <NotesPane
+          notes={notes}
+          version={notesVersion}
+          sessionId={sessionId}
+          isRecording={isRecording}
+          onNotesChange={(md, v) => { setNotes(md); setNotesVersion(v) }}
+        />
         <div className="right-pane">
           {/* Keyed so uploads and chat history reset when switching lectures. */}
           <FileUpload key={`upload-${sessionId}`} sessionId={sessionId} />

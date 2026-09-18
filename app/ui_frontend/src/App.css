@@ -1866,6 +1866,46 @@ a.btn-icon:hover {
   height: 40px;
 }
 
+.dialog-wide {
+  max-width: 520px;
+}
+
+.dialog-field + .dialog-field {
+  margin-top: 14px;
+}
+
+.dialog-field small {
+  font-weight: 400;
+  font-size: 12px;
+  color: var(--faint);
+}
+
+/* Notes editing */
+.notes-editor {
+  width: 100%;
+  min-height: 320px;
+  height: 100%;
+  box-sizing: border-box;
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  resize: vertical;
+}
+
+.pane-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.pane-actions .btn-icon {
+  width: 30px;
+  height: 30px;
+}
+
 .dialog-actions {
   display: flex;
   justify-content: flex-end;

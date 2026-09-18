@@ -3,7 +3,8 @@
 Protocol (one socket per lecture, path ``/ws/session/{session_id}``):
 
 * Browser → server, JSON text frames: ``{"type": "start", "title", "save_storage",
-  "vocabulary"}``, ``{"type": "vocabulary", "text"}`` (key terms edited mid-lecture),
+  "vocabulary", "notes_focus"}``, ``{"type": "vocabulary", "text"}`` and
+  ``{"type": "focus", "text"}`` (key terms / notes focus edited mid-lecture),
   ``{"type": "resume", "save_storage"}`` (after a reconnect mid-recording),
   ``{"type": "stop"}``, ``{"type": "ping"}``.
 * Browser → server, binary frames: 5-second WebM/Opus chunks from
@@ -203,7 +204,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
-def _apply_prompt(session_id: str, title: str | None, vocabulary: str | None) -> None:
+def apply_prompt(session_id: str, title: str | None, vocabulary: str | None) -> None:
     """Point Whisper at this lecture's title/key terms (plus the server-wide list)."""
     set_session_prompt(session_id, build_prompt(title, vocabulary, settings.whisper_vocabulary))
 
@@ -263,7 +264,7 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
 
     # Spelling hints for Whisper survive reconnects and restarts: rebuild them
     # from what the session row already knows.
-    _apply_prompt(session_id, session.title, session.vocabulary)
+    apply_prompt(session_id, session.title, session.vocabulary)
 
     await manager.broadcast(
         session_id,
@@ -319,8 +320,12 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                     session.title = title
                                 if "vocabulary" in message:
                                     session.vocabulary = vocabulary
+                                if "notes_focus" in message:
+                                    session.notes_focus = (
+                                        message.get("notes_focus") or ""
+                                    ).strip()[:500] or None
                                 await db.commit()
-                                _apply_prompt(session_id, session.title, session.vocabulary)
+                                apply_prompt(session_id, session.title, session.vocabulary)
 
                         reset_transcriber_session(session_id)
                         manager.start_notes_task(session_id)
@@ -333,6 +338,16 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                             },
                         )
 
+                    elif msg_type == "focus":
+                        # Notes focus edited mid-lecture: the next pass uses it.
+                        async with AsyncSessionLocal() as db:
+                            session = await db.get(Session, session_id)
+                            if session:
+                                session.notes_focus = (message.get("text") or "").strip()[
+                                    :500
+                                ] or None
+                                await db.commit()
+
                     elif msg_type == "vocabulary":
                         # Key terms edited mid-lecture: store and re-prompt Whisper.
                         vocabulary = (message.get("text") or "").strip() or None
@@ -341,7 +356,7 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                             if session:
                                 session.vocabulary = vocabulary
                                 await db.commit()
-                                _apply_prompt(session_id, session.title, session.vocabulary)
+                                apply_prompt(session_id, session.title, session.vocabulary)
 
                     elif msg_type == "resume":
                         # The browser reconnected mid-recording (network blip or a

@@ -82,6 +82,9 @@ class Session(Base):
     # Names, acronyms and course terms the user typed for this lecture; fed to
     # Whisper as a spelling hint (see transcriber.set_session_prompt).
     vocabulary = Column(Text, nullable=True)
+    # What the user wants the notes to emphasise ("formulas and definitions",
+    # "case names and rulings"); appended to the extraction prompt.
+    notes_focus = Column(Text, nullable=True)
     # Kept: exempt from the audio retention cleanup and from deletion until unlocked.
     locked = Column(Boolean, default=False, nullable=False, server_default="false")
     created_at = Column(DateTime, default=datetime.utcnow)

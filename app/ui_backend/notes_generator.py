@@ -51,7 +51,12 @@ Rules:
 - Only include a section if the transcript has content for it
 - Never invent or infer content not stated in the transcript
 - Bullet points only, no prose paragraphs
-- Be concise"""
+- Be concise{focus}"""
+
+# Appended to the rules when the user gave the lecture a focus.
+FOCUS_TEMPLATE = """
+- The student asked the notes to focus on: {focus}. Give that priority — capture every
+  relevant detail for it, and keep other sections brief"""
 
 
 # Windows processed in one pass when catching up on a backlog (each is one
@@ -78,18 +83,20 @@ CLOUD_WINDOW_CHARS = 24_000
 _last_fallback: dict[str, str | None] = {"note": None}
 
 
-async def extract_notes(transcript: str) -> str | None:
+async def extract_notes(transcript: str, focus: str | None = None) -> str | None:
     """Extract notes for one transcript window with the configured provider.
 
-    If a cloud provider fails and the call falls back to local Ollama, a
-    cloud-sized window is far more than Ollama can read, so it is re-run in
-    Ollama-sized slices and the results merged — nothing is silently skimmed.
+    ``focus`` is the user's per-lecture instruction, if any. If a cloud
+    provider fails and the call falls back to local Ollama, a cloud-sized
+    window is far more than Ollama can read, so it is re-run in Ollama-sized
+    slices and the results merged — nothing is silently skimmed.
     """
     from providers import generate_text
 
+    focus_text = FOCUS_TEMPLATE.format(focus=focus.strip()) if focus and focus.strip() else ""
     try:
         result = await generate_text(
-            EXTRACT_PROMPT_TEMPLATE.format(transcript=transcript),
+            EXTRACT_PROMPT_TEMPLATE.format(transcript=transcript, focus=focus_text),
             max_tokens=800,
             temperature=0.1,
             timeout=120.0,
@@ -108,7 +115,7 @@ async def extract_notes(transcript: str) -> str | None:
         logger.info("Re-running a %d-char window in local-sized slices", len(transcript))
         merged = ""
         for i in range(0, len(transcript), OLLAMA_WINDOW_CHARS):
-            piece = await extract_notes(transcript[i : i + OLLAMA_WINDOW_CHARS])
+            piece = await extract_notes(transcript[i : i + OLLAMA_WINDOW_CHARS], focus)
             if piece:
                 merged = merge_notes(merged, piece)
         return merged or result.text
@@ -237,13 +244,16 @@ async def generate_notes_for_session(
     db: AsyncSession,
     session_id: str,
     broadcast_callback=None,
+    fresh: bool = False,
 ) -> NotesVersion | None:
     """Run one notes pass for a session and store it as a new version.
 
     Reads segments newer than ``last_summarized_segment_id``, extracts notes
     from that window, merges them into the previous version, saves the
     result and (optionally) broadcasts it to the browser. Returns the new
-    ``NotesVersion`` or ``None`` when there was nothing new.
+    ``NotesVersion`` or ``None`` when there was nothing new. ``fresh`` starts
+    from empty notes instead of merging into the previous version (used when
+    regenerating a lecture from scratch, e.g. after changing its focus).
     """
     session_result = await db.execute(select(Session).where(Session.id == session_id))
     session = session_result.scalar_one_or_none()
@@ -277,7 +287,7 @@ async def generate_notes_for_session(
         .limit(1)
     )
     latest_notes = latest_notes_result.scalar_one_or_none()
-    current_notes = latest_notes.notes_md if latest_notes else ""
+    current_notes = "" if fresh else (latest_notes.notes_md if latest_notes else "")
 
     # Which extractor can run. Cloud providers need no local model; Ollama
     # needs to be reachable, otherwise the heuristic extractor keeps notes
@@ -311,7 +321,7 @@ async def generate_notes_for_session(
     for batch in batches:
         text = " ".join(seg.text for seg in batch)
         _last_fallback["note"] = None
-        extracted = await extract_notes(text) if use_model else None
+        extracted = await extract_notes(text, session.notes_focus) if use_model else None
         fallback_note = fallback_note or _last_fallback["note"]
         notes_md = merge_notes(notes_md, extracted or extract_heuristic_notes(text))
     last_processed = batches[-1][-1]
@@ -350,3 +360,21 @@ async def generate_notes_for_session(
         )
 
     return notes_version
+
+
+async def regenerate_notes_for_session(db: AsyncSession, session_id: str, broadcast_callback=None):
+    """Rebuild a lecture's notes from the whole transcript (new versions; the
+    old ones stay in history). Used after the user changes the lecture's focus
+    or wants a clean rewrite. Runs pass after pass until the backlog is done."""
+    session = await db.get(Session, session_id)
+    if session is None:
+        return None
+    session.last_summarized_segment_id = None
+    await db.commit()
+    result = await generate_notes_for_session(db, session_id, broadcast_callback, fresh=True)
+    while True:
+        more = await generate_notes_for_session(db, session_id, broadcast_callback)
+        if more is None:
+            break
+        result = more
+    return result

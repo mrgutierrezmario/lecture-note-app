@@ -22,8 +22,24 @@ class SessionResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     last_notes_version: int
+    vocabulary: Optional[str] = None  # key terms for the transcriber
+    notes_focus: Optional[str] = None  # what the notes should emphasise
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class SessionDetails(BaseModel):
+    """Editable per-lecture settings (``PATCH /api/session/{id}``)."""
+
+    title: Optional[str] = None
+    vocabulary: Optional[str] = None
+    notes_focus: Optional[str] = None
+
+
+class NotesEdit(BaseModel):
+    """A user's own version of the notes (``PUT /api/session/{id}/notes``)."""
+
+    notes_md: str
 
 
 class TranscriptResponse(BaseModel):
