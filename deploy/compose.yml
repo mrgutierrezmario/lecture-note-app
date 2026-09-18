@@ -8,11 +8,19 @@
 name: lecture-notes
 
 x-restart: &restart unless-stopped
+# Container logs are capped (the app logs every audio chunk); Docker rotates
+# them instead of letting them grow for months on the host's disk.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "20m"
+    max-file: "5"
 
 services:
   postgres:
     image: postgres:18-alpine
     restart: *restart
+    logging: *logging
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
@@ -28,6 +36,7 @@ services:
   minio:
     image: quay.io/minio/minio:latest
     restart: *restart
+    logging: *logging
     command: server /data --address :9000
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
@@ -80,6 +89,7 @@ services:
   tailscale:
     image: tailscale/tailscale:latest
     restart: *restart
+    logging: *logging
     hostname: ${TS_HOSTNAME:-lecture-notes}
     depends_on:
       tailscale-config:
@@ -108,6 +118,7 @@ services:
       dockerfile: deploy/Dockerfile
     image: lecture-notes-app:latest
     restart: *restart
+    logging: *logging
     network_mode: service:tailscale
     depends_on:
       postgres:

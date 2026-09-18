@@ -45,6 +45,28 @@ function Workspace({ user, onLogout, onUserChange }) {
   const [micMuted, setMicMuted] = useState(false)
   const [isPaused, setIsPaused] = useState(false)
   const isPausedRef = useRef(false)
+  // Screen Wake Lock: phones suspend the page when the screen sleeps, which
+  // kills the recorder mid-lecture. Held while recording, re-acquired when the
+  // tab becomes visible again (the OS releases it on every hide).
+  const wakeLockRef = useRef(null)
+  const acquireWakeLock = useCallback(async () => {
+    if (!('wakeLock' in navigator) || wakeLockRef.current) return
+    try {
+      wakeLockRef.current = await navigator.wakeLock.request('screen')
+      wakeLockRef.current.addEventListener('release', () => { wakeLockRef.current = null })
+    } catch (_) { /* denied (low battery, not visible) — nothing to do */ }
+  }, [])
+  const releaseWakeLock = useCallback(() => {
+    wakeLockRef.current?.release().catch(() => {})
+    wakeLockRef.current = null
+  }, [])
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible' && isRecordingRef.current) acquireWakeLock()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [acquireWakeLock])
   const [audioDevices, setAudioDevices] = useState([])
   const [selectedDeviceId, setSelectedDeviceId] = useState('')
   const [captureTabAudio, setCaptureTabAudio] = useState(false)
@@ -322,6 +344,7 @@ function Workspace({ user, onLogout, onUserChange }) {
       setIsRecording(true)
       isRecordingRef.current = true
       saveStorageRef.current = saveStorage
+      acquireWakeLock()
       if (micState !== 'granted') { setMicState('granted'); loadDevices() }
       sendMessage({ type: 'start', title: title || undefined, save_storage: saveStorage })
       setStatus(`Recording (${statusLabel})${micMuted ? ' — mic muted' : ''}...`)
@@ -330,7 +353,7 @@ function Workspace({ user, onLogout, onUserChange }) {
       if (error?.name === 'NotAllowedError') setMicState('denied')
       setStatus(micErrorMessage(error))
     }
-  }, [sendMessage, sendBinary, title, saveStorage, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, startLevelMeter])
+  }, [sendMessage, sendBinary, title, saveStorage, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, startLevelMeter, acquireWakeLock])
 
   // Mute only disables the mic track: the recorder and the stream keep going,
   // so the transcript resumes the moment the mic is enabled again.
@@ -370,6 +393,7 @@ function Workspace({ user, onLogout, onUserChange }) {
 
   const stopRecording = useCallback(() => {
     stopLevelMeter()
+    releaseWakeLock()
     isPausedRef.current = false
     setIsPaused(false)
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
@@ -398,7 +422,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     isRecordingRef.current = false
     sendMessage({ type: 'stop' })
     setStatus('Processing...')
-  }, [sendMessage, stopLevelMeter])
+  }, [sendMessage, stopLevelMeter, releaseWakeLock])
 
   // Hand the URL straight to the browser's download manager. The server marks
   // every export as an attachment, so this saves the file on every platform —

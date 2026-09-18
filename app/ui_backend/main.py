@@ -5,19 +5,23 @@ the built React UI, so one port serves the whole app. Run with uvicorn
 (see ``deploy/docker-entrypoint.sh`` or ``start.sh``).
 """
 
+import asyncio
 import logging
 from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from sqlalchemy import text
 from fastapi.staticfiles import StaticFiles
 
 import settings_store
 from auth import AuthMiddleware
 from cleanup import start_cleanup_background_task
 from config import get_settings
+from database import AsyncSessionLocal
+from s3_client import s3_client
 from routes import (
     admin_router,
     auth_router,
@@ -85,8 +89,26 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
 
 @app.get("/health")
 async def health():
-    """Liveness probe; the only path that needs no login."""
-    return {"status": "healthy"}
+    """Health probe (no login). Checks the database and object storage so an
+    external uptime monitor sees a real outage, not just a running process.
+    Returns 503 when either dependency is down."""
+    checks: dict[str, str] = {}
+    try:
+        async with AsyncSessionLocal() as db:
+            await db.execute(text("SELECT 1"))
+        checks["database"] = "ok"
+    except Exception as e:  # noqa: BLE001 — any failure is a failed check
+        checks["database"] = f"error: {type(e).__name__}"
+    try:
+        await asyncio.to_thread(s3_client.client.head_bucket, Bucket=s3_client.bucket)
+        checks["storage"] = "ok"
+    except Exception as e:  # noqa: BLE001
+        checks["storage"] = f"error: {type(e).__name__}"
+    healthy = all(v == "ok" for v in checks.values())
+    return JSONResponse(
+        status_code=200 if healthy else 503,
+        content={"status": "healthy" if healthy else "degraded", **checks},
+    )
 
 
 # ── Built frontend ────────────────────────────────────────────────────────────
