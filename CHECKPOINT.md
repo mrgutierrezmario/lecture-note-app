@@ -220,6 +220,26 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### PDF / Word export and stored chat (2026-09-18, late)
+- `documents_export.py`: one branded document per lecture — title +
+  "Recorded … · duration · Notes version", Contents strip, **1. Notes**
+  (Markdown → blue H2s, blue bullets, bold/italic/code), **2. Questions &
+  answers** (YOU label + bold question; AI · model label + tinted block with
+  blue left rule), **3. Full transcript** (~30 s paragraphs, grey monospace
+  time column). PDF via **reportlab 5.0.1** (new dependency), Word via
+  python-docx (header/footer, shaded answers, two-column transcript table).
+  Logo resolved from `dist/` in the image, `public/` in dev.
+- Endpoints `GET /api/session/{id}/export/lecture.pdf|.docx` (filename from
+  the title); toolbar buttons PDF/Word; History → Download → PDF/Word;
+  Google Drive export now also uploads `lecture.pdf` + `lecture.docx`.
+- **Chat stored per lecture** (migration 014 `chat_messages`; images not
+  stored): `GET …/chat` reloads it when a lecture is reopened; deleted with
+  the lecture; privacy page updated (questions are retained with the lecture).
+- **Bug fixed**: `transcript.txt` timestamps were chunk-relative (all
+  `00:0x`); now absolute (`chunk × 5 s + offset`) — same in the exports.
+- Tests: +6 (builders, grouping, subtitle, inline runs) → 38 passing.
+- Mockup kept at `design/pdf-mockup.pdf` (generated from the real lecture).
+
 ### Gap list, items 5, 6, 1, 9 (2026-09-18, evening)
 - **Self-service account deletion**: Settings → Your account → Delete
   account (password-confirmed `DELETE /api/auth/me`): removes lectures,
@@ -437,8 +457,7 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    app's own Funnel host was used as the domain. Any Google account can
    now connect a Drive.
 10. Optional next features: Google Picker folder chooser (~3 h, needs an API
-    key); Claude API credits; speaker separation (post-lecture, see above);
-    PDF/DOCX export.
+    key); Claude API credits; speaker separation (post-lecture, see above).
 11. Operator to run once on the Mac: `deploy/restore-drill.sh --from-remote`
     (the real disaster-recovery path via Google Drive).
 12. Optional: revoke/re-create the two Gmail App Passwords that passed through
