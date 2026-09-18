@@ -17,6 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 import google_drive
 import mp3_export
+import ratelimit
 from auth import CurrentUser, current_user
 from config import get_settings
 from database import get_db
@@ -38,6 +39,28 @@ from schemas import (
 )
 
 logger = logging.getLogger(__name__)
+
+
+# Per-user caps on the endpoints that cost real money or CPU (per 10 minutes).
+# Generous for a student asking questions; tight enough that one account can't
+# exhaust the shared Gemini/Claude quota or keep Whisper busy for everyone.
+USAGE_WINDOW = 10 * 60
+USAGE_LIMITS = {"chat": 40, "image": 15, "upload": 20}
+
+
+def _check_usage(user: CurrentUser, kind: str) -> None:
+    """Raise 429 when ``user`` has used ``kind`` too often; admins are exempt."""
+    if user.is_admin:
+        return
+    allowed, wait = ratelimit.allow(f"{kind}:{user.id}", USAGE_LIMITS[kind], USAGE_WINDOW)
+    if not allowed:
+        what = {"chat": "questions", "image": "image questions", "upload": "uploads"}[kind]
+        raise HTTPException(
+            status_code=429,
+            detail=f"You've sent a lot of {what} in a short time — try again in about "
+            f"{max(1, wait // 60)} minute(s).",
+            headers={"Retry-After": str(wait)},
+        )
 
 
 async def session_access(
@@ -411,6 +434,7 @@ async def stream_audio_chunk(
 async def upload_document(
     session_id: str,
     file: UploadFile = File(...),
+    user: CurrentUser = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Attach a PDF, PowerPoint, Word file or image to the lecture.
@@ -418,6 +442,7 @@ async def upload_document(
     Text is extracted (or, for images, transcribed by a vision model) and
     stored; the chat uses it as context. Bounded by ``max_upload_mb``.
     """
+    _check_usage(user, "upload")
     result = await db.execute(select(Session).where(Session.id == session_id))
     session = result.scalar_one_or_none()
     if not session:
@@ -544,6 +569,7 @@ async def _transcribe_image(image_base64: str, media_type: str) -> tuple[str, st
 async def chat(
     session_id: str,
     request: ChatRequest,
+    user: CurrentUser = Depends(current_user),
     db: AsyncSession = Depends(get_db),
 ):
     """Answer a question about the lecture.
@@ -552,6 +578,7 @@ async def chat(
     back to llava, then a BLIP caption + text model). Otherwise the text
     provider answers from the transcript and uploaded documents only.
     """
+    _check_usage(user, "image" if request.image_base64 else "chat")
     settings = get_settings()
 
     result = await db.execute(select(Session).where(Session.id == session_id))

@@ -1,4 +1,4 @@
-"""Small in-memory rate limiter for the sign-in endpoints.
+"""Small in-memory rate limiter for sign-in and for per-user usage caps.
 
 Brute-forcing a password is slow because of bcrypt, but nothing else stood in
 the way. This adds a lockout: after ``MAX_FAILURES`` wrong attempts within
@@ -6,6 +6,10 @@ the way. This adds a lockout: after ``MAX_FAILURES`` wrong attempts within
 one attacker can't lock everyone out and a distributed one still hits the
 per-account limit — further attempts are refused with 429 for ``LOCKOUT``
 seconds, doubling on every repeat. A successful sign-in clears the counters.
+
+``allow(key, limit, window)`` is a plain sliding-window cap used for per-user
+limits on the expensive endpoints (chat, uploads, image reads) so one account
+can't burn the shared AI quota or keep Whisper busy for everyone.
 
 Memory-only and per process: fine for one backend; a restart forgets it.
 """
@@ -75,3 +79,26 @@ def record_success(*keys: str) -> None:
     with _lock:
         for key in keys:
             _buckets.pop(key, None)
+
+
+_usage: dict[str, list[float]] = {}
+
+
+def allow(key: str, limit: int, window: int) -> tuple[bool, int]:
+    """Count one use of ``key``; ``(allowed, seconds until the next slot)``.
+
+    A sliding window: at most ``limit`` uses in the last ``window`` seconds.
+    Refused calls are not counted, so a user who waits gets their slot back.
+    """
+    now = time.time()
+    with _lock:
+        stamps = [t for t in _usage.get(key, []) if now - t < window]
+        if len(stamps) >= limit:
+            _usage[key] = stamps
+            return False, int(window - (now - stamps[0])) + 1
+        stamps.append(now)
+        _usage[key] = stamps
+        if len(_usage) > 10_000:
+            for k in [k for k, v in _usage.items() if not v or now - v[-1] > window]:
+                _usage.pop(k, None)
+    return True, 0
