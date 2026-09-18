@@ -34,6 +34,21 @@ function ChatPane({ sessionId }) {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
   }, [messages])
 
+  // Earlier questions for this lecture are kept on the server; show them when
+  // the lecture is (re)opened. The pane is keyed by session id, so this runs
+  // once per lecture.
+  useEffect(() => {
+    let cancelled = false
+    fetch(`/api/session/${sessionId}/chat`)
+      .then(r => (r.ok ? r.json() : []))
+      .then(rows => {
+        if (cancelled || !rows.length) return
+        setMessages(rows.map(m => ({ role: m.role, text: m.text, provider: m.provider || undefined })))
+      })
+      .catch(() => {})
+    return () => { cancelled = true }
+  }, [sessionId])
+
   const handlePaste = useCallback((e) => {
     const items = e.clipboardData?.items
     if (!items) return

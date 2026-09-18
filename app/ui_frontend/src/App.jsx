@@ -462,6 +462,20 @@ function Workspace({ user, onLogout, onUserChange }) {
       'Exporting transcript…',
     ), [sessionId, triggerDownload])
 
+  // Formatted document (notes + Q&A + transcript) — PDF or Word.
+  const exportPdf = useCallback(() =>
+    triggerDownload(
+      `/api/session/${sessionId}/export/lecture.pdf`,
+      `lecture-${sessionId.slice(0, 8)}.pdf`,
+      'Building the PDF…',
+    ), [sessionId, triggerDownload])
+  const exportDocx = useCallback(() =>
+    triggerDownload(
+      `/api/session/${sessionId}/export/lecture.docx`,
+      `lecture-${sessionId.slice(0, 8)}.docx`,
+      'Building the Word file…',
+    ), [sessionId, triggerDownload])
+
   // MP3: build on the server with a visible progress state, then download.
   const [mp3Progress, setMp3Progress] = useState(null) // null | { percent, phase }
   const exportAudio = useCallback(async () => {
@@ -656,6 +670,8 @@ function Workspace({ user, onLogout, onUserChange }) {
           onResume={resumeRecording}
           onExport={exportNotes}
           onExportTranscript={exportTranscript}
+          onExportPdf={exportPdf}
+          onExportDocx={exportDocx}
           onExportAudio={exportAudio}
           mp3Progress={mp3Progress}
           hasNotes={notesVersion > 0}

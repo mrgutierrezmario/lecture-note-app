@@ -28,13 +28,22 @@ from typing import Awaitable, Callable, Optional
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 import mp3_export
 from config import get_settings
 from database import AsyncSessionLocal
-from models import AudioChunk, DriveFile, DriveLink, NotesVersion, Session, TranscriptSegment
+from documents_export import LectureDoc, build_docx, build_pdf
+from models import (
+    AudioChunk,
+    ChatMessage,
+    DriveFile,
+    DriveLink,
+    NotesVersion,
+    Session,
+    TranscriptSegment,
+)
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -420,6 +429,18 @@ async def _run(job: Job) -> None:
             await put("transcript", "transcript.txt", "text/plain", transcript.encode())
             if notes:
                 await put("notes", "notes.md", "text/markdown", notes.encode())
+            # The formatted document (notes + Q&A + transcript) in both formats:
+            # PDF opens anywhere, Word is what students edit.
+            lec = await _lecture_doc(db, session)
+            await put(
+                "pdf", "lecture.pdf", "application/pdf", await asyncio.to_thread(build_pdf, lec)
+            )
+            await put(
+                "docx",
+                "lecture.docx",
+                "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                await asyncio.to_thread(build_docx, lec),
+            )
             if keys:
                 await _set_step(job, "converting audio to MP3")
                 mp3 = await mp3_export.wait(mp3_export.start(session.id, keys, "recording.mp3"))
@@ -490,3 +511,49 @@ async def _contents(db: AsyncSession, session: Session) -> tuple[Optional[str], 
     )
     keys = [c.s3_key for c in chunks if c.s3_key]
     return notes, transcript, keys
+
+
+async def _lecture_doc(db: AsyncSession, session: Session) -> LectureDoc:
+    """The same document the PDF/Word download endpoints build."""
+    notes_row = (
+        await db.execute(
+            select(NotesVersion)
+            .where(NotesVersion.session_id == session.id)
+            .order_by(NotesVersion.version.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    segments = (
+        (
+            await db.execute(
+                select(TranscriptSegment)
+                .where(TranscriptSegment.session_id == session.id)
+                .order_by(TranscriptSegment.chunk_index, TranscriptSegment.ts_start)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    chat = (
+        (
+            await db.execute(
+                select(ChatMessage)
+                .where(ChatMessage.session_id == session.id)
+                .order_by(ChatMessage.created_at, ChatMessage.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    chunks = await db.scalar(
+        select(func.count()).select_from(AudioChunk).where(AudioChunk.session_id == session.id)
+    )
+    return LectureDoc(
+        title=session.title or f"Lecture {session.id[:8]}",
+        recorded_at=session.created_at,
+        duration_seconds=int(chunks or 0) * 5,
+        notes_version=notes_row.version if notes_row else 0,
+        notes_md=notes_row.notes_md if notes_row else None,
+        transcript=[(seg.chunk_index * 5 + seg.ts_start, seg.text) for seg in segments],
+        qa=[(m.role, m.text, m.provider) for m in chat],
+    )

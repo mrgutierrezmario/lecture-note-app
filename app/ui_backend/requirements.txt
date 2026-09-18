@@ -21,3 +21,5 @@ python-docx==1.1.2
 bcrypt==4.2.1
 # Encrypts stored Google refresh tokens (google_drive.py).
 cryptography>=42
+# PDF export of notes/transcript/Q&A (documents_export.py).
+reportlab==5.0.1

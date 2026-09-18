@@ -5,7 +5,7 @@
  * lectures with an owner tag.
  */
 import { useState, useEffect, useCallback } from 'react'
-import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon, SpinnerIcon } from './Icons'
+import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon, SpinnerIcon, PdfIcon, DocIcon } from './Icons'
 import { useDialog } from './Dialog'
 import { prepareMp3, downloadUrl } from '../lib/mp3'
 
@@ -237,6 +237,12 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                         ) : (
                           <span className="disabled"><NotesIcon size={14} /> Notes (none)</span>
                         )}
+                        <a href={`/api/session/${item.id}/export/lecture.pdf`} download={`lecture-${item.id.slice(0, 8)}.pdf`}>
+                          <PdfIcon size={14} /> PDF (notes + Q&amp;A + transcript)
+                        </a>
+                        <a href={`/api/session/${item.id}/export/lecture.docx`} download={`lecture-${item.id.slice(0, 8)}.docx`}>
+                          <DocIcon size={14} /> Word
+                        </a>
                         {item.has_audio ? (
                           <a href={`/api/session/${item.id}/export/audio.mp3`} onClick={e => { e.preventDefault(); downloadMp3(item) }}>
                             <AudioIcon size={14} /> {mp3Busy[item.id] || 'MP3'}

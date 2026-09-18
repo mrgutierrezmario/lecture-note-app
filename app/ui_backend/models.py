@@ -228,3 +228,20 @@ class DriveFile(Base):
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     __table_args__ = (Index("ix_drive_files_session_kind", "session_id", "kind", unique=True),)
+
+
+class ChatMessage(Base):
+    """One turn of "Ask about the lecture", kept with the lecture so History
+    reopens it with its questions and exports can include them. Pasted images
+    are not stored — only the question text and the answer."""
+
+    __tablename__ = "chat_messages"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    session_id = Column(
+        String(36), ForeignKey("sessions.id", ondelete="CASCADE"), nullable=False, index=True
+    )
+    role = Column(String(16), nullable=False)  # "user" | "assistant"
+    text = Column(Text, nullable=False)
+    provider = Column(String(64), nullable=True)  # which model answered
+    created_at = Column(DateTime, default=datetime.utcnow)

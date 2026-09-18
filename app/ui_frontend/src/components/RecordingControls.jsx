@@ -1,9 +1,9 @@
 // Start/Pause/Stop buttons and the grouped export buttons (notes, transcript,
 // MP3). Exports are plain links to the API's attachment endpoints so the
 // browser's download manager handles them (blob URLs misbehaved on Android).
-import { NotesIcon, TranscriptIcon, AudioIcon, SpinnerIcon, PauseIcon, PlayIcon } from './Icons'
+import { NotesIcon, TranscriptIcon, AudioIcon, SpinnerIcon, PauseIcon, PlayIcon, PdfIcon, DocIcon } from './Icons'
 
-function RecordingControls({ isRecording, isPaused = false, onStart, onStop, onPause, onResume, onExport, onExportTranscript, onExportAudio, hasNotes, hasTranscript, isConnected, readOnly = false, mp3Progress = null }) {
+function RecordingControls({ isRecording, isPaused = false, onStart, onStop, onPause, onResume, onExport, onExportTranscript, onExportPdf, onExportDocx, onExportAudio, hasNotes, hasTranscript, isConnected, readOnly = false, mp3Progress = null }) {
   return (
     <div className="controls">
       {readOnly ? null : !isRecording ? (
@@ -46,6 +46,14 @@ function RecordingControls({ isRecording, isPaused = false, onStart, onStop, onP
         <button onClick={onExportTranscript} disabled={!hasTranscript} data-tip="Download the full transcript as text">
           <TranscriptIcon />
           Transcript
+        </button>
+        <button onClick={onExportPdf} disabled={!hasTranscript} data-tip="Notes, questions & answers and the transcript as one PDF">
+          <PdfIcon />
+          PDF
+        </button>
+        <button onClick={onExportDocx} disabled={!hasTranscript} data-tip="The same document as a Word file">
+          <DocIcon />
+          Word
         </button>
         <button
           onClick={onExportAudio}

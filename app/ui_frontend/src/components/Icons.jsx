@@ -202,6 +202,23 @@ export const DriveIcon = p => (
   </Svg>
 )
 
+// Document with "PDF" / "W" marks for the formatted exports.
+export const PdfIcon = p => (
+  <Svg {...p}>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <path d="M14 3v5h5" />
+    <path d="M8 17v-4h1.5a1.5 1.5 0 0 1 0 3H8M12.5 17v-4h1a2 2 0 0 1 0 4zM16 17v-4h2" strokeWidth="1.4" />
+  </Svg>
+)
+
+export const DocIcon = p => (
+  <Svg {...p}>
+    <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+    <path d="M14 3v5h5" />
+    <path d="M8.5 13l1.2 4 1.3-3 1.3 3 1.2-4" strokeWidth="1.4" />
+  </Svg>
+)
+
 export const DownloadIcon = p => (
   <Svg {...p}>
     <path d="M12 4v12M6 10l6 6 6-6M4 20h16" />

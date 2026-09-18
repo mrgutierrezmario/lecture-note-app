@@ -121,6 +121,17 @@ class ChatRequest(BaseModel):
     history: list[ChatTurn] = []  # the most recent exchanges, oldest first
 
 
+class ChatMessageOut(BaseModel):
+    """A stored chat turn (``GET /api/session/{id}/chat``)."""
+
+    role: str
+    text: str
+    provider: Optional[str] = None
+    created_at: Optional[datetime] = None
+
+    model_config = ConfigDict(from_attributes=True)
+
+
 class ChatResponse(BaseModel):
     """The assistant's answer and which provider produced it."""
 

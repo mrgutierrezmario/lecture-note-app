@@ -25,7 +25,7 @@ optional.
 | Notes & chat | Local [Ollama](https://ollama.com) (default) — or Claude, Gemini or OpenAI via API key |
 | Slides & images | Claude / Gemini / OpenAI vision, falling back to local llava |
 | Accounts | Username or email sign-in; self-registration with email confirmation and optional admin approval; emailed password reset; admin role |
-| Per user | Lecture history, per-user storage quota, "keep" up to 5 lectures from cleanup |
+| Per user | Lecture history, per-user storage quota, "keep" up to 5 lectures from cleanup; exports as Markdown, text, PDF, Word and MP3 |
 | Runs as | A Docker Compose stack (Postgres, MinIO, app) with a fixed public HTTPS URL via Tailscale Funnel — free, no domain needed |
 | Works on | Desktop browsers and phones (installable as a home-screen app) |
 | Your data | Nightly encrypted off-site backups; users can keep their own copy of every lecture in their Google Drive |

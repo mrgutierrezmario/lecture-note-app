@@ -6,15 +6,18 @@ can touch any). Images are read by the configured cloud vision provider with
 local llava and BLIP as fallbacks.
 """
 
+import asyncio
 import base64
 import logging
+import re
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+import documents_export
 import google_drive
 import mp3_export
 import ratelimit
@@ -23,11 +26,20 @@ from config import get_settings
 from database import get_db
 from document_processor import extract_text, image_media_type
 from image_analyzer import caption_image as blip_caption
-from models import AudioChunk, DocumentUpload, DriveLink, NotesVersion, Session, TranscriptSegment
+from models import (
+    AudioChunk,
+    ChatMessage,
+    DocumentUpload,
+    DriveLink,
+    NotesVersion,
+    Session,
+    TranscriptSegment,
+)
 from s3_client import s3_client
 from schemas import (
     AudioChunkResponse,
     AudioChunksListResponse,
+    ChatMessageOut,
     ChatRequest,
     ChatResponse,
     DocumentUploadResponse,
@@ -39,6 +51,7 @@ from schemas import (
 )
 
 logger = logging.getLogger(__name__)
+CHUNK_SECONDS = 5  # MediaRecorder timeslice; matches routes/history.py
 
 
 # Per-user caps on the endpoints that cost real money or CPU (per 10 minutes).
@@ -176,6 +189,118 @@ async def get_notes(session_id: str, db: AsyncSession = Depends(get_db)):
     )
 
 
+async def _store_chat(
+    db: AsyncSession, session_id: str, question: str, answer: str, provider: str | None
+) -> None:
+    """Keep the exchange with the lecture (pasted images are not stored)."""
+    db.add(ChatMessage(session_id=session_id, role="user", text=question))
+    db.add(ChatMessage(session_id=session_id, role="assistant", text=answer, provider=provider))
+    await db.commit()
+
+
+@router.get("/{session_id}/chat", response_model=list[ChatMessageOut])
+async def chat_history(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Earlier questions and answers for this lecture, oldest first."""
+    rows = (
+        (
+            await db.execute(
+                select(ChatMessage)
+                .where(ChatMessage.session_id == session_id)
+                .order_by(ChatMessage.created_at, ChatMessage.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return rows
+
+
+async def _lecture_doc(session_id: str, db: AsyncSession) -> documents_export.LectureDoc:
+    """Gather title, notes, transcript and Q&A for a PDF/Word export."""
+    session = (
+        await db.execute(select(Session).where(Session.id == session_id))
+    ).scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    notes = (
+        await db.execute(
+            select(NotesVersion)
+            .where(NotesVersion.session_id == session_id)
+            .order_by(NotesVersion.version.desc())
+            .limit(1)
+        )
+    ).scalar_one_or_none()
+    segments = (
+        (
+            await db.execute(
+                select(TranscriptSegment)
+                .where(TranscriptSegment.session_id == session_id)
+                .order_by(TranscriptSegment.chunk_index, TranscriptSegment.ts_start)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    chat = (
+        (
+            await db.execute(
+                select(ChatMessage)
+                .where(ChatMessage.session_id == session_id)
+                .order_by(ChatMessage.created_at, ChatMessage.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    chunk_count = await db.scalar(
+        select(func.count()).select_from(AudioChunk).where(AudioChunk.session_id == session_id)
+    )
+    return documents_export.LectureDoc(
+        title=session.title or f"Lecture {session_id[:8]}",
+        recorded_at=session.created_at,
+        duration_seconds=int(chunk_count or 0) * CHUNK_SECONDS,
+        notes_version=notes.version if notes else 0,
+        notes_md=notes.notes_md if notes else None,
+        # Stored times are relative to each 5-second chunk; make them absolute.
+        transcript=[(seg.chunk_index * CHUNK_SECONDS + seg.ts_start, seg.text) for seg in segments],
+        qa=[(m.role, m.text, m.provider) for m in chat],
+    )
+
+
+def _attachment(title: str, session_id: str, ext: str) -> str:
+    """Content-Disposition header for a lecture export."""
+    return f'attachment; filename="{_export_filename(title, session_id, ext)}"'
+
+
+def _export_filename(title: str, session_id: str, ext: str) -> str:
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", (title or session_id[:8]).strip()).strip("-")[:40]
+    return f"lecture-{slug or session_id[:8]}.{ext}"
+
+
+@router.get("/{session_id}/export/lecture.pdf")
+async def export_pdf(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Notes, questions & answers and the full transcript as one PDF."""
+    lec = await _lecture_doc(session_id, db)
+    data = await asyncio.to_thread(documents_export.build_pdf, lec)
+    return Response(
+        content=data,
+        media_type="application/pdf",
+        headers={"Content-Disposition": _attachment(lec.title, session_id, "pdf")},
+    )
+
+
+@router.get("/{session_id}/export/lecture.docx")
+async def export_docx(session_id: str, db: AsyncSession = Depends(get_db)):
+    """The same document as a Word file."""
+    lec = await _lecture_doc(session_id, db)
+    data = await asyncio.to_thread(documents_export.build_docx, lec)
+    return Response(
+        content=data,
+        media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        headers={"Content-Disposition": _attachment(lec.title, session_id, "docx")},
+    )
+
+
 @router.put("/{session_id}/notes", response_model=NotesResponse)
 async def edit_notes(session_id: str, body: NotesEdit, db: AsyncSession = Depends(get_db)):
     """Save the user's edited notes as a new version.
@@ -281,9 +406,9 @@ async def export_transcript(session_id: str, db: AsyncSession = Depends(get_db))
     title = session.title or f"Lecture - {session_id[:8]}"
     lines = [title, "=" * len(title), ""]
     for seg in segments:
-        minutes = int(seg.ts_start // 60)
-        seconds = seg.ts_start % 60
-        lines.append(f"[{minutes:02d}:{seconds:05.2f}] {seg.text}")
+        # Stored times are relative to the 5-second chunk; report time in the lecture.
+        at = seg.chunk_index * CHUNK_SECONDS + seg.ts_start
+        lines.append(f"[{int(at // 60):02d}:{at % 60:05.2f}] {seg.text}")
 
     content = "\n".join(lines)
     filename = f"transcript-{session_id[:8]}.txt"
@@ -725,6 +850,7 @@ async def chat(
                 answer = f"Error analyzing image: {str(e)}"
                 provider = "none"
         logger.info("Image question answered by %s", provider)
+        await _store_chat(db, session_id, request.message, answer, provider)
         return ChatResponse(answer=answer, session_id=session_id, provider=provider)
 
     # Text-only path: llama3
@@ -757,4 +883,5 @@ Instructions:
     except Exception as e:
         answer, provider = f"Error connecting to AI: {str(e)}", "none"
 
+    await _store_chat(db, session_id, request.message, answer, provider)
     return ChatResponse(answer=answer, session_id=session_id, provider=provider, fallback=fallback)
