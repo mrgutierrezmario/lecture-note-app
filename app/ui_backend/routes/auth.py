@@ -283,8 +283,12 @@ async def _approve(user: User, db: AsyncSession, request: Request, background: B
     )
     await db.commit()
     if user.email and mailer.configured():
+        cfg = get_settings()
         subject, text, html_body = mailer.account_approved_email(
-            user.username, f"{_public_base(request)}/"
+            user.username,
+            f"{_public_base(request)}/",
+            cfg.audio_retention_days,
+            cfg.max_locked_lectures,
         )
         background.add_task(mailer.send, user.email, subject, text, html_body)
     logger.info("User %s approved", user.username)

@@ -166,18 +166,50 @@ def approval_request_email(username: str, email: str, link: str, days: int) -> t
     return subject, text, body
 
 
-def account_approved_email(username: str, link: str) -> tuple[str, str, str]:
-    """(subject, text, html) telling a user their account is active."""
+def account_approved_email(
+    username: str, link: str, retention_days: int, keep_limit: int
+) -> tuple[str, str, str]:
+    """(subject, text, html) telling a user their account is active, with the
+    things they must know before the first lecture (audio retention above all)."""
     subject = "Your AI Lecture Notes account is active"
+    keep = f" (up to {keep_limit} lectures)" if keep_limit else ""
+    guide = link.rstrip("/") + "/guide"
     text = (
-        f"Hi {username},\n\nYour account has been approved — you can sign in now:\n\n{link}\n\n"
+        f"Hi {username},\n\n"
+        f"Your account has been approved — you can sign in now:\n\n{link}\n\n"
+        "A few things worth knowing before your first lecture:\n\n"
+        f"- Recordings are kept for {retention_days} days. After that the audio is deleted "
+        "automatically; the transcript and notes stay. Download the MP3 from History before "
+        f"then, or mark the lecture as Kept to protect it{keep}.\n"
+        "- Save everything to your own Google Drive. Connect your Google account under "
+        "Settings > Google Drive and each lecture's notes, transcript and MP3 are saved there "
+        "automatically when you stop recording.\n"
+        "- Online class? For Zoom in a browser tab, turn on Tab audio before you start. On a "
+        "phone, use speakerphone.\n\n"
+        f"The User Guide covers the rest: {guide}\n\n"
         "This is an automated message; replies are not monitored."
+    )
+    outro = (
+        "<strong>A few things worth knowing before your first lecture:</strong>"
+        "<ul style='margin:8px 0 0;padding-left:20px;line-height:1.5'>"
+        f"<li><strong>Recordings are kept for {retention_days} days.</strong> After that the "
+        "audio is deleted automatically; the transcript and notes stay. Download the MP3 from "
+        "History before then, or mark the lecture as <strong>Kept</strong> to protect it"
+        f"{html.escape(keep)}.</li>"
+        "<li><strong>Save everything to your own Google Drive.</strong> Connect your Google "
+        "account under Settings → Google Drive and each lecture's notes, transcript and MP3 "
+        "are saved there automatically when you stop recording.</li>"
+        "<li><strong>Online class?</strong> For Zoom in a browser tab, turn on <em>Tab audio</em> "
+        "before you start. On a phone, use speakerphone.</li>"
+        "</ul>"
+        f"<p style='margin:12px 0 0'>The <a href='{html.escape(guide, quote=True)}'>User Guide</a> "
+        "covers the rest.</p>"
     )
     body = _wrap(
         "Your account is active",
-        f"Hi {html.escape(username)}, your account has been approved.",
+        f"Hi {html.escape(username)}, your account has been approved — you can sign in now.",
         "Sign in",
         link,
-        "",
+        outro,
     )
     return subject, text, body
