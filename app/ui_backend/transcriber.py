@@ -33,6 +33,10 @@ RMS_SILENCE_THRESHOLD = 0.008  # skip chunk if RMS below this — pure silence
 # Recent segment texts, keyed by session so concurrent recordings never
 # suppress each other's speech. Used only to drop chunk-boundary duplicates.
 _recent_segments: dict[str, deque[str]] = {}
+# Per-session spelling hints for Whisper (lecture title + key terms + the
+# server-wide vocabulary), set by the websocket handler on start/reconnect.
+_session_prompts: dict[str, str] = {}
+_PROMPT_MAX_CHARS = 600  # Whisper reads at most ~224 tokens of prompt
 _recent_lock = threading.Lock()
 _DEDUP_WINDOW = 4
 _MIN_DEDUP_WORDS = 5  # shorter phrases repeat legitimately in lecture speech
@@ -41,6 +45,36 @@ _MIN_DEDUP_WORDS = 5  # shorter phrases repeat legitimately in lecture speech
 def _normalize(text: str) -> str:
     """Lowercase, drop punctuation, collapse whitespace — for equality comparison."""
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", text.lower())).strip()
+
+
+def build_prompt(title: str | None, vocabulary: str | None, global_vocabulary: str = "") -> str:
+    """Compose Whisper's ``initial_prompt`` from what we know about the lecture.
+
+    Whisper treats the prompt as preceding text, so a short natural sentence
+    that *contains* the terms biases it toward those spellings: "Lecture:
+    MGT-699 Strategy. Terms: Porter's five forces, SWOT, Nvidia."
+    """
+    parts = []
+    if title and title.strip():
+        parts.append(f"Lecture: {title.strip()}.")
+    terms = ", ".join(
+        t.strip()
+        for src in (global_vocabulary, vocabulary)
+        if src
+        for t in src.split(",")
+        if t.strip()
+    )
+    if terms:
+        parts.append(f"Terms: {terms}.")
+    return " ".join(parts)[:_PROMPT_MAX_CHARS]
+
+
+def set_session_prompt(session_id: str, prompt: str) -> None:
+    """Remember the spelling hints for a session (empty string clears them)."""
+    if prompt:
+        _session_prompts[session_id] = prompt
+    else:
+        _session_prompts.pop(session_id, None)
 
 
 def _recent_for(session_id: str | None) -> deque[str]:
@@ -165,10 +199,12 @@ def transcribe_wav_sync(wav_path: str, session_id: str | None = None) -> list[di
         return []
 
     model = get_whisper_model()
+    language = (settings.whisper_language or "en").strip().lower()
     segments, info = model.transcribe(
         wav_path,
         beam_size=5,
-        language="en",
+        language=None if language == "auto" else language,
+        initial_prompt=_session_prompts.get(session_id or "") or None,
         vad_filter=True,
         vad_parameters=dict(threshold=0.5, min_silence_duration_ms=500, speech_pad_ms=200),
         no_speech_threshold=0.6,

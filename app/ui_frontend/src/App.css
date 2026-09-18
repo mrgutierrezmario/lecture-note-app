@@ -179,6 +179,26 @@ a.btn-icon:hover {
   max-width: 420px;
 }
 
+.terms-button {
+  flex-shrink: 0;
+}
+
+.settings-field-top {
+  align-items: flex-start;
+}
+
+.settings-field textarea {
+  flex: 1;
+  font: inherit;
+  font-size: 13px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  resize: vertical;
+}
+
 .session-chip {
   display: inline-flex;
   align-items: center;

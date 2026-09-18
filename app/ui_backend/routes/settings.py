@@ -38,6 +38,8 @@ _OVERRIDE_FIELDS = (
     "openai_model",
     "google_client_id",
     "audio_retention_days",
+    "whisper_language",
+    "whisper_vocabulary",
 )
 
 
@@ -80,6 +82,8 @@ async def _current(restart_required: list[str] | None = None) -> SettingsRespons
         notes_interval_seconds=value("notes_interval_seconds"),
         storage_quota_mb=value("storage_quota_mb"),
         audio_retention_days=value("audio_retention_days"),
+        whisper_language=value("whisper_language"),
+        whisper_vocabulary=value("whisper_vocabulary"),
         registration_open=value("registration_open"),
         registration_approval=value("registration_approval"),
         mail_configured=mailer.configured(),

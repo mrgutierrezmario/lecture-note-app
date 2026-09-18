@@ -33,6 +33,13 @@ export const GearIcon = p => (
   </Svg>
 )
 
+// "Aa" with an underline — key terms / spelling hints.
+export const TermsIcon = p => (
+  <Svg {...p}>
+    <path d="M3 17l4-11 4 11M4.6 13h4.8M14 17v-6.5a2.5 2.5 0 0 1 5 0V17M14 13.5h5M3 21h18" />
+  </Svg>
+)
+
 export const PauseIcon = p => (
   <Svg {...p}>
     <path d="M8 5v14M16 5v14" strokeWidth="2.4" />

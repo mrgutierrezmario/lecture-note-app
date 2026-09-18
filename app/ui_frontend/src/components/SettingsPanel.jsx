@@ -17,6 +17,22 @@ const VISION_MODELS = [
   { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 — cheapest, weakest on slides' },
 ]
 
+const WHISPER_LANGUAGES = [
+  { id: 'auto', label: 'Auto-detect (per chunk)' },
+  { id: 'en', label: 'English' },
+  { id: 'es', label: 'Spanish' },
+  { id: 'fr', label: 'French' },
+  { id: 'de', label: 'German' },
+  { id: 'it', label: 'Italian' },
+  { id: 'pt', label: 'Portuguese' },
+  { id: 'zh', label: 'Chinese' },
+  { id: 'ja', label: 'Japanese' },
+  { id: 'ko', label: 'Korean' },
+  { id: 'hi', label: 'Hindi' },
+  { id: 'ar', label: 'Arabic' },
+  { id: 'ru', label: 'Russian' },
+]
+
 const WHISPER_MODELS = [
   { id: 'tiny', label: 'tiny — fastest, least accurate' },
   { id: 'base', label: 'base' },
@@ -95,6 +111,8 @@ function SettingsPanel({ user, onUserChange }) {
         gemini_model: data.gemini_model,
         openai_model: data.openai_model,
         whisper_model: data.whisper_model,
+        whisper_language: data.whisper_language,
+        whisper_vocabulary: data.whisper_vocabulary,
         notes_interval_seconds: data.notes_interval_seconds,
         storage_quota_mb: data.storage_quota_mb,
         audio_retention_days: data.audio_retention_days,
@@ -140,6 +158,8 @@ function SettingsPanel({ user, onUserChange }) {
         gemini_model: data.gemini_model,
         openai_model: data.openai_model,
         whisper_model: data.whisper_model,
+        whisper_language: data.whisper_language,
+        whisper_vocabulary: data.whisper_vocabulary,
         notes_interval_seconds: data.notes_interval_seconds,
         storage_quota_mb: data.storage_quota_mb,
         audio_retention_days: data.audio_retention_days,
@@ -417,6 +437,27 @@ function SettingsPanel({ user, onUserChange }) {
             <p className="settings-note">
               Restart required — the model is loaded once at first use. Anything slower than
               realtime on CPU makes chunks queue up and lag grows across a lecture.
+            </p>
+            <label className="settings-field">
+              <span>Transcription language</span>
+              <select value={draft.whisper_language || 'en'} onChange={e => setDraft({ ...draft, whisper_language: e.target.value })}>
+                {WHISPER_LANGUAGES.map(l => <option key={l.id} value={l.id}>{l.label}</option>)}
+              </select>
+            </label>
+            <p className="settings-note">
+              A fixed language is faster and never mis-detects a short chunk. Auto-detect for mixed-language classes.
+            </p>
+            <label className="settings-field settings-field-top">
+              <span>Spelling hints</span>
+              <textarea
+                rows={3}
+                value={draft.whisper_vocabulary || ''}
+                placeholder="Names and terms every lecture here tends to contain: Prof. Ramirez, MGT-699, Porter's five forces…"
+                onChange={e => setDraft({ ...draft, whisper_vocabulary: e.target.value })}
+              />
+            </label>
+            <p className="settings-note">
+              Comma-separated. Fed to the transcriber for every lecture so these are spelled right; users add per-lecture terms with the "Aa" button next to the title.
             </p>
 
             <label className="settings-field">

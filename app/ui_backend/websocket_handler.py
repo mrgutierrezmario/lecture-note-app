@@ -2,7 +2,8 @@
 
 Protocol (one socket per lecture, path ``/ws/session/{session_id}``):
 
-* Browser → server, JSON text frames: ``{"type": "start", "title", "save_storage"}``,
+* Browser → server, JSON text frames: ``{"type": "start", "title", "save_storage",
+  "vocabulary"}``, ``{"type": "vocabulary", "text"}`` (key terms edited mid-lecture),
   ``{"type": "resume", "save_storage"}`` (after a reconnect mid-recording),
   ``{"type": "stop"}``, ``{"type": "ping"}``.
 * Browser → server, binary frames: 5-second WebM/Opus chunks from
@@ -35,8 +36,8 @@ from database import AsyncSessionLocal
 from models import AudioChunk, Session, TranscriptSegment
 from notes_generator import generate_notes_for_session
 from s3_client import s3_client
+from transcriber import build_prompt, set_session_prompt, transcribe_chunk
 from transcriber import reset_session as reset_transcriber_session
-from transcriber import transcribe_chunk
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -202,6 +203,11 @@ class ConnectionManager:
 manager = ConnectionManager()
 
 
+def _apply_prompt(session_id: str, title: str | None, vocabulary: str | None) -> None:
+    """Point Whisper at this lecture's title/key terms (plus the server-wide list)."""
+    set_session_prompt(session_id, build_prompt(title, vocabulary, settings.whisper_vocabulary))
+
+
 async def ensure_session_exists(db: AsyncSession, session_id: str, user_id=None) -> Session:
     """Create the session row on first contact (no-op if it exists).
 
@@ -255,6 +261,10 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
         if last_chunk:
             chunk_index = last_chunk.chunk_index + 1
 
+    # Spelling hints for Whisper survive reconnects and restarts: rebuild them
+    # from what the session row already knows.
+    _apply_prompt(session_id, session.title, session.vocabulary)
+
     await manager.broadcast(
         session_id,
         {
@@ -298,15 +308,19 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                 }
                             )
                             continue
-                        if title:
-                            async with AsyncSessionLocal() as db:
-                                result = await db.execute(
-                                    select(Session).where(Session.id == session_id)
-                                )
-                                session = result.scalar_one_or_none()
-                                if session:
+                        vocabulary = (message.get("vocabulary") or "").strip() or None
+                        async with AsyncSessionLocal() as db:
+                            result = await db.execute(
+                                select(Session).where(Session.id == session_id)
+                            )
+                            session = result.scalar_one_or_none()
+                            if session:
+                                if title:
                                     session.title = title
-                                    await db.commit()
+                                if "vocabulary" in message:
+                                    session.vocabulary = vocabulary
+                                await db.commit()
+                                _apply_prompt(session_id, session.title, session.vocabulary)
 
                         reset_transcriber_session(session_id)
                         manager.start_notes_task(session_id)
@@ -318,6 +332,16 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                 "message": "Recording started",
                             },
                         )
+
+                    elif msg_type == "vocabulary":
+                        # Key terms edited mid-lecture: store and re-prompt Whisper.
+                        vocabulary = (message.get("text") or "").strip() or None
+                        async with AsyncSessionLocal() as db:
+                            session = await db.get(Session, session_id)
+                            if session:
+                                session.vocabulary = vocabulary
+                                await db.commit()
+                                _apply_prompt(session_id, session.title, session.vocabulary)
 
                     elif msg_type == "resume":
                         # The browser reconnected mid-recording (network blip or a

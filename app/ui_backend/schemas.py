@@ -173,6 +173,8 @@ class SettingsResponse(BaseModel):
     notes_interval_seconds: int
     storage_quota_mb: int
     audio_retention_days: int
+    whisper_language: str = "en"
+    whisper_vocabulary: str = ""
     registration_open: bool
     registration_approval: bool = False
     mail_configured: bool
@@ -212,6 +214,8 @@ class SettingsUpdate(BaseModel):
     notes_interval_seconds: Optional[int] = None
     storage_quota_mb: Optional[int] = None
     audio_retention_days: Optional[int] = None
+    whisper_language: Optional[str] = None
+    whisper_vocabulary: Optional[str] = None
     registration_open: Optional[bool] = None
     registration_approval: Optional[bool] = None
     max_locked_lectures: Optional[int] = None

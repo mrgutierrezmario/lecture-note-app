@@ -43,6 +43,9 @@ function Workspace({ user, onLogout, onUserChange }) {
   const [status, setStatus] = useState('Ready')
   const [saveStorage, setSaveStorage] = useState(false)
   const [micMuted, setMicMuted] = useState(false)
+  // Names/terms the user typed for this lecture; sent to the server, which
+  // feeds them to Whisper as spelling hints. Editable before or during recording.
+  const [vocabulary, setVocabulary] = useState('')
   const [isPaused, setIsPaused] = useState(false)
   const isPausedRef = useRef(false)
   // Screen Wake Lock: phones suspend the page when the screen sleeps, which
@@ -346,14 +349,14 @@ function Workspace({ user, onLogout, onUserChange }) {
       saveStorageRef.current = saveStorage
       acquireWakeLock()
       if (micState !== 'granted') { setMicState('granted'); loadDevices() }
-      sendMessage({ type: 'start', title: title || undefined, save_storage: saveStorage })
+      sendMessage({ type: 'start', title: title || undefined, save_storage: saveStorage, vocabulary })
       setStatus(`Recording (${statusLabel})${micMuted ? ' — mic muted' : ''}...`)
     } catch (error) {
       console.error('Error starting recording:', error)
       if (error?.name === 'NotAllowedError') setMicState('denied')
       setStatus(micErrorMessage(error))
     }
-  }, [sendMessage, sendBinary, title, saveStorage, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, startLevelMeter, acquireWakeLock])
+  }, [sendMessage, sendBinary, title, saveStorage, vocabulary, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, startLevelMeter, acquireWakeLock])
 
   // Mute only disables the mic track: the recorder and the stream keep going,
   // so the transcript resumes the moment the mic is enabled again.
@@ -527,6 +530,21 @@ function Workspace({ user, onLogout, onUserChange }) {
     }
   }, [isRecording])
 
+  const editVocabulary = useCallback(async () => {
+    const next = await dialog.prompt({
+      title: 'Key terms for this lecture',
+      label: 'Names, acronyms, course terms — comma separated. The transcriber uses them to get spellings right.',
+      defaultValue: vocabulary,
+      placeholder: 'e.g. Porter\'s five forces, SWOT, Nvidia, Prof. Ramirez',
+      confirmLabel: 'Save terms',
+    })
+    if (next === null || next === undefined) return
+    const cleaned = next.trim()
+    setVocabulary(cleaned)
+    // Live update while recording; before start it simply rides along with "start".
+    if (isRecordingRef.current) sendMessage({ type: 'vocabulary', text: cleaned })
+  }, [dialog, vocabulary, sendMessage])
+
   const startNewLecture = useCallback(() => {
     if (isRecording) return
     const fresh = uuidv4()
@@ -534,6 +552,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     setSessionId(fresh)
     setViewingPast(false)
     setTitle('')
+    setVocabulary('')
     setTranscript([])
     setNotes('')
     setNotesVersion(0)
@@ -566,6 +585,8 @@ function Workspace({ user, onLogout, onUserChange }) {
           title={title}
           onTitleChange={setTitle}
           disabled={isRecording || viewingPast}
+          vocabulary={vocabulary}
+          onEditVocabulary={viewingPast ? undefined : editVocabulary}
         />
 
         <div className="app-bar-actions">

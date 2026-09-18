@@ -31,6 +31,13 @@ class Settings(BaseSettings):
     # slower than realtime on CPU, so chunks queue up and lag grows without
     # bound over a lecture — only select it with a GPU or for offline reruns.
     whisper_model: str = "small"
+    # ISO code ("en", "es", …) or "auto" to detect per chunk. A fixed language
+    # is faster and avoids mis-detection on short or noisy chunks.
+    whisper_language: str = "en"
+    # Names and terms every lecture on this server tends to contain
+    # (professor names, course codes); merged with each lecture's own key
+    # terms into Whisper's initial prompt so they are spelled right.
+    whisper_vocabulary: str = ""
 
     # Notes Generation
     notes_interval_seconds: int = 60

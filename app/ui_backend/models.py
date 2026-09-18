@@ -79,6 +79,9 @@ class Session(Base):
     # Null only for sessions recorded before accounts existed; those are admin-only.
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True, index=True)
     title = Column(Text, nullable=True)
+    # Names, acronyms and course terms the user typed for this lecture; fed to
+    # Whisper as a spelling hint (see transcriber.set_session_prompt).
+    vocabulary = Column(Text, nullable=True)
     # Kept: exempt from the audio retention cleanup and from deletion until unlocked.
     locked = Column(Boolean, default=False, nullable=False, server_default="false")
     created_at = Column(DateTime, default=datetime.utcnow)
