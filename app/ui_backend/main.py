@@ -87,11 +87,11 @@ async def websocket_endpoint(websocket: WebSocket, session_id: str):
     await handle_websocket(websocket, session_id)
 
 
-@app.get("/health")
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health():
-    """Health probe (no login). Checks the database and object storage so an
-    external uptime monitor sees a real outage, not just a running process.
-    Returns 503 when either dependency is down."""
+    """Health probe (no login; GET or HEAD — uptime monitors send HEAD first).
+    Checks the database and object storage so an external monitor sees a
+    real outage, not just a running process. 503 when either is down."""
     checks: dict[str, str] = {}
     try:
         async with AsyncSessionLocal() as db:
