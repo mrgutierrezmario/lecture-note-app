@@ -433,6 +433,12 @@ B2, a USB drive): create the remote yourself and point `RCLONE_REMOTE` in
   lectures, settings and — because the Tailscale identity is restored — the
   same public URL.
 
+**Prove it works:** `deploy/restore-drill.sh` restores the newest bundle into a
+throwaway stack on the same machine (own volumes, port 8020, never touches the
+live app), checks that accounts, lectures, settings and audio came back and the
+app is healthy, and removes it again. `--from-remote` fetches the off-site copy
+first — the path a real recovery would take. Run it now and then.
+
 Set `BACKUP_NOTIFY_EMAIL` in `deploy/.env` to get an email (through the app's
 own mail account) whenever a nightly backup fails. The log is
 `deploy/state/backups/backup.log`.
