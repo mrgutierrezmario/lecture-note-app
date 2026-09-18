@@ -220,6 +220,29 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Gap list, items 5, 6, 1, 9 (2026-09-18, evening)
+- **Self-service account deletion**: Settings → Your account → Delete
+  account (password-confirmed `DELETE /api/auth/me`): removes lectures,
+  transcripts, notes, documents, audio objects, Drive link (revoked),
+  reset tokens; signs out. Last admin cannot delete themselves. Tested.
+- **Dependabot** (`.github/dependabot.yml`): weekly grouped pip + npm,
+  monthly Docker + Actions.
+- **Tests + CI**: `app/ui_backend/tests/` — 32 pytest tests (auth tokens,
+  passwords, lockout/usage caps, notes merge + focus prompt, WebM header,
+  Whisper prompt, Drive helpers, settings validation, provider cascade,
+  API smoke via TestClient without a DB). conftest stubs faster-whisper
+  and isolates STATE_DIR. `.github/workflows/ci.yml`: ruff + pytest +
+  frontend build on push/PR — **green on first run**; README badge.
+  `requirements-dev.txt`; ruff per-file ignore D103 for tests.
+- **Old do-not-reply housekeeping**: new account added as project
+  **Owner** (both listed). Changing the consent-screen support email was
+  abandoned — Google demands Search Console ownership of
+  `tail3659a6.ts.net` from the editing account; published config
+  untouched. **Backups moved**: rclone reconnected as
+  `mgnts.donotreply@gmail.com`, full re-upload (3007 chunks, ~225 MB,
+  10 min) completed; old account's `LectureNotesBackups` folder can be
+  trashed.
+
 ### Gap list, items 2–8 (2026-09-18)
 - **Wake lock** while recording (re-acquired on visibility); guide notes the
   phone limits. **/health** checks Postgres + MinIO, GET or HEAD, 503 when
@@ -415,8 +438,7 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    now connect a Drive.
 10. Optional next features: Google Picker folder chooser (~3 h, needs an API
     key); Claude API credits; speaker separation (post-lecture, see above);
-    automated tests + CI (gap 1 — the biggest remaining one for the public
-    repo); PDF/DOCX export; self-service account deletion; Dependabot.
+    PDF/DOCX export.
 11. Operator to run once on the Mac: `deploy/restore-drill.sh --from-remote`
     (the real disaster-recovery path via Google Drive).
 12. Optional: revoke/re-create the two Gmail App Passwords that passed through
