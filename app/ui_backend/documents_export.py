@@ -42,8 +42,19 @@ from reportlab.platypus import (
 
 APP_NAME = "AI Lecture Notes"
 BRAND = "M.G. NETWORK AND TECHNOLOGY SOLUTIONS"
-LOGO = (
-    Path(__file__).resolve().parent.parent / "ui_frontend" / "public" / "android-chrome-512x512.png"
+# The logo mark ships with the frontend: under dist/ in the Docker image (the
+# built site), under public/ in a development checkout.
+_UI = Path(__file__).resolve().parent.parent / "ui_frontend"
+LOGO = next(
+    (
+        p
+        for p in (
+            _UI / "dist" / "android-chrome-512x512.png",
+            _UI / "public" / "android-chrome-512x512.png",
+        )
+        if p.exists()
+    ),
+    _UI / "public" / "android-chrome-512x512.png",
 )
 PARAGRAPH_SECONDS = 30  # transcript segments are grouped into paragraphs this long
 
