@@ -2,7 +2,7 @@
 # Build context is the repository root (see deploy/compose.yml).
 
 # ── Stage 1: build the UI ─────────────────────────────────────────────────────
-FROM node:24-alpine AS ui
+FROM node:25-alpine AS ui
 WORKDIR /ui
 COPY app/ui_frontend/package.json app/ui_frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
