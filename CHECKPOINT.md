@@ -304,12 +304,15 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   the operator from a phone (sign-up → confirm → approve link → active
   email); test accounts deleted. Sign-up form hides the password fields
   once the account is created.
-- **Email addresses**: sender stays `mgnetwork.donotreply@gmail.com`
-  (App Password); Reply-To, backup-failure alerts, the admin account's
-  email (→ approval requests, admin password reset) and the privacy
-  contact are all `mg.net.tech@gmail.com`. Google consent screen still
-  shows donotreply (Google only allows an address the project owner
-  owns — add mg.net.tech as a project Owner to change it).
+- **Email addresses** (updated 2026-09-18): sender is now
+  `mgnts.donotreply@gmail.com` (new App Password, set by the operator in
+  `deploy/.env`; test email verified). Reply-To, backup-failure alerts,
+  the admin account's email (→ approval requests, admin password reset)
+  and the privacy contact are `mg.net.tech@gmail.com`. The **old**
+  `mgnetwork.donotreply@gmail.com` still owns the Google Cloud project
+  `lecture-notes` (consent screen support email, both OAuth clients) and
+  the backup Drive folder — optional housekeeping: add the new account as
+  project Owner and `rclone config reconnect gdrive:` as the new account.
 - **Privacy policy** at `/privacy` (public, no sign-in): formal, numbered
   sections — what is stored, AI providers, Google Drive scope/tokens/
   revocation, backups, choices, contact. Contact line comes from
