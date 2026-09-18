@@ -220,6 +220,32 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Gap list, items 2–8 (2026-09-18)
+- **Wake lock** while recording (re-acquired on visibility); guide notes the
+  phone limits. **/health** checks Postgres + MinIO, GET or HEAD, 503 when
+  degraded. **Container logs** capped 20 MB × 5 per service.
+- **Uptime monitor**: UptimeRobot (account = business email) hits
+  `/health` every 5 min; alerts to mg.net.tech.
+- **Restore drill** `deploy/restore-drill.sh`: restores the newest bundle
+  into throwaway project `lecture-drill` (own volumes, port 8020, unsigned
+  Tailscale node), verifies users/lectures/segments/notes/schema/audio/
+  settings/health, tears down. **PASSED** on the 09-18 bundle (5 lectures,
+  2848 segments, 3007 audio objects). `--from-remote` (rclone, Mac) not yet
+  run — the true DR path; ask the operator to run it once.
+- **Transcription accuracy**: Whisper `initial_prompt` = lecture title +
+  per-lecture key terms ("Aa" button, migration 012 `sessions.vocabulary`)
+  + server-wide *Spelling hints* (Settings). *Transcription language*
+  setting (fixed code or auto). Prompt applied on connect/start/PATCH.
+- **Notes steering/editing**: per-lecture *notes focus* (migration 013)
+  appended to the extraction prompt; `PATCH /api/session/{id}` for
+  title/terms/focus; `PUT …/notes` saves an edited version that later
+  passes merge into; `POST …/notes/regenerate` rebuilds from the whole
+  transcript (fresh). Notes pane: pencil (edit) and sparkle (regenerate,
+  not while recording). Tested on the real lecture, then restored (v29 =
+  v26 content).
+- **Per-user caps** (`ratelimit.allow`): 40 chat / 15 image / 20 uploads
+  per 10 min, admins exempt, 429 + Retry-After.
+
 ### Recording controls and onboarding email (2026-09-16 → 18)
 - **Mute no longer drops chunks**: it disabled the mic track *and* stopped
   sending; muting in the first 5 s lost the WebM header chunk so nothing
