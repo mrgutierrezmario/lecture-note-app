@@ -10,7 +10,7 @@ COPY app/ui_frontend ./
 RUN npm run build
 
 # ── Stage 2: backend ──────────────────────────────────────────────────────────
-FROM python:3.11-slim
+FROM python:3.14-slim
 
 # ffmpeg: audio chunk decoding + MP3 export. postgresql-client: pg_isready for the
 # startup wait. curl: healthcheck.
