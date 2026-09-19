@@ -8,6 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon, SpinnerIcon, PdfIcon, DocIcon, UserIcon } from './Icons'
 import { useDialog } from './Dialog'
 import { prepareMp3, downloadUrl } from '../lib/mp3'
+import AssignOwnerDialog from './AssignOwnerDialog'
 
 const formatMB = bytes => `${Math.round(bytes / 1048576)} MB`
 
@@ -100,27 +101,18 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
   }
 
   // Admin: hand a lecture to another account (the demo account, or a user who
-  // recorded under the wrong login).
-  const reassign = async (item) => {
-    const username = await dialog.prompt({
-      title: `Assign "${item.title || 'Untitled lecture'}" to…`,
-      label: 'Username of the new owner',
-      placeholder: 'e.g. test',
-      confirmLabel: 'Assign',
+  // recorded under the wrong login). The dialog lists the registered users.
+  const [assigning, setAssigning] = useState(null) // the lecture being reassigned
+  const reassign = (item) => setAssigning(item)
+  const assignTo = async (username) => {
+    const response = await fetch(`/api/sessions/${assigning.id}/owner`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username }),
     })
-    if (!username || !username.trim()) return
-    try {
-      const response = await fetch(`/api/sessions/${item.id}/owner`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username: username.trim() }),
-      })
-      const data = await response.json().catch(() => ({}))
-      if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`)
-      await load()
-    } catch (err) {
-      dialog.notice({ title: 'Could not assign', message: err.message })
-    }
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`)
+    await load()
   }
 
   const downloadMp3 = async (item) => {
@@ -307,6 +299,15 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                 </li>
               ))}
             </ul>
+          )}
+
+          {assigning && (
+            <AssignOwnerDialog
+              lecture={assigning}
+              currentOwner={assigning.owner}
+              onAssign={assignTo}
+              onClose={() => setAssigning(null)}
+            />
           )}
 
           <p className="settings-note settings-note-full history-note">

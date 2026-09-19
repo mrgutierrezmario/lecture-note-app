@@ -2042,6 +2042,18 @@ a.btn-icon:hover {
 
 .dialog-actions button {
   min-width: 96px;
+  justify-content: center;
+  padding: 0 16px;
+}
+
+.dialog-field select {
+  height: 40px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  color: var(--text);
+  font: inherit;
 }
 
 .btn-danger {
