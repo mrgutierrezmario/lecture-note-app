@@ -30,7 +30,8 @@ optional.
 | While recording | Pause/Resume, mute, tab audio, key terms for the transcriber, a focus for the notes; audio is buffered through disconnects |
 | Afterwards | Edit or regenerate the notes; ask follow-up questions (chat is kept with the lecture); export as Markdown, text, PDF, Word or MP3 |
 | Works on | Desktop browsers and phones (installable as a home-screen app; the screen stays awake while recording) |
-| Your data | Nightly encrypted off-site backups; users can keep their own copy of every lecture in their Google Drive |
+| Your data | Nightly encrypted off-site backups with a scripted restore drill; users can keep their own copy of every lecture in their Google Drive |
+| Operations | `/health` reports the database and storage for an uptime monitor (UptimeRobot works on the free tier), backup failures email you, container logs rotate, CI runs lint + tests on every push |
 
 <details>
 <summary><strong>More screenshots</strong> — light mode, phone, history, settings</summary>
