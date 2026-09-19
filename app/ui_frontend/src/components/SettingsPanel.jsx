@@ -234,6 +234,8 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
         </button>
       </div>
 
+      {/* The body scrolls, not the panel, so the scrollbar stays inside the rounded corners. */}
+      <div className="settings-scroll">
       {/* Appearance is browser-local, so it renders even if the backend settings failed to load. */}
       <section className="settings-section">
         <h3>Appearance</h3>
@@ -710,6 +712,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
         {' · '}
         <span data-tip="Application version">v{__APP_VERSION__}</span>
       </p>
+      </div>
       </div>
       </div>
     </>
