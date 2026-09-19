@@ -511,7 +511,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               </select>
             </label>
             <p className="settings-note">
-              Generates the 60-second notes and answers "Ask about the lecture". Cloud providers receive the
+              Generates the running notes and answers "Ask about the lecture". Cloud providers receive the
               transcript; Ollama keeps it on this machine. A cloud failure falls back to Ollama.
               {settings.active_text_provider !== settings.text_provider && (
                 <> <strong>Currently using {settings.active_text_provider}.</strong></>
@@ -607,6 +607,10 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
                 onChange={e => setDraft({ ...draft, storage_quota_mb: Number(e.target.value) })}
               />
             </label>
+            <p className="settings-note">
+              Retained audio only — transcripts and notes never count. 0 means unlimited.
+              About 5 MB per lecture hour; audio is also deleted after {draft.audio_retention_days} days. Per-user overrides are set under Users.
+            </p>
             <label className="settings-field">
               <span>Kept lectures per user</span>
               <input
@@ -618,10 +622,6 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
             </label>
             <p className="settings-note">
               A kept lecture's audio skips the {draft.audio_retention_days}-day cleanup and it can't be deleted until unlocked. 0 disables keeping for regular users. Admins are never limited.
-            </p>
-            <p className="settings-note">
-              Retained audio only — transcripts and notes never count. 0 means unlimited.
-              About 5 MB per lecture hour; audio is also deleted after {draft.audio_retention_days} days. Per-user overrides are set under Users.
             </p>
 
             <div className="settings-actions">

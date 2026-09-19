@@ -48,17 +48,17 @@ optional.
 ![The empty workspace before recording, light mode](design/screenshots/workspace-empty.png)
 <p align="center"><em>Ready to record: name the lecture, pick a microphone, optionally capture tab audio or skip keeping the audio.</em></p>
 
-![The History drawer listing lectures with download, rename, keep and delete actions](design/screenshots/history.png)
+<p align="center"><img width="587" alt="The History drawer listing lectures with download, share, rename, keep and delete actions" src="design/screenshots/history.png"></p>
 <p align="center"><em>History: every lecture with its notes/audio/kept/Drive status, downloads, and the storage quota.</em></p>
 
-![Settings: provider and model choice, notes interval, storage quota, kept lectures, sign-up switch](design/screenshots/settings-models.png)
+<p align="center"><img width="578" alt="Settings: provider and model choice, notes interval, storage quota, kept lectures, sign-up switches" src="design/screenshots/settings-models.png"></p>
 <p align="center"><em>Admin settings: which provider does what, the notes interval, quotas and sign-up.</em></p>
 
 ![Settings: Google Drive connected, auto-save switch and folder choice](design/screenshots/settings-google-drive.png)
 <p align="center"><em>Each user can connect their own Google Drive.</em></p>
 
-![The sign-in page](design/screenshots/login.png)
-<p align="center"><em>Sign in with username or email; password reset by email.</em></p>
+<p align="center"><img width="425" alt="The sign-in page" src="design/screenshots/login.png"></p>
+<p align="center"><em>Sign in with username or email; password reset by email; a read-only demo for visitors.</em></p>
 
 </details>
 
