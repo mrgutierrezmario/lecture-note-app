@@ -5,6 +5,21 @@ All notable changes to AI Lecture Notes. The format follows
 [Semantic Versioning](https://semver.org/). The current version lives in the
 `VERSION` file and is shown in Settings and at `/health`.
 
+## [1.1.0] — 2026-09-19
+
+### Added
+- **Share a lecture** read-only with other accounts (person icon in History → pick a user → Share; Remove revokes). Viewers see it in their History with a "shared by" tag, can read, ask their own questions and export, and can follow the live transcript while it is being recorded.
+- **Demo account**: "Try the demo" on the sign-in page opens a read-only visitor account with the lectures shared to it; Settings is view-only for it, nothing can be changed or recorded.
+
+### Changed
+- Sign-in page shows the company name under the logo.
+- Settings and History dialogs scroll inside their rounded frame (the scrollbar no longer squares off the corners); History's footer note is a short list; Settings footer centred.
+- Settings help text: notes interval wording, storage note placed under the storage field.
+
+### Fixed
+- PDF export crashed on notes that contained plain paragraphs.
+- Demo sign-in was blocked by the auth middleware.
+
 ## [1.0.0] — 2026-09-19
 
 First release: the app as used daily for a graduate lecture series.
@@ -38,4 +53,5 @@ Claude for slides and images, and fixes found in live classes. The app was in
 daily classroom use through the summer. The pre-release history was squashed
 at the public release on 2026-09-14 because it contained personal details.
 
+[1.1.0]: https://github.com/mrgutierrezmario/lecture-note-app/releases/tag/v1.1.0
 [1.0.0]: https://github.com/mrgutierrezmario/lecture-note-app/releases/tag/v1.0.0

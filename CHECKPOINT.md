@@ -220,6 +220,25 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### v1.1.0 — UI polish after the demo/sharing work (2026-09-19, afternoon)
+- Settings and History panels: the panel clips to its radius and an inner
+  `.settings-scroll` body scrolls, so the scrollbar no longer squares off
+  the right-hand corners. Phone layout keeps full height.
+- Share dialog reworked at the operator's request: dropdown of users +
+  **Share** button, current viewers listed with Remove; lecture title as a
+  subtitle line, one-line explanation.
+- Settings footer centred; History footer note is a lead line + 3 bullets.
+- Sign-in card: company name (small caps) under the logo, logo sized by
+  width (104 px) — it is a 2:1 mark and looked tiny in a square box.
+- README: origin paragraph in the Timeline, refreshed sign-in / History /
+  Settings screenshots (1× crops supplied by the operator).
+- Settings help text: "60-second notes" → "running notes"; storage note
+  moved under the storage field.
+- Released as **v1.1.0** (minor: sharing + demo are new features since
+  1.0.0).
+- Noticed: "GDP and CPI Class" is *owned* by `test`, not shared — fine for
+  the demo, but the operator cannot rename/keep it from the admin account.
+
 ### Demo account and lecture sharing (2026-09-19/20)
 - **Demo account** (migration 015 `users.is_demo`): "Try the demo" on the
   sign-in page (`POST /api/auth/demo`, open path, rate-limited per IP)
