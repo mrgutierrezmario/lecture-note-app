@@ -623,8 +623,8 @@ Never commit `.env` files, `deploy/.env`, or anything under `deploy/state/`
 
 Designed, specified and operated by Mario Gutierrez (M.G. Network and
 Technology Solutions), and developed with [Claude Code](https://claude.com/claude-code)
-as a pair-programming assistant — which is why commits carry a `Co-Authored-By`
-line. Every feature was driven by real use: recorded lectures, the problems
+as a pair-programming assistant (commits up to v1.0.0 carry a `Co-Authored-By`
+line). Every feature was driven by real use: recorded lectures, the problems
 they surfaced, and the fixes that followed.
 
 ## License
