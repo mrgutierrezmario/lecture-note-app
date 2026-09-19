@@ -7,6 +7,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { CheckIcon, DriveIcon, SpinnerIcon } from './Icons'
 import { useDialog } from './Dialog'
+import { pickDriveFolder } from '../lib/drivePicker'
 
 // `refreshKey` changes when an admin saves/clears the OAuth client, so the section re-checks availability.
 function DriveSection({ isAdmin, refreshKey }) {
@@ -53,6 +54,18 @@ function DriveSection({ isAdmin, refreshKey }) {
     }
   }
   const setAuto = (auto_export) => patch({ auto_export })
+  const chooseFolder = async () => {
+    setBusy(true)
+    setError(null)
+    try {
+      const picked = await pickDriveFolder()
+      if (picked) await patch({ folder_id: picked.id })
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
   const saveFolder = async () => {
     if (await patch({ folder_name: folder })) {
       setFolderSaved(true)
@@ -144,14 +157,20 @@ function DriveSection({ isAdmin, refreshKey }) {
             />
           </label>
           <p className="settings-note">
-            Use "/" for a path, e.g. <code>School/Fall 2026</code>. The folder is created in your Drive right
-            away and new saves go there; lectures already saved keep updating where they are. You can also
-            move the folder anywhere in your Drive — the app follows it.
+            Use "/" for a path, e.g. <code>School/Fall 2026</code>, and <em>Create folder</em> makes it in your
+            Drive right away — or <em>Choose existing folder</em> to pick one you already have. New saves go
+            there; lectures already saved keep updating where they are. Moving the folder later is fine — the
+            app follows it.
           </p>
           <div className="settings-actions">
             <button disabled={busy || !folder.trim() || folder.trim() === status.folder_name} onClick={saveFolder}>
-              {busy ? 'Creating…' : folderSaved ? 'Folder created' : 'Create folder'}
+              {busy ? 'Working…' : folderSaved ? 'Folder created' : 'Create folder'}
             </button>
+            {status.picker_available && (
+              <button className="btn-secondary" disabled={busy} onClick={chooseFolder} data-tip="Pick a folder that already exists in your Drive (Google's chooser)">
+                Choose existing folder…
+              </button>
+            )}
             <button className="btn-secondary" disabled={busy} onClick={disconnect}>Disconnect</button>
           </div>
         </>

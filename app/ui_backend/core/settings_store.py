@@ -49,12 +49,13 @@ EDITABLE: dict[str, tuple[type, bool]] = {
     "gemini_model": (str, True),
     "openai_model": (str, True),
     "google_client_id": (str, True),
+    "google_picker_api_key": (str, True),
     "audio_retention_days": (int, True),
     "whisper_language": (str, True),
     "whisper_vocabulary": (str, True),
 }
 # String fields that may legitimately be cleared to "".
-_MAY_BE_EMPTY = {"google_client_id", "whisper_vocabulary"}
+_MAY_BE_EMPTY = {"google_client_id", "google_picker_api_key", "whisper_vocabulary"}
 
 # Secrets kept in STATE_DIR/.env rather than the overrides file: env var -> settings attr.
 SECRET_FIELDS = {

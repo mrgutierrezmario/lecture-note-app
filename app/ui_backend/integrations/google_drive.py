@@ -73,6 +73,40 @@ def configured() -> bool:
     return bool(settings.google_client_id and settings.google_client_secret)
 
 
+def picker_available() -> bool:
+    """Whether an admin saved a Picker API key (Settings → API keys)."""
+    return configured() and bool(settings.google_picker_api_key.strip())
+
+
+def app_id() -> str:
+    """The Cloud project number, which Google's picker needs so that the folder
+    the user picks becomes accessible under the drive.file scope. It is the
+    part of the OAuth client id before the first dash."""
+    return settings.google_client_id.split("-", 1)[0]
+
+
+async def access_token_for(link: DriveLink) -> str:
+    """A short-lived access token for the user's Drive (for the picker)."""
+    return await _access_token(decrypt(link.refresh_token))
+
+
+async def folder_name_of(link: DriveLink, folder_id: str) -> str:
+    """The name of a folder the app can see (a picked folder, or one it made)."""
+    drive = Drive(await access_token_for(link))
+    try:
+        response = await drive.client.get(
+            f"{DRIVE_API}/files/{folder_id}", params={"fields": "name,mimeType,trashed"}
+        )
+        if response.status_code != 200:
+            raise DriveError("That folder isn't accessible — pick it again with the chooser")
+        data = response.json()
+        if data.get("mimeType") != FOLDER_MIME or data.get("trashed"):
+            raise DriveError("Please choose a folder")
+        return data["name"]
+    finally:
+        await drive.close()
+
+
 def redirect_uri() -> str:
     """Where Google sends the user back; must match the OAuth client exactly."""
     base = settings.public_url.rstrip("/")

@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from accounts.auth import CurrentUser, current_user
 from core.database import get_db
 from core.models import DriveLink
-from core.schemas import DriveStatus, DriveUpdate
+from core.schemas import DrivePickerToken, DriveStatus, DriveUpdate
 from integrations import google_drive
 
 logger = logging.getLogger(__name__)
@@ -37,6 +37,7 @@ def _status(link: DriveLink | None) -> DriveStatus:
             if link and link.folder_id
             else None
         ),
+        picker_available=google_drive.picker_available(),
     )
 
 
@@ -86,6 +87,30 @@ async def callback(
     return RedirectResponse("/?drive=connected", status_code=302)
 
 
+@router.get("/picker-token", response_model=DrivePickerToken)
+async def picker_token(
+    user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    """Credentials for Google's folder picker: the user's own short-lived access
+    token (their Drive, drive.file scope), the Picker API key and the app id."""
+    if not google_drive.picker_available():
+        raise HTTPException(
+            status_code=400, detail="The folder chooser is not set up on this server"
+        )
+    link = await db.get(DriveLink, user.id)
+    if link is None:
+        raise HTTPException(status_code=400, detail="Google Drive is not connected")
+    try:
+        token = await google_drive.access_token_for(link)
+    except google_drive.DriveError as e:
+        raise HTTPException(status_code=502, detail=str(e))
+    return DrivePickerToken(
+        access_token=token,
+        api_key=google_drive.settings.google_picker_api_key.strip(),
+        app_id=google_drive.app_id(),
+    )
+
+
 @router.patch("", response_model=DriveStatus)
 async def update(
     body: DriveUpdate,
@@ -101,7 +126,16 @@ async def update(
         raise HTTPException(status_code=400, detail="Google Drive is not connected")
     if body.auto_export is not None:
         link.auto_export = body.auto_export
-    if body.folder_name is not None:
+    if body.folder_id is not None:
+        # An existing folder chosen with Google's picker: the picker granted the
+        # app access to it, so it can be read back to confirm and get its name.
+        try:
+            name = await google_drive.folder_name_of(link, body.folder_id.strip())
+        except google_drive.DriveError as e:
+            raise HTTPException(status_code=400, detail=str(e))
+        link.folder_id = body.folder_id.strip()
+        link.folder_name = name
+    elif body.folder_name is not None:
         name = google_drive.clean_folder_path(body.folder_name)
         if not name:
             raise HTTPException(status_code=422, detail="Folder name can't be empty")

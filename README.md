@@ -400,6 +400,7 @@ runtime from the admin Settings panel and persist in the app-state volume.
 | `SUPPORT_EMAIL` | — | Contact shown on the privacy page (`/privacy`) |
 | `BACKUP_NOTIFY_EMAIL` | — | Gets an email when a nightly backup fails |
 | `GOOGLE_CLIENT_ID` *(panel)*, `GOOGLE_CLIENT_SECRET` *(panel)* | — | OAuth client for users' Google Drive (Settings → API keys) |
+| `GOOGLE_PICKER_API_KEY` *(panel)* | — | Optional: lets users pick an existing Drive folder with Google's chooser |
 | `SESSION_DAYS` | `30` | Login cookie lifetime |
 
 API keys (`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`) are entered
@@ -504,6 +505,12 @@ see nothing in the user's Drive except the files it created.
    URI `https://<your host>/api/drive/callback` (Settings shows the exact
    value). Paste the Client ID and secret into **Settings → API keys → Google
    Drive (OAuth client)**.
+
+Optional: to let users pick an *existing* Drive folder with Google's chooser,
+enable the **Google Picker API** in the same project, create an **API key**
+restricted to it (Credentials → Create credentials → API key) and paste it
+under Settings → API keys → Picker API key. Without it users can still create
+folders (and move them anywhere afterwards).
 
 Refresh tokens are stored encrypted with `SECRET_KEY`; disconnecting revokes
 them at Google.

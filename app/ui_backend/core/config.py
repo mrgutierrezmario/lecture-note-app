@@ -97,6 +97,10 @@ class Settings(BaseSettings):
     # STATE_DIR/.env. Redirect URI to register: <public_url>/api/drive/callback
     google_client_id: str = ""
     google_client_secret: Optional[str] = None
+    # API key (restricted to the Google Picker API) that lets users pick an
+    # existing Drive folder with Google's own chooser. Optional: without it the
+    # app can only create folders. Set from the Settings panel.
+    google_picker_api_key: str = ""
 
     # Whether the sign-in page offers "Create account". Turn off once everyone
     # who should have an account has one.

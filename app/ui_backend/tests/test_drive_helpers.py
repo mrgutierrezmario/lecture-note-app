@@ -33,3 +33,19 @@ def test_oauth_state_is_bound_to_the_user():
 
 def test_redirect_uri_uses_public_url():
     assert gd.redirect_uri() == "https://notes.example.test/api/drive/callback"
+
+
+def test_app_id_is_the_project_number(monkeypatch):
+    monkeypatch.setattr(
+        gd.settings, "google_client_id", "935144431204-abc.apps.googleusercontent.com"
+    )
+    assert gd.app_id() == "935144431204"
+
+
+def test_picker_needs_client_and_key(monkeypatch):
+    monkeypatch.setattr(gd.settings, "google_client_id", "1-abc")
+    monkeypatch.setattr(gd.settings, "google_client_secret", "s")
+    monkeypatch.setattr(gd.settings, "google_picker_api_key", "")
+    assert not gd.picker_available()
+    monkeypatch.setattr(gd.settings, "google_picker_api_key", "AIza-key")
+    assert gd.picker_available()

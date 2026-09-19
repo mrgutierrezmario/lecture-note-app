@@ -216,6 +216,7 @@ class SettingsResponse(BaseModel):
     openai_model: str
     openai_key_masked: Optional[str] = None
     google_client_id: str = ""
+    google_picker_api_key: str = ""
     google_client_secret_masked: Optional[str] = None
     google_redirect_uri: str = ""
     ollama_base_url: str
@@ -254,6 +255,7 @@ class SettingsUpdate(BaseModel):
     openai_model: Optional[str] = None
     openai_api_key: Optional[str] = None
     google_client_id: Optional[str] = None
+    google_picker_api_key: Optional[str] = None
     google_client_secret: Optional[str] = None
 
 
@@ -426,10 +428,20 @@ class DriveStatus(BaseModel):
     auto_export: bool = False
     folder_name: str = "AI Lecture Notes"
     folder_url: Optional[str] = None
+    picker_available: bool = False  # an admin saved a Picker API key
 
 
 class DriveUpdate(BaseModel):
-    """Change automatic saving and/or the folder path in Drive."""
+    """Change automatic saving, the folder path, or point at a picked folder."""
 
     auto_export: Optional[bool] = None
     folder_name: Optional[str] = None
+    folder_id: Optional[str] = None  # an existing folder chosen with Google's picker
+
+
+class DrivePickerToken(BaseModel):
+    """What the browser needs to open Google's folder picker."""
+
+    access_token: str
+    api_key: str
+    app_id: str  # the Cloud project number (first part of the OAuth client id)

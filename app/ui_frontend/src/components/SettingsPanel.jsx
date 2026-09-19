@@ -89,6 +89,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
   const [keyInput, setKeyInput] = useState('')
   const [providerKeys, setProviderKeys] = useState({ gemini: '', openai: '' })
   const [googleClient, setGoogleClient] = useState({ id: '', secret: '' })
+  const [pickerKey, setPickerKey] = useState('')
   const [providerTest, setProviderTest] = useState({})
   const [geminiModels, setGeminiModels] = useState(null) // null = not loaded, [] = failed
   const [saving, setSaving] = useState(false)
@@ -401,9 +402,32 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
             {settings.google_client_id && settings.google_client_secret_masked && (
               <p className="settings-inline-ok">Configured — users can connect their Drive from Settings.</p>
             )}
+            <label className="settings-field">
+              <span>Picker API key</span>
+              <input
+                type="text"
+                placeholder={settings.google_picker_api_key ? `Saved (…${settings.google_picker_api_key.slice(-4)}) — paste to replace` : 'AIza… (optional)'}
+                value={pickerKey}
+                onChange={e => setPickerKey(e.target.value)}
+                autoComplete="off"
+              />
+            </label>
+            <p className="settings-note">
+              Optional. Lets users pick an <em>existing</em> Drive folder with Google's chooser. In the same Cloud
+              project: enable the <strong>Google Picker API</strong>, then Credentials → Create credentials →
+              <strong> API key</strong>, restricted to the Google Picker API.
+            </p>
+            <div className="settings-actions">
+              <button disabled={saving || !pickerKey.trim()} onClick={async () => { if (await save({ google_picker_api_key: pickerKey.trim() }, 'Picker API key saved.')) setPickerKey('') }}>
+                Save Picker key
+              </button>
+              {settings.google_picker_api_key && (
+                <button className="btn-secondary" disabled={saving} onClick={() => save({ google_picker_api_key: '' }, 'Picker API key cleared.')}>Clear</button>
+              )}
+            </div>
           </section>
 
-          <DriveSection isAdmin refreshKey={`${settings.google_client_id}|${settings.google_client_secret_masked}`} />
+          <DriveSection isAdmin refreshKey={`${settings.google_client_id}|${settings.google_client_secret_masked}|${settings.google_picker_api_key}`} />
 
           <section className="settings-section">
             <h3>Models</h3>
