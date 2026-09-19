@@ -1346,7 +1346,7 @@ a.btn-icon:hover {
 .login-logo {
   width: 72px;
   height: 72px;
-  margin: 0 auto 4px;
+  margin: 12px auto 4px;
   object-fit: contain;
 }
 
