@@ -44,7 +44,7 @@ APP_NAME = "AI Lecture Notes"
 BRAND = "M.G. NETWORK AND TECHNOLOGY SOLUTIONS"
 # The logo mark ships with the frontend: under dist/ in the Docker image (the
 # built site), under public/ in a development checkout.
-_UI = Path(__file__).resolve().parent.parent / "ui_frontend"
+_UI = Path(__file__).resolve().parent.parent.parent / "ui_frontend"
 LOGO = next(
     (
         p

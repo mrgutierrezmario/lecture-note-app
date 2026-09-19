@@ -1,6 +1,6 @@
 """Notes merging, de-duplication, the heuristic extractor and the focus prompt."""
 
-import notes_generator as ng
+from ai import notes_generator as ng
 
 
 def test_merge_appends_new_sections_and_dedupes_bullets():

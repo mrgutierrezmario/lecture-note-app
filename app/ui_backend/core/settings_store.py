@@ -23,7 +23,7 @@ import os
 from pathlib import Path
 from typing import Any, Optional
 
-from config import STATE_DIR, get_settings
+from core.config import STATE_DIR, get_settings
 
 logger = logging.getLogger(__name__)
 

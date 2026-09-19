@@ -1,6 +1,6 @@
 """Provider cascade order and failure descriptions."""
 
-import providers as p
+from ai import providers as p
 
 
 def test_cloud_cascade_prefers_primary_then_other_configured(monkeypatch):

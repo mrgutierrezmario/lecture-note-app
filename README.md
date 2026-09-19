@@ -134,7 +134,7 @@ cp .env.example .env            # defaults match the docker-compose dev services
 (cd alembic && alembic upgrade head)   # create the tables
 
 # First admin account
-python manage_users.py create admin --admin      # prompts for a password
+python -m scripts.manage_users create admin --admin      # prompts for a password
 
 # Frontend
 cd ../ui_frontend && npm install
@@ -195,7 +195,7 @@ Day-to-day:
 deploy/start.sh                                  # after pulling new code: rebuild + restart what changed
 deploy/stop.sh                                   # stop; data is kept
 docker compose -f deploy/compose.yml logs -f app # follow the app log
-docker compose -f deploy/compose.yml exec app python manage_users.py list
+docker compose -f deploy/compose.yml exec app python -m scripts.manage_users list
 ```
 
 ### Keeping it up after a reboot
@@ -279,7 +279,7 @@ hashed). Logins last 30 days.
   Password works well — use a dedicated `…donotreply@gmail.com` account so
   replies don't land in your inbox). Without mail, the link isn't offered and
   admins reset passwords from **Settings → Users**.
-- Shell fallback: `manage_users.py create|list|passwd|delete`.
+- Shell fallback: `python -m scripts.manage_users create|list|passwd|delete`.
 
 ---
 
@@ -373,7 +373,7 @@ for notes.
 
 Production config lives in `deploy/.env` (created by `start.sh`); development
 config in `app/ui_backend/.env`. Everything not listed has a sensible default
-in `app/ui_backend/config.py`. Settings marked *panel* can also be changed at
+in `app/ui_backend/core/config.py`. Settings marked *panel* can also be changed at
 runtime from the admin Settings panel and persist in the app-state volume.
 
 | Variable | Default | Purpose |
@@ -513,24 +513,23 @@ them at Google.
 ## Project layout
 
 ```
-app/ui_backend/          FastAPI backend
-  main.py                app wiring; serves the built UI in production
-  websocket_handler.py   the recording socket: chunks in, transcript/notes out
-  transcriber.py         ffmpeg + faster-whisper
-  notes_generator.py     incremental notes (extract → merge)
-  providers.py           Ollama / Claude / Gemini / OpenAI behind one interface
-  auth.py, routes/auth.py  accounts, cookie sessions, registration, password reset
-  routes/sessions.py     per-lecture API: transcript, notes, exports, uploads, chat
-  routes/history.py      lecture list, rename, delete, keep, quota usage
-  routes/settings.py     admin settings, API keys, provider tests
-  quota.py, cleanup.py   storage accounting and retention
-  models.py, alembic/    schema and migrations (applied on startup)
-  manage_users.py        CLI for accounts
-  audio_backup.py        streams the audio bucket in/out for deploy/backup.sh
-  google_drive.py, routes/drive.py  per-user Google Drive connection and exports
-app/ui_frontend/         React + Vite frontend (src/components, src/hooks)
-deploy/                  compose.yml, Dockerfile, start.sh/stop.sh,
-                         backup.sh/restore.sh/backup-setup.sh, mac/ launch agents
+app/ui_backend/           FastAPI backend — main.py wires it up and serves the built UI
+  core/                   config, database session, ORM models, API schemas, runtime settings
+  accounts/               auth (passwords, signed cookies, middleware), rate limiting
+  ai/                     transcriber (ffmpeg + Whisper), notes_generator (extract → merge),
+                          providers (Ollama / Claude / Gemini / OpenAI behind one interface),
+                          image_analyzer, document_processor
+  storage/                s3_client, quota, cleanup (retention), audio_backup (for backup.sh)
+  exports/                documents_export (PDF / Word), mp3_export
+  integrations/           google_drive (OAuth + uploads), mailer
+  realtime/               websocket_handler — the recording socket: chunks in, transcript/notes out
+  routes/                 API routers: sessions, history, auth, settings, drive, admin
+  scripts/                manage_users — CLI for accounts
+  alembic/                schema migrations (applied on startup)
+  tests/                  pytest suite
+app/ui_frontend/          React + Vite frontend (src/components, src/hooks)
+deploy/                   compose.yml, Dockerfile, start.sh/stop.sh,
+                          backup.sh/restore.sh/restore-drill.sh/backup-setup.sh, mac/ launch agents
 ```
 
 Backend code is formatted and linted with [ruff](https://docs.astral.sh/ruff/)

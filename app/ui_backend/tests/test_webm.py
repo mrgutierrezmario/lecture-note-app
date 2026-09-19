@@ -1,6 +1,6 @@
 """Slicing the WebM header out of MediaRecorder's first blob."""
 
-from websocket_handler import _CLUSTER_ID, _EBML_MAGIC, _webm_header
+from realtime.websocket_handler import _CLUSTER_ID, _EBML_MAGIC, _webm_header
 
 
 def test_header_is_everything_before_the_first_cluster():

@@ -3,10 +3,10 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from auth import require_admin
-from cleanup import cleanup_old_audio
-from database import get_db
-from schemas import CleanupResponse
+from accounts.auth import require_admin
+from core.database import get_db
+from core.schemas import CleanupResponse
+from storage.cleanup import cleanup_old_audio
 
 router = APIRouter(prefix="/api/admin", tags=["admin"], dependencies=[Depends(require_admin)])
 

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 
 import httpx
 
-from config import get_settings
+from core.config import get_settings
 
 logger = logging.getLogger(__name__)
 
@@ -139,7 +139,7 @@ def configured(provider: str) -> bool:
     if provider in ("ollama", "llava"):
         return True
     if provider == "claude":
-        import settings_store
+        from core import settings_store
 
         return settings_store.credentials_available()
     return bool(key_for(provider))

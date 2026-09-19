@@ -3,8 +3,8 @@
 Runs *inside* the app container, where the S3 credentials already are, so the
 backup script on the host never needs MinIO's password or a bind mount:
 
-    docker compose exec -T app python audio_backup.py export < have.txt > audio.tar
-    docker compose exec -T app python audio_backup.py import < audio.tar
+    docker compose exec -T app python -m storage.audio_backup export < have.txt > audio.tar
+    docker compose exec -T app python -m storage.audio_backup import < audio.tar
 
 ``export`` reads the list of objects the host already has ("<key> <size>" per
 line) on stdin and writes a tar of the *missing* objects to stdout, plus a
@@ -21,7 +21,7 @@ import sys
 import tarfile
 from datetime import datetime, timezone
 
-from s3_client import s3_client
+from storage.s3_client import s3_client
 
 MANIFEST = "MANIFEST"
 
@@ -94,4 +94,4 @@ if __name__ == "__main__":
     elif command == "import":
         import_()
     else:
-        sys.exit("usage: audio_backup.py export|import")
+        sys.exit("usage: python -m storage.audio_backup export|import")

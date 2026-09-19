@@ -4,7 +4,7 @@ import uuid
 
 import pytest
 
-import google_drive as gd
+from integrations import google_drive as gd
 
 
 def test_clean_folder_path():

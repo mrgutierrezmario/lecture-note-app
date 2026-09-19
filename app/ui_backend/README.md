@@ -3,6 +3,24 @@
 FastAPI backend for AI Lecture Notes. See the root `README.md` for the full setup guide;
 this file covers backend-specific details.
 
+## Layout
+
+`main.py` is the only module at the top level; everything else is grouped by
+what it does:
+
+| Package | Contents |
+|---|---|
+| `core/` | config, database session, ORM models, API schemas, runtime settings store |
+| `accounts/` | passwords, signed login cookies, the auth middleware, rate limiting |
+| `ai/` | Whisper transcription, notes generation, the provider layer (Ollama/Claude/Gemini/OpenAI), image and document reading |
+| `storage/` | S3/MinIO client, quotas, retention cleanup, the audio backup helper |
+| `exports/` | PDF/Word documents and the MP3 build |
+| `integrations/` | Google Drive and outgoing email |
+| `realtime/` | the recording WebSocket handler |
+| `routes/` | FastAPI routers (one per API area) |
+| `scripts/` | `manage_users` CLI (`python -m scripts.manage_users`) |
+| `alembic/`, `tests/` | migrations and the pytest suite |
+
 ## Setup
 
 ### Prerequisites
@@ -35,7 +53,7 @@ venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 ## Configuration
 
-Settings are defined in `config.py` and can be overridden with a `.env` file in this directory.
+Settings are defined in `core/config.py` and can be overridden with a `.env` file in this directory.
 
 | Variable | Default | Description |
 |----------|---------|-------------|

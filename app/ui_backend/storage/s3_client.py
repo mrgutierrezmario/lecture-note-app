@@ -11,7 +11,7 @@ import boto3
 from botocore.config import Config
 from botocore.exceptions import ClientError
 
-from config import get_settings
+from core.config import get_settings
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

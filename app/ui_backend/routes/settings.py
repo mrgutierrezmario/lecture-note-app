@@ -9,13 +9,12 @@ import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
-import google_drive
-import mailer
-import providers
-import settings_store
-from auth import require_admin
-from config import get_settings
-from schemas import AuthStatus, ModelOption, ProviderTest, SettingsResponse, SettingsUpdate
+from accounts.auth import require_admin
+from ai import providers
+from core import settings_store
+from core.config import get_settings
+from core.schemas import AuthStatus, ModelOption, ProviderTest, SettingsResponse, SettingsUpdate
+from integrations import google_drive, mailer
 
 logger = logging.getLogger(__name__)
 

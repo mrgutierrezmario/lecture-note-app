@@ -1,6 +1,6 @@
 """Whisper spelling hints built from title, per-lecture terms and the global list."""
 
-import transcriber as t
+from ai import transcriber as t
 
 
 def test_build_prompt_composes_all_sources():

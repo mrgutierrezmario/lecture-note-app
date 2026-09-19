@@ -3,7 +3,7 @@
 import time
 import uuid
 
-import auth
+from accounts import auth
 
 
 def test_password_hash_roundtrip():

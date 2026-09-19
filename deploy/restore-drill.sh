@@ -90,7 +90,7 @@ log "Restoring saved settings..."
 docker run --rm -i -v "${DRILL}_app-state:/v" busybox:stable tar -C /v -xzf - < "$STAGE/app-state.tar.gz"
 if [ -d "$SRC/audio" ]; then
   log "Uploading audio ($(du -sh "$SRC/audio" | cut -f1))..."
-  tar -C "$SRC/audio" -cf - . | $DC run --rm -T --no-deps --entrypoint python app audio_backup.py import 2>&1 | grep -v "^INFO" | tail -1
+  tar -C "$SRC/audio" -cf - . | $DC run --rm -T --no-deps --entrypoint python app -m storage.audio_backup import 2>&1 | grep -v "^INFO" | tail -1
 fi
 
 # ── App ───────────────────────────────────────────────────────────────────────
@@ -110,10 +110,10 @@ SEGMENTS=$(Q "select count(*) from transcript_segments"); NOTES=$(Q "select coun
 ALEMBIC=$(Q "select version_num from alembic_version")
 CHUNKS_DB=$(Q "select count(*) from audio_chunks where not deleted_from_s3")
 CHUNKS_S3=$($DC exec -T app python -c "
-from s3_client import s3_client as s
+from storage.s3_client import s3_client as s
 n=sum(len(p.get('Contents',[])) for p in s.client.get_paginator('list_objects_v2').paginate(Bucket=s.bucket)); print(n)" 2>/dev/null | tail -1)
 SETTINGS=$($DC exec -T app python -c "
-import settings_store; o=settings_store._read_overrides(); print(len(o), 'settings;', 'gemini key' if settings_store.get_settings().gemini_api_key else 'no gemini key')" 2>/dev/null | tail -1)
+from core import settings_store; o=settings_store._read_overrides(); print(len(o), 'settings;', 'gemini key' if settings_store.get_settings().gemini_api_key else 'no gemini key')" 2>/dev/null | tail -1)
 log "Users: $USERS ($ADMINS admin) · lectures: $LECTURES · segments: $SEGMENTS · notes versions: $NOTES · schema: $ALEMBIC"
 log "Audio: $CHUNKS_S3 objects in storage vs $CHUNKS_DB retained chunks in the database"
 log "Settings restored: $SETTINGS"

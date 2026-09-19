@@ -104,7 +104,7 @@ fi
 if [ $AUDIO = 1 ] && [ -d "$BACKUP_DIR/audio" ]; then
   log "Uploading audio chunks ($(du -sh "$BACKUP_DIR/audio" | cut -f1))..."
   $DC up -d tailscale >/dev/null
-  tar -C "$BACKUP_DIR/audio" -cf - . | $DC run --rm -T --no-deps --entrypoint python app audio_backup.py import
+  tar -C "$BACKUP_DIR/audio" -cf - . | $DC run --rm -T --no-deps --entrypoint python app -m storage.audio_backup import
 fi
 
 # ── Bring everything up ───────────────────────────────────────────────────────

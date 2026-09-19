@@ -13,8 +13,8 @@ import httpx
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import get_settings
-from models import NotesVersion, Session, TranscriptSegment
+from core.config import get_settings
+from core.models import NotesVersion, Session, TranscriptSegment
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -91,7 +91,7 @@ async def extract_notes(transcript: str, focus: str | None = None) -> str | None
     window is far more than Ollama can read, so it is re-run in Ollama-sized
     slices and the results merged — nothing is silently skimmed.
     """
-    from providers import generate_text
+    from ai.providers import generate_text
 
     focus_text = FOCUS_TEMPLATE.format(focus=focus.strip()) if focus and focus.strip() else ""
     try:
@@ -292,7 +292,7 @@ async def generate_notes_for_session(
     # Which extractor can run. Cloud providers need no local model; Ollama
     # needs to be reachable, otherwise the heuristic extractor keeps notes
     # coming rather than producing nothing.
-    from providers import active_provider
+    from ai.providers import active_provider
 
     provider = active_provider()
     use_model = provider != "ollama" or await check_ollama_available()

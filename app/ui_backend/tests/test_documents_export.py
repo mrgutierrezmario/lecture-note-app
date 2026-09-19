@@ -4,7 +4,7 @@ import zipfile
 from datetime import datetime
 from io import BytesIO
 
-import documents_export as de
+from exports import documents_export as de
 
 
 def _lecture(**overrides):

@@ -86,10 +86,10 @@ $DC exec -T app curl -fs http://localhost:8000/health >/dev/null 2>&1 || {
   echo "App did not become healthy. Logs:" >&2; $DC logs --tail=40 app >&2; exit 1; }
 
 # ── First admin ───────────────────────────────────────────────────────────────
-if ! $DC exec -T app python manage_users.py list 2>/dev/null | grep -q " admin"; then
+if ! $DC exec -T app python -m scripts.manage_users list 2>/dev/null | grep -q " admin"; then
   ADMIN="${ADMIN_USERNAME:-admin}"
   log "No admin account yet — creating '$ADMIN'..."
-  $DC exec -T app python manage_users.py create "$ADMIN" --admin --generate
+  $DC exec -T app python -m scripts.manage_users create "$ADMIN" --admin --generate
   echo "  ^ save this password; change it in Settings > Your password after signing in."
 fi
 

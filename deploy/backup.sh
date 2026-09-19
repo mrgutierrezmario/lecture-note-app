@@ -94,7 +94,7 @@ AUDIO="$BACKUP_DIR/audio"
 # What we already have, as "<key> <size>" — the container sends only the rest.
 ( cd "$AUDIO" && find . -type f ! -name MANIFEST -exec wc -c {} + ) |
   awk '$2 != "total" { sub(/^\.\//, "", $2); print $2, $1 }' |
-  $DC exec -T app python audio_backup.py export | tar -x -C "$AUDIO" -f -
+  $DC exec -T app python -m storage.audio_backup export | tar -x -C "$AUDIO" -f -
 # Remove local chunks that no longer exist in the bucket (retention / user delete).
 if [ -f "$AUDIO/MANIFEST" ]; then
   ( cd "$AUDIO" && find . -type f ! -name MANIFEST | sed 's|^\./||' | sort > "$WORK/have" \

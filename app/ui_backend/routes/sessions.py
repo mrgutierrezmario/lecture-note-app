@@ -17,16 +17,13 @@ from fastapi.responses import FileResponse, Response, StreamingResponse
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import documents_export
-import google_drive
-import mp3_export
-import ratelimit
-from auth import CurrentUser, current_user
-from config import get_settings
-from database import get_db
-from document_processor import extract_text, image_media_type
-from image_analyzer import caption_image as blip_caption
-from models import (
+from accounts import ratelimit
+from accounts.auth import CurrentUser, current_user
+from ai.document_processor import extract_text, image_media_type
+from ai.image_analyzer import caption_image as blip_caption
+from core.config import get_settings
+from core.database import get_db
+from core.models import (
     AudioChunk,
     ChatMessage,
     DocumentUpload,
@@ -35,8 +32,7 @@ from models import (
     Session,
     TranscriptSegment,
 )
-from s3_client import s3_client
-from schemas import (
+from core.schemas import (
     AudioChunkResponse,
     AudioChunksListResponse,
     ChatMessageOut,
@@ -49,6 +45,9 @@ from schemas import (
     SessionResponse,
     TranscriptResponse,
 )
+from exports import documents_export, mp3_export
+from integrations import google_drive
+from storage.s3_client import s3_client
 
 logger = logging.getLogger(__name__)
 CHUNK_SECONDS = 5  # MediaRecorder timeslice; matches routes/history.py
@@ -125,7 +124,7 @@ async def update_session_details(
     await db.commit()
     await db.refresh(session)
     # A live recording picks the new spelling hints up from the next chunk.
-    from websocket_handler import apply_prompt
+    from realtime.websocket_handler import apply_prompt
 
     apply_prompt(session.id, session.title, session.vocabulary)
     return session
@@ -341,8 +340,8 @@ async def regenerate_notes(session_id: str, db: AsyncSession = Depends(get_db)):
     """Rebuild the notes from the whole transcript — e.g. after setting a focus
     on a past lecture. Takes a while for a long lecture; the reply is the
     finished version."""
-    from notes_generator import regenerate_notes_for_session
-    from websocket_handler import manager
+    from ai.notes_generator import regenerate_notes_for_session
+    from realtime.websocket_handler import manager
 
     version = await regenerate_notes_for_session(db, session_id, manager.broadcast)
     if version is None:
@@ -663,7 +662,7 @@ async def _transcribe_image(image_base64: str, media_type: str) -> tuple[str, st
     provider so a weak transcription is visible in the stored text.
     """
     settings = get_settings()
-    from providers import active_vision_provider, describe_image_cloud
+    from ai.providers import active_vision_provider, describe_image_cloud
 
     if active_vision_provider() != "llava":
         try:
@@ -739,7 +738,7 @@ async def chat(
     # How much transcript the active text provider can take. Cloud models have
     # very large context windows; local Ollama is bounded by num_ctx (set in
     # providers.py), so keep its share modest.
-    from providers import active_provider
+    from ai.providers import active_provider
 
     transcript_budget = 16_000 if active_provider() == "ollama" else 300_000
 
@@ -781,7 +780,7 @@ async def chat(
         # Three tiers, best first. Each failure is logged: a swallowed error here
         # is indistinguishable to the student from a bad answer, because the chain
         # silently degrades to a generic BLIP caption.
-        from providers import active_vision_provider, describe_image_cloud
+        from ai.providers import active_vision_provider, describe_image_cloud
 
         if active_vision_provider() != "llava":
             try:
@@ -871,7 +870,7 @@ Instructions:
 
     fallback = None
     try:
-        from providers import generate_text
+        from ai.providers import generate_text
 
         result = await generate_text(prompt, max_tokens=600, temperature=0.1, timeout=180.0)
         answer, provider = (

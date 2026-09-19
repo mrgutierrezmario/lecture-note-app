@@ -2,7 +2,7 @@
 
 import pytest
 
-import settings_store as ss
+from core import settings_store as ss
 
 
 def test_masked():

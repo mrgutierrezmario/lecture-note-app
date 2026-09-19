@@ -24,9 +24,9 @@ import bcrypt
 from fastapi import Depends, HTTPException, Request, WebSocket
 from sqlalchemy import select
 
-from config import get_settings
-from database import AsyncSessionLocal
-from models import User
+from core.config import get_settings
+from core.database import AsyncSessionLocal
+from core.models import User
 
 logger = logging.getLogger(__name__)
 

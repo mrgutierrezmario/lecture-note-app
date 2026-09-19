@@ -14,11 +14,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import google_drive
-from auth import CurrentUser, current_user
-from database import get_db
-from models import DriveLink
-from schemas import DriveStatus, DriveUpdate
+from accounts.auth import CurrentUser, current_user
+from core.database import get_db
+from core.models import DriveLink
+from core.schemas import DriveStatus, DriveUpdate
+from integrations import google_drive
 
 logger = logging.getLogger(__name__)
 

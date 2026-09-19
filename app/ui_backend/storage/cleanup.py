@@ -13,10 +13,10 @@ from datetime import datetime, timedelta
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import get_settings
-from database import AsyncSessionLocal
-from models import AudioChunk, Session
-from s3_client import s3_client
+from core.config import get_settings
+from core.database import AsyncSessionLocal
+from core.models import AudioChunk, Session
+from storage.s3_client import s3_client
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

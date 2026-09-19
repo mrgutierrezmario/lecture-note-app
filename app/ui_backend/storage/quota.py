@@ -10,8 +10,8 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from config import get_settings
-from models import AudioChunk, Session, User
+from core.config import get_settings
+from core.models import AudioChunk, Session, User
 
 MB = 1024 * 1024
 

@@ -12,10 +12,8 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from sqlalchemy import delete, func, or_, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import google_drive
-import mailer
-import ratelimit
-from auth import (
+from accounts import ratelimit
+from accounts.auth import (
     CurrentUser,
     clear_login_cookie,
     current_user,
@@ -24,9 +22,9 @@ from auth import (
     set_login_cookie,
     verify_password,
 )
-from config import get_settings
-from database import get_db
-from models import (
+from core.config import get_settings
+from core.database import get_db
+from core.models import (
     AudioChunk,
     DocumentUpload,
     DriveFile,
@@ -36,9 +34,8 @@ from models import (
     TranscriptSegment,
     User,
 )
-from models import PasswordReset as ResetToken
-from s3_client import s3_client
-from schemas import (
+from core.models import PasswordReset as ResetToken
+from core.schemas import (
     AccountDelete,
     ForgotPasswordRequest,
     LoginRequest,
@@ -53,6 +50,8 @@ from schemas import (
     UserResponse,
     UserUpdate,
 )
+from integrations import google_drive, mailer
+from storage.s3_client import s3_client
 
 logger = logging.getLogger(__name__)
 

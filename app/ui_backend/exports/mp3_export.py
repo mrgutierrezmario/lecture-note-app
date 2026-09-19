@@ -18,7 +18,7 @@ import threading
 import time
 from dataclasses import dataclass, field
 
-from s3_client import s3_client
+from storage.s3_client import s3_client
 
 logger = logging.getLogger(__name__)
 

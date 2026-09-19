@@ -17,7 +17,8 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 # Where runtime-written files live: .env (API key saved from the Settings panel)
 # and runtime_settings.json. Defaults to the backend directory; the Docker image
 # points it at a mounted volume so those survive container recreation.
-STATE_DIR = Path(os.environ.get("STATE_DIR", Path(__file__).resolve().parent))
+# The backend root (one level above this package) unless STATE_DIR is set.
+STATE_DIR = Path(os.environ.get("STATE_DIR", Path(__file__).resolve().parent.parent))
 
 
 class Settings(BaseSettings):

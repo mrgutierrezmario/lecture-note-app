@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """Manage accounts from the shell — needed once to create the first admin.
 
-venv/bin/python manage_users.py create <username> [--admin]   (prompts for a password,
+venv/bin/python -m scripts.manage_users create <username> [--admin]   (prompts for a password,
                                                                 or generates one with --generate)
 venv/bin/python manage_users.py list
 venv/bin/python manage_users.py passwd <username>
@@ -16,9 +16,9 @@ import sys
 
 from sqlalchemy import select, update
 
-from auth import hash_password
-from database import AsyncSessionLocal
-from models import Session, User
+from accounts.auth import hash_password
+from core.database import AsyncSessionLocal
+from core.models import Session, User
 
 
 async def _get(db, username: str) -> User | None:

@@ -29,16 +29,16 @@ from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import google_drive
-import quota
-from auth import websocket_user
-from config import get_settings
-from database import AsyncSessionLocal
-from models import AudioChunk, Session, TranscriptSegment
-from notes_generator import generate_notes_for_session
-from s3_client import s3_client
-from transcriber import build_prompt, set_session_prompt, transcribe_chunk
-from transcriber import reset_session as reset_transcriber_session
+from accounts.auth import websocket_user
+from ai.notes_generator import generate_notes_for_session
+from ai.transcriber import build_prompt, set_session_prompt, transcribe_chunk
+from ai.transcriber import reset_session as reset_transcriber_session
+from core.config import get_settings
+from core.database import AsyncSessionLocal
+from core.models import AudioChunk, Session, TranscriptSegment
+from integrations import google_drive
+from storage import quota
+from storage.s3_client import s3_client
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

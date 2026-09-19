@@ -17,7 +17,7 @@ from sqlalchemy import Boolean, Column, DateTime, Float, ForeignKey, Index, Inte
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
-from database import Base
+from core.database import Base
 
 
 class User(Base):

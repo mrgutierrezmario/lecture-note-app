@@ -220,6 +220,23 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Backend reorganised into packages (2026-09-19)
+- `app/ui_backend/` now has only `main.py` at the top level; modules moved
+  with `git mv` into `core/` (config, database, models, schemas,
+  settings_store), `accounts/` (auth, ratelimit), `ai/` (transcriber,
+  notes_generator, providers, image_analyzer, document_processor),
+  `storage/` (s3_client, quota, cleanup, audio_backup), `exports/`
+  (documents_export, mp3_export), `integrations/` (google_drive, mailer),
+  `realtime/` (websocket_handler), `scripts/` (manage_users). `routes/`,
+  `alembic/`, `tests/` unchanged.
+- Imports rewritten mechanically (`import x` → `from pkg import x`, so
+  `x.attr` call sites are untouched); path lookups that moved a level
+  (`STATE_DIR`, the PDF logo) adjusted; ruff isort first-party list updated.
+- Invocations changed: `python -m storage.audio_backup` (backup/restore/
+  drill scripts), `python -m scripts.manage_users` (start.sh, README).
+- Verified: ruff clean, 40 tests, and a full restore drill on the built
+  image (migrations, health, Whisper, websocket, CLI) before deploying.
+
 ### Dependency review, phone fixes, docs (2026-09-19)
 - **Dependabot PRs**: #5 (20 Python bumps: FastAPI 0.109→0.141, pydantic
   2.6→2.13, websockets 12→17, faster-whisper 1.0→1.2, av 12→18, bcrypt

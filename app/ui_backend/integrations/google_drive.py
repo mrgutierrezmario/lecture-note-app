@@ -31,11 +31,9 @@ from cryptography.fernet import Fernet, InvalidToken
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import mp3_export
-from config import get_settings
-from database import AsyncSessionLocal
-from documents_export import LectureDoc, build_docx, build_pdf
-from models import (
+from core.config import get_settings
+from core.database import AsyncSessionLocal
+from core.models import (
     AudioChunk,
     ChatMessage,
     DriveFile,
@@ -44,6 +42,8 @@ from models import (
     Session,
     TranscriptSegment,
 )
+from exports import mp3_export
+from exports.documents_export import LectureDoc, build_docx, build_pdf
 
 logger = logging.getLogger(__name__)
 settings = get_settings()

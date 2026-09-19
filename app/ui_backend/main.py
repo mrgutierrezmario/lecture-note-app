@@ -16,11 +16,11 @@ from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
-import settings_store
-from auth import AuthMiddleware
-from cleanup import start_cleanup_background_task
-from config import get_settings
-from database import AsyncSessionLocal
+from accounts.auth import AuthMiddleware
+from core import settings_store
+from core.config import get_settings
+from core.database import AsyncSessionLocal
+from realtime.websocket_handler import handle_websocket
 from routes import (
     admin_router,
     auth_router,
@@ -29,8 +29,8 @@ from routes import (
     sessions_router,
     settings_router,
 )
-from s3_client import s3_client
-from websocket_handler import handle_websocket
+from storage.cleanup import start_cleanup_background_task
+from storage.s3_client import s3_client
 
 logging.basicConfig(
     level=logging.INFO,

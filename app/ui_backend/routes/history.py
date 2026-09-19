@@ -6,11 +6,10 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import case, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-import quota
-from auth import CurrentUser, current_user
-from config import get_settings
-from database import get_db
-from models import (
+from accounts.auth import CurrentUser, current_user
+from core.config import get_settings
+from core.database import get_db
+from core.models import (
     AudioChunk,
     DocumentUpload,
     DriveFile,
@@ -19,8 +18,9 @@ from models import (
     TranscriptSegment,
     User,
 )
-from s3_client import s3_client
-from schemas import SessionLock, SessionRename, SessionSummary, StorageUsage
+from core.schemas import SessionLock, SessionRename, SessionSummary, StorageUsage
+from storage import quota
+from storage.s3_client import s3_client
 
 logger = logging.getLogger(__name__)
 

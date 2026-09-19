@@ -1,6 +1,6 @@
 """Sign-in lockout and per-user usage caps."""
 
-import ratelimit
+from accounts import ratelimit
 
 
 def setup_function():
