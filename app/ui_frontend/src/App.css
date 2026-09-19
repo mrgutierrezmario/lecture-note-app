@@ -1745,8 +1745,26 @@ a.btn-icon:hover {
 }
 
 .history-note {
-  padding: 0 24px 16px;
-  margin: 8px 0 0;
+  padding: 12px 24px 16px;
+  margin: 0;
+  border-top: 1px solid var(--border);
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--faint);
+}
+
+.history-note p {
+  margin: 0 0 6px;
+  color: var(--muted);
+}
+
+.history-note ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.history-note li + li {
+  margin-top: 3px;
 }
 
 .btn-new-lecture {

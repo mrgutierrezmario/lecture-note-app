@@ -185,6 +185,8 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
             </button>
           </div>
 
+          {/* The body scrolls, not the panel, so the scrollbar stays inside the rounded corners. */}
+          <div className="settings-scroll">
           {error && <div className="settings-error">{error}</div>}
           {!items && !error && <p className="settings-loading">Loading…</p>}
 
@@ -303,17 +305,21 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
             <ShareDialog lecture={sharing} onSave={shareWith} onClose={() => setSharing(null)} />
           )}
 
-          <p className="settings-note settings-note-full history-note">
-            {user.is_admin
-              ? 'This view includes every lecture on the system. '
-              : user.is_demo
-                ? 'This is the demo account: these are sample lectures anyone trying the demo can open. '
-                : 'This view includes the lectures you have recorded. '}
-            Transcripts and notes are retained indefinitely. Audio recordings are removed automatically
-            after {retentionDays} days and count toward the storage shown above. To preserve a recording, download the
-            MP3 or mark the lecture as kept — kept lectures are excluded from the cleanup and cannot be
-            deleted until unlocked.
-          </p>
+          <div className="history-note">
+            <p>
+              {user.is_admin
+                ? 'Showing every lecture on the system.'
+                : user.is_demo
+                  ? 'Demo account: sample lectures anyone trying the demo can open.'
+                  : 'Showing the lectures you have recorded.'}
+            </p>
+            <ul>
+              <li>Transcripts and notes are kept indefinitely.</li>
+              <li>Audio is deleted automatically after {retentionDays} days and counts toward the storage shown above.</li>
+              <li>To keep a recording, download the MP3 or lock the lecture — locked lectures skip the cleanup and can't be deleted until unlocked.</li>
+            </ul>
+          </div>
+          </div>
         </div>
       </div>
     </>
