@@ -644,6 +644,9 @@ noise — was squashed into one commit. The project itself is older:
 Roughly eight months from first commit to release, with six months of use in
 between.
 
+<p align="center"><img width="640" alt="The History panel listing lectures from March 26, 2026 through September 16, 2026" src="design/screenshots/history-timeline.png"></p>
+<p align="center"><em>History as of September 2026: from the first recorded class in March to the current course.</em></p>
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) — © 2026 M.G. Network and Technology Solutions.
