@@ -220,6 +220,20 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Google Drive folder selector (2026-09-19)
+- Settings → Google Drive → **Choose existing folder…** opens Google's
+  Picker (loaded on demand from apis.google.com) with the user's own
+  short-lived access token (`GET /api/drive/picker-token`), the Picker
+  API key and the app id (= Cloud project number, first part of the OAuth
+  client id) — that combination makes the picked folder accessible under
+  `drive.file`. `PATCH /api/drive {folder_id}` reads the folder back to
+  confirm access and store its name.
+- Admin: Settings → API keys → **Google Drive folder selector** → API key
+  (`google_picker_api_key`, overrides file). Operator enabled the Google
+  Picker API, created a key restricted to it and to the site, saved it;
+  picked a folder and exported to it successfully.
+- Tests: +2 (app id, picker availability) → 42.
+
 ### Backend reorganised into packages (2026-09-19)
 - `app/ui_backend/` now has only `main.py` at the top level; modules moved
   with `git mv` into `core/` (config, database, models, schemas,
@@ -502,8 +516,8 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    `/privacy` was added (operator contact from `SUPPORT_EMAIL`) and the
    app's own Funnel host was used as the domain. Any Google account can
    now connect a Drive.
-10. Optional next features: Google Picker folder chooser (~3 h, needs an API
-    key); Claude API credits; speaker separation (post-lecture, see above).
+10. Optional next features: Claude API credits; speaker separation
+    (post-lecture, see above).
 11. Operator to run once on the Mac: `deploy/restore-drill.sh --from-remote`
     (the real disaster-recovery path via Google Drive).
 12. Optional: revoke/re-create the two Gmail App Passwords that passed through
