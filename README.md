@@ -627,6 +627,23 @@ as a pair-programming assistant (commits up to v1.0.0 carry a `Co-Authored-By`
 line). Every feature was driven by real use: recorded lectures, the problems
 they surfaced, and the fixes that followed.
 
+### Timeline
+
+This repository's history starts on 2026-09-14, when the project went public
+and the earlier history — which contained personal details and development
+noise — was squashed into one commit. The project itself is older:
+
+| When | What |
+|---|---|
+| **January 2026** | First prototype: browser recording, Whisper transcription, Ollama notes, Postgres + MinIO |
+| **March 2026** | First real lectures recorded (a graduate management course); WebSocket streaming, mute, downloads, live-class fixes |
+| **April 2026** | Claude for slides and images, audio-drop and dual-socket fixes, one-command startup script |
+| **May – August 2026** | In daily use for the course; running notes on what worked and what didn't |
+| **September 2026** | Production hardening from that list: Docker stack, public HTTPS URL, accounts, backups, Google Drive, PDF/Word exports, monitoring, tests + CI, docs — released as **v1.0.0** on 2026-09-19 |
+
+Roughly eight months from first commit to release, with six months of use in
+between.
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) — © 2026 M.G. Network and Technology Solutions.

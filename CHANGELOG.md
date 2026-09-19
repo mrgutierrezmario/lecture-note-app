@@ -29,4 +29,13 @@ First release: the app as used daily for a graduate lecture series.
 - Docker Compose stack with a fixed public HTTPS URL via Tailscale Funnel; `/health` for uptime monitoring; nightly encrypted off-site backups with a scripted restore drill; container log rotation; Dependabot; CI (ruff + pytest + frontend build).
 - Privacy policy and user guide served by the app.
 
+## Before 1.0.0
+
+Development began on 2026-01-29 (first prototype: browser recording, Whisper,
+Ollama notes, Postgres + MinIO). The first real lectures were recorded on
+2026-03-26; March and April brought WebSocket streaming, mute, downloads,
+Claude for slides and images, and fixes found in live classes. The app was in
+daily classroom use through the summer. The pre-release history was squashed
+at the public release on 2026-09-14 because it contained personal details.
+
 [1.0.0]: https://github.com/mrgutierrezmario/lecture-note-app/releases/tag/v1.0.0
