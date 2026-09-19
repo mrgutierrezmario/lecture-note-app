@@ -100,7 +100,8 @@ function Login({ onLogin, onRegister, onDemo }) {
   return (
     <div className="login-screen">
       <form className="login-card" onSubmit={submit}>
-        <img className="login-logo" src="/logo-mark.svg" alt="M.G. Network and Technology Solutions" />
+        <img className="login-logo" src="/logo-mark.svg" alt="" />
+        <p className="login-company">M.G. Network and Technology Solutions</p>
         <h1>AI Lecture Notes</h1>
         <p className="login-sub">
           {mode === 'login' ? 'Sign in to record and review lectures'

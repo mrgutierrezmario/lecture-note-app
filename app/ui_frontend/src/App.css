@@ -1350,9 +1350,19 @@ a.btn-icon:hover {
   object-fit: contain;
 }
 
+.login-company {
+  margin: 0 0 2px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .login-card h1 {
   font-size: 20px;
   font-weight: 700;
+  margin: 0;
 }
 
 .login-sub {
