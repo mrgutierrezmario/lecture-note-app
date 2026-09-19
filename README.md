@@ -27,7 +27,9 @@ optional.
 | Accounts | Username or email sign-in; self-registration with email confirmation and optional admin approval; emailed password reset; admin role |
 | Per user | Lecture history, per-user storage quota, "keep" up to 5 lectures from cleanup; exports as Markdown, text, PDF, Word and MP3 |
 | Runs as | A Docker Compose stack (Postgres, MinIO, app) with a fixed public HTTPS URL via Tailscale Funnel — free, no domain needed |
-| Works on | Desktop browsers and phones (installable as a home-screen app) |
+| While recording | Pause/Resume, mute, tab audio, key terms for the transcriber, a focus for the notes; audio is buffered through disconnects |
+| Afterwards | Edit or regenerate the notes; ask follow-up questions (chat is kept with the lecture); export as Markdown, text, PDF, Word or MP3 |
+| Works on | Desktop browsers and phones (installable as a home-screen app; the screen stays awake while recording) |
 | Your data | Nightly encrypted off-site backups; users can keep their own copy of every lecture in their Google Drive |
 
 <details>
@@ -204,6 +206,19 @@ docker compose -f deploy/compose.yml exec app python manage_users.py list
 - In the Tailscale admin console, open the machine and **Disable key expiry**
   so it never asks to re-authenticate.
 
+### Knowing when it's down
+
+`GET /health` needs no login and checks the database and object storage: it
+returns `200 {"status":"healthy",…}` when both answer and `503 {"status":
+"degraded",…}` when either doesn't (HEAD works too). Point any free uptime
+monitor at it — [UptimeRobot](https://uptimerobot.com) on a 5-minute interval
+is enough — and you get an email within minutes of an outage and another when
+it recovers, including the case where Docker is up but Postgres died.
+
+Two more things watch themselves: the nightly backup emails
+`BACKUP_NOTIFY_EMAIL` if it fails, and Docker rotates container logs
+(20 MB × 5 per service) so they can't fill the disk.
+
 ### Sizing (a 16 GB Mac mini is plenty)
 
 | Process | RAM |
@@ -316,8 +331,11 @@ and re-run `deploy/start.sh`. On a 16 GB machine, the launch agent in
 |---|---|
 | Microphone dropdown | Which input to record. A virtual device (e.g. BlackHole on macOS) captures system audio |
 | Tab audio | Also record a browser tab (Zoom in a browser, a video) alongside the mic — desktop only |
-| Mute mic | Pause the microphone without stopping the recording |
+| Pause / Resume | Freeze the recording during a break; the lecture stays open (no final notes, no export until Stop) |
+| Mute | Silence the selected input without stopping the recording; the switch names the device it silences (with BlackHole selected that is the meeting audio, not you — use Zoom's mute for yourself) |
 | Don't keep audio | Transcribe without storing the recording: no MP3 later, no quota used |
+| **Aa** (Lecture details) | Key terms (names, acronyms) the transcriber should spell right, and a focus the notes should emphasise; editable during the lecture |
+| Continue recording | After a Stop, keep recording into the same lecture |
 | Keep (lock) in History | Exempt a lecture from the audio cleanup and from deletion |
 
 **Zoom on macOS:** setting Zoom's speaker to BlackHole silences your own
@@ -326,13 +344,22 @@ your speakers and BlackHole, set it as the system output, and pick BlackHole
 as the app's microphone.
 
 The app warns after 15 seconds of digital silence (typically the OS holding
-the mic for a call). If the connection drops mid-lecture, the browser
-reconnects and both transcription and notes resume; a backlog of transcript
-is caught up in the next notes passes.
+the mic for a call). If the connection drops mid-lecture — or the server
+restarts — the browser keeps recording and buffers the audio (up to 30
+minutes), then sends it in order when the link is back; nothing is lost. On
+phones the screen is kept awake while recording.
 
-**Exports:** notes (Markdown) and transcript (text) download immediately; the
-MP3 is assembled on the server first — the button shows progress, and the
-finished file is cached for 30 minutes so a repeat download is instant.
+**Notes:** they build every notes interval; edit them in place afterwards (the
+pencil — saved as a new version that later passes build on) or regenerate them
+from the whole transcript with the current focus (the sparkle, when not
+recording). The live transcript follows along only while you are at the
+bottom; scroll up to re-read and a "Jump to latest" pill appears instead.
+
+**Exports:** notes (Markdown) and transcript (text) download immediately;
+**PDF** and **Word** build one formatted document — notes, the questions you
+asked with their answers, and the transcript in 30-second paragraphs with
+times; the MP3 is assembled on the server first — the button shows progress,
+and the finished file is cached for 30 minutes so a repeat download is instant.
 
 **Which model answered:** every chat reply shows the provider under it, and
 in amber when a cloud provider failed and the local model answered instead
@@ -363,9 +390,15 @@ runtime from the admin Settings panel and persist in the app-state volume.
 | `MAX_LOCKED_LECTURES` *(panel)* | `5` | Kept lectures per regular user (admins unlimited) |
 | `MAX_UPLOAD_MB` | `50` | Largest document/image upload |
 | `AUDIO_RETENTION_DAYS` *(panel)* | `14` | Audio deleted after this many days (Settings → Audio retention) |
+| `WHISPER_LANGUAGE` *(panel)* | `en` | Transcription language code, or `auto` to detect per chunk |
+| `WHISPER_VOCABULARY` *(panel)* | — | Server-wide spelling hints (names, course codes) fed to Whisper |
 | `REGISTRATION_OPEN` *(panel)* | `true` | Whether the sign-in page offers "Create account" |
-| `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_REPLY_TO` | — | SMTP (Gmail App Password) for reset emails |
-| `PUBLIC_URL` | — | Base URL used in emailed links |
+| `REGISTRATION_APPROVAL` *(panel)* | `false` | New accounts wait for an admin's approval (admins are emailed a link) |
+| `MAIL_USERNAME`, `MAIL_PASSWORD`, `MAIL_FROM`, `MAIL_REPLY_TO` | — | SMTP (Gmail App Password) for account emails |
+| `PUBLIC_URL` | — | Base URL used in emailed links and the Google Drive redirect |
+| `SUPPORT_EMAIL` | — | Contact shown on the privacy page (`/privacy`) |
+| `BACKUP_NOTIFY_EMAIL` | — | Gets an email when a nightly backup fails |
+| `GOOGLE_CLIENT_ID` *(panel)*, `GOOGLE_CLIENT_SECRET` *(panel)* | — | OAuth client for users' Google Drive (Settings → API keys) |
 | `SESSION_DAYS` | `30` | Login cookie lifetime |
 
 API keys (`ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`) are entered
