@@ -220,6 +220,18 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Code-quality audit (2026-09-19, late)
+- Verified: ruff format/check clean on all 51 backend files; docstrings on
+  every public module/class/function (D100–D107: none missing); every
+  frontend component/hook has a header comment (useTheme.js added).
+- ruff rule set widened and **enforced in CI**: `E, W, F, I, D1, B, UP,
+  SIM, C4` (B008 ignored — FastAPI `Depends()` idiom). Applied across the
+  codebase: `X | None` annotations (88), `raise … from e` in every except
+  block (13), `contextlib.suppress` for try/except/pass, literal dicts,
+  one collapsed if. 42 tests green; deployed; CI green.
+- Dependabot: #6 (checkout v7) merged; #7/#8 (setup-node/-python v7)
+  conflicted after #6, applied directly on main and closed.
+
 ### Remote restore drill, chat fixes (2026-09-19, evening)
 - **`restore-drill.sh --from-remote` PASSED on the Mac** — fetched from
   the new account's Google Drive (5 min), restored 5 lectures / 2848
