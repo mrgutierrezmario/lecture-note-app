@@ -15,9 +15,12 @@ optional.
 
 **By M.G. Network and Technology Solutions.**
 
-![A past lecture open in dark mode: full transcript on the left, generated notes in the middle, and the chat on the right answering a question and then a follow-up about the lecture](design/screenshots/lecture-dark.png)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="design/screenshots/lecture-dark.png">
+  <img alt="A past lecture open: full transcript on the left, generated notes in the middle, and the chat on the right answering a question and then a follow-up about the lecture" src="design/screenshots/lecture-light.png">
+</picture>
 
-<p align="center"><em>Transcript, generated notes, and "Ask about the lecture" — with a follow-up question, dark mode.</em></p>
+<p align="center"><em>Transcript, generated notes, and "Ask about the lecture" — with a follow-up question. The screenshot follows your GitHub theme; the app has both.</em></p>
 
 | | |
 |---|---|
@@ -35,11 +38,14 @@ optional.
 
 <br>
 
-![The same lecture in light mode](design/screenshots/lecture-light.png)
-<p align="center"><em>Light mode.</em></p>
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="design/screenshots/lecture-light.png">
+  <img alt="The same lecture in the other theme" src="design/screenshots/lecture-dark.png">
+</picture>
+<p align="center"><em>The same lecture in the other theme (light and dark are both built in).</em></p>
 
 ![Three phone screens: the lecture header and transcript in dark mode, the notes in dark mode, and the notes in light mode](design/screenshots/phone.png)
-<p align="center"><em>Installed as a home-screen app on a phone: transcript and notes stack vertically.</em></p>
+<p align="center"><em>Installed as a home-screen app on a phone, mostly in dark mode — the easier read on a small screen. Transcript and notes stack vertically.</em></p>
 
 ![The empty workspace before recording, light mode](design/screenshots/workspace-empty.png)
 <p align="center"><em>Ready to record: name the lecture, pick a microphone, optionally capture tab audio or skip keeping the audio.</em></p>
