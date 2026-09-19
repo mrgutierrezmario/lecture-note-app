@@ -434,6 +434,19 @@ def _docx_shade(paragraph, hex_fill: str) -> None:
     p_pr.append(shd)
 
 
+def _docx_bottom_rule(paragraph, hex_color: str = RULE) -> None:
+    """A thin rule under a paragraph (used beneath the title block)."""
+    p_pr = paragraph._p.get_or_add_pPr()
+    borders = OxmlElement("w:pBdr")
+    bottom = OxmlElement("w:bottom")
+    bottom.set(qn("w:val"), "single")
+    bottom.set(qn("w:sz"), "6")
+    bottom.set(qn("w:space"), "6")
+    bottom.set(qn("w:color"), hex_color.lstrip("#"))
+    borders.append(bottom)
+    p_pr.append(borders)
+
+
 def _docx_runs(paragraph, text: str, size: float | None = None, color: str | None = None) -> None:
     for piece, fmt in _inline_runs(text):
         run = paragraph.add_run(piece)
@@ -478,6 +491,7 @@ def build_docx(lec: LectureDoc) -> bytes:
     t.runs[0].bold = True
     sub = d.add_paragraph()
     _docx_runs(sub, lec.subtitle, size=9.5, color=MUTED)
+    _docx_bottom_rule(sub)
 
     sections = lec.sections()
     names = {"notes": "Notes", "qa": "Questions & answers", "transcript": "Full transcript"}

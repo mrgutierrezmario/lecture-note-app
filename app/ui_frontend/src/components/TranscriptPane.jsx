@@ -1,19 +1,41 @@
-// Live transcript: new segments append as chunks are transcribed and the view
-// follows along; a past lecture shows the whole transcript at once.
-import { useEffect, useRef } from 'react'
+// Live transcript: new segments append as chunks are transcribed. The pane
+// follows along only while the reader is at the bottom; once they scroll up
+// to re-read something it stays put (a "Jump to latest" pill brings them
+// back). Scrolling is done on the pane itself, never with scrollIntoView,
+// which on phones drags the whole page down as well.
+import { useEffect, useRef, useState, useCallback } from 'react'
 import { TranscriptIcon, MicIcon } from './Icons'
 
+const FOLLOW_THRESHOLD = 48 // px from the bottom that still counts as "at the bottom"
+
 function TranscriptPane({ transcript }) {
-  const endRef = useRef(null)
-  const scrollTimerRef = useRef(null)
+  const bodyRef = useRef(null)
+  const followRef = useRef(true)
+  const [behind, setBehind] = useState(false) // new text arrived while scrolled up
+
+  const scrollToEnd = useCallback((smooth = true) => {
+    const el = bodyRef.current
+    if (!el) return
+    el.scrollTo({ top: el.scrollHeight, behavior: smooth ? 'smooth' : 'auto' })
+    followRef.current = true
+    setBehind(false)
+  }, [])
+
+  const onScroll = useCallback(() => {
+    const el = bodyRef.current
+    if (!el) return
+    const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < FOLLOW_THRESHOLD
+    followRef.current = atBottom
+    if (atBottom) setBehind(false)
+  }, [])
 
   useEffect(() => {
-    if (scrollTimerRef.current) clearTimeout(scrollTimerRef.current)
-    scrollTimerRef.current = setTimeout(() => {
-      endRef.current?.scrollIntoView({ behavior: 'smooth' })
-    }, 150)
-    return () => clearTimeout(scrollTimerRef.current)
-  }, [transcript])
+    if (followRef.current) {
+      const t = setTimeout(() => scrollToEnd(true), 100)
+      return () => clearTimeout(t)
+    }
+    if (transcript.length) setBehind(true)
+  }, [transcript, scrollToEnd])
 
   return (
     <section className="pane">
@@ -28,7 +50,7 @@ function TranscriptPane({ transcript }) {
             : `${transcript.length} ${transcript.length === 1 ? 'segment' : 'segments'}`}
         </span>
       </header>
-      <div className="pane-body">
+      <div ref={bodyRef} onScroll={onScroll} className="pane-body">
         {transcript.length === 0 ? (
           <div className="empty-state">
             <span className="empty-icon"><MicIcon size={22} strokeWidth={1.6} /></span>
@@ -47,7 +69,11 @@ function TranscriptPane({ transcript }) {
             ))}
           </div>
         )}
-        <div ref={endRef} />
+        {behind && (
+          <button type="button" className="jump-latest" onClick={() => scrollToEnd(true)}>
+            ↓ Jump to latest
+          </button>
+        )}
       </div>
     </section>
   )
