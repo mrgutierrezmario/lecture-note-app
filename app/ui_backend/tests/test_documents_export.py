@@ -94,3 +94,10 @@ def test_answer_paragraphs_survive_in_pdf():
     answer = "First paragraph.\n\nSecond paragraph.\n\n- point one\n- point two"
     flow = de._pdf_markdown(answer, body_style="a")
     assert len(flow) == 3  # two paragraphs + one bullet list, not a single paragraph
+
+
+def test_pdf_handles_plain_paragraphs_and_rules():
+    # Notes with plain lines (not headings or bullets) once crashed the PDF builder.
+    md = "## Outline\n- a point\n\nA plain sentence.\n\n---\n*Updated: 2026-03-26*\n"
+    data = de.build_pdf(_lecture(notes_md=md))
+    assert data.startswith(b"%PDF-")

@@ -180,6 +180,7 @@ _BASE = ParagraphStyle(
     textColor=colors.HexColor(INK),
 )
 _STYLES = {
+    "base": _BASE,
     "title": ParagraphStyle(
         "title", parent=_BASE, fontName="Helvetica-Bold", fontSize=20, leading=24, spaceAfter=2
     ),
