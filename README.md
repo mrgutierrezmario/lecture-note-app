@@ -15,12 +15,9 @@ optional.
 
 **By M.G. Network and Technology Solutions.**
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="design/screenshots/lecture-dark.png">
-  <img alt="A past lecture open: full transcript on the left, generated notes in the middle, and the chat on the right answering a question and then a follow-up about the lecture" src="design/screenshots/lecture-light.png">
-</picture>
+![A past lecture open in dark mode: full transcript on the left, generated notes in the middle, and the chat on the right answering a question and then a follow-up about the lecture](design/screenshots/lecture-dark.png)
 
-<p align="center"><em>Transcript, generated notes, and "Ask about the lecture" — with a follow-up question. The screenshot follows your GitHub theme; the app has both.</em></p>
+<p align="center"><em>Transcript, generated notes, and "Ask about the lecture" — with a follow-up question. Dark mode; light mode below.</em></p>
 
 | | |
 |---|---|
@@ -38,11 +35,8 @@ optional.
 
 <br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="design/screenshots/lecture-light.png">
-  <img alt="The same lecture in the other theme" src="design/screenshots/lecture-dark.png">
-</picture>
-<p align="center"><em>The same lecture in the other theme (light and dark are both built in).</em></p>
+![The same lecture in light mode](design/screenshots/lecture-light.png)
+<p align="center"><em>Light mode.</em></p>
 
 <p align="center"><img width="560" alt="Two phone screens in dark mode: the lecture header with the live transcript, and the generated notes" src="design/screenshots/phone.png"></p>
 <p align="center"><em>Installed as a home-screen app on a phone, in dark mode — the easier read on a small screen. Transcript and notes stack vertically.</em></p>
