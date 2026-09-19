@@ -1,10 +1,12 @@
-// Share a lecture read-only with other accounts: a checkbox per registered
-// user (tick to share, untick to remove access). Owner or admin only.
+// Share a lecture read-only with another account: pick a user from the
+// dropdown and press Share. Accounts that already have it are listed
+// underneath, each with a Remove link. Owner or admin only.
 import { useState, useEffect } from 'react'
 
 function ShareDialog({ lecture, onSave, onClose }) {
   const [users, setUsers] = useState(null) // [{ username, is_demo }]
-  const [chosen, setChosen] = useState(new Set())
+  const [shared, setShared] = useState([]) // usernames that already have access
+  const [pick, setPick] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(null)
 
@@ -15,7 +17,7 @@ function ShareDialog({ lecture, onSave, onClose }) {
     ])
       .then(([names, shares]) => {
         setUsers(names.filter(u => u.username !== lecture.owner))
-        setChosen(new Set(shares.usernames))
+        setShared(shares.usernames)
       })
       .catch(err => setError(`Could not load users: ${err.message}`))
     const onKey = e => { if (e.key === 'Escape') onClose() }
@@ -23,19 +25,15 @@ function ShareDialog({ lecture, onSave, onClose }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [lecture.id, lecture.owner, onClose])
 
-  const toggle = (username) => setChosen(prev => {
-    const next = new Set(prev)
-    if (next.has(username)) next.delete(username); else next.add(username)
-    return next
-  })
+  const available = (users || []).filter(u => !shared.includes(u.username))
 
-  const submit = async (e) => {
-    e.preventDefault()
+  const save = async (usernames) => {
     setBusy(true)
     setError(null)
     try {
-      await onSave([...chosen])
-      onClose()
+      await onSave(usernames)
+      setShared(usernames)
+      setPick('')
     } catch (err) {
       setError(err.message)
     } finally {
@@ -43,29 +41,46 @@ function ShareDialog({ lecture, onSave, onClose }) {
     }
   }
 
+  const share = (e) => {
+    e.preventDefault()
+    if (pick) save([...shared, pick])
+  }
+
+  const remove = (username) => save(shared.filter(u => u !== username))
+
   return (
     <div className="dialog-backdrop" onClick={onClose}>
-      <form className="dialog" role="dialog" aria-labelledby="share-title" onClick={e => e.stopPropagation()} onSubmit={submit}>
+      <form className="dialog" role="dialog" aria-labelledby="share-title" onClick={e => e.stopPropagation()} onSubmit={share}>
         <h2 id="share-title">Share lecture</h2>
         <p className="dialog-message">
-          People you tick see <strong>{lecture.title || 'this lecture'}</strong> in their History: transcript, notes,
-          their own questions, exports. Only you can change it. Untick to remove access.
+          The person you share with sees <strong>{lecture.title || 'this lecture'}</strong> in their History: transcript,
+          notes, their own questions, exports. Only you can change it.
         </p>
-        <div className="share-list">
-          {users === null && !error && <p className="settings-note settings-note-full">Loading users…</p>}
-          {users?.length === 0 && <p className="settings-note settings-note-full">There are no other accounts to share with yet.</p>}
-          {users?.map(u => (
-            <label key={u.username} className="share-row">
-              <input type="checkbox" checked={chosen.has(u.username)} onChange={() => toggle(u.username)} />
-              <span>{u.username}</span>
-              {u.is_demo && <span className="user-badge user-badge-you" data-tip="The read-only demo account — share here to make this lecture visible to 'Try the demo' visitors">demo</span>}
-            </label>
-          ))}
-        </div>
+        <label className="dialog-field">
+          Share with
+          <select value={pick} onChange={e => setPick(e.target.value)} disabled={users === null || busy}>
+            <option value="">
+              {users === null ? 'Loading users…' : available.length ? 'Choose a user…' : 'No other accounts to share with'}
+            </option>
+            {available.map(u => (
+              <option key={u.username} value={u.username}>{u.username}{u.is_demo ? ' (demo account)' : ''}</option>
+            ))}
+          </select>
+        </label>
+        {shared.length > 0 && (
+          <div className="share-list">
+            {shared.map(username => (
+              <div key={username} className="share-row">
+                <span>{username}</span>
+                <button type="button" className="link-button share-remove" onClick={() => remove(username)} disabled={busy}>Remove</button>
+              </div>
+            ))}
+          </div>
+        )}
         {error && <p className="settings-inline-error">{error}</p>}
         <div className="dialog-actions">
-          <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>Cancel</button>
-          <button type="submit" className="btn-primary" disabled={busy || users === null}>{busy ? 'Saving…' : 'Save'}</button>
+          <button type="button" className="btn-secondary" onClick={onClose} disabled={busy}>Close</button>
+          <button type="submit" className="btn-primary" disabled={busy || !pick}>{busy ? 'Saving…' : 'Share'}</button>
         </div>
       </form>
     </div>

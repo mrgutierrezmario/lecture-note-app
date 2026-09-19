@@ -1557,14 +1557,14 @@ a.btn-icon:hover {
   font-weight: 600;
 }
 
-/* Share dialog: one row per account. */
+/* Share dialog: who already has the lecture, one row each with Remove. */
 .share-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  max-height: 260px;
+  gap: 2px;
+  max-height: 200px;
   overflow-y: auto;
-  margin: 4px 0 12px;
+  margin-top: 4px;
   padding: 6px 0;
   border-top: 1px solid var(--border);
   border-bottom: 1px solid var(--border);
@@ -1573,17 +1573,16 @@ a.btn-icon:hover {
 .share-row {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 10px;
   padding: 6px 4px;
   font-size: 14px;
   color: var(--text);
-  cursor: pointer;
 }
 
-.share-row input {
-  width: 16px;
-  height: 16px;
-  accent-color: var(--primary);
+.share-remove {
+  font-size: 13px;
+  color: var(--danger);
 }
 
 .settings-danger-heading {

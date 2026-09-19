@@ -281,7 +281,7 @@ hashed). Logins last 30 days.
   replies don't land in your inbox). Without mail, the link isn't offered and
   admins reset passwords from **Settings → Users**.
 - **Sharing:** the person icon on a History row shares a lecture read-only
-  with other accounts (tick/untick users). They see it in their History,
+  with other accounts (pick a user, press Share; Remove revokes). They see it in their History,
   can read, ask their own questions and export; only the owner can change it.
 - **Demo account (optional):** create a user with the *Demo* switch (Settings →
   Users) and share a lecture or two with it (History → the person icon). The

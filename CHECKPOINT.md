@@ -230,9 +230,9 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   keys/users hidden. Admin: *Demo* switch on Add user, "demo" badge.
   Account **`test`** created (random password; never needed).
 - **Sharing** (migration 016 `session_shares`, `chat_messages.user_id`):
-  person icon on a History row → checkbox per registered user
-  (`GET /api/auth/users/names`, no emails) → `PUT …/shares` replaces the
-  set (untick = remove). Viewers: "shared by X" tag, `can_edit=false`,
+  person icon on a History row → dropdown of registered users + **Share**
+  button, list of current viewers with Remove (`GET /api/auth/users/names`,
+  no emails; `PUT …/shares` replaces the set). Viewers: "shared by X" tag, `can_edit=false`,
   read/own chat/exports/live socket, no writes. Replaced the short-lived
   "Assign to user" (which *moved* ownership; the operator's clicks on it
   moved two lectures to `test` — moved back). `PATCH …/owner` kept as an
