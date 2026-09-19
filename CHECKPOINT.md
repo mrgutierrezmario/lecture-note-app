@@ -220,6 +220,24 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Remote restore drill, chat fixes (2026-09-19, evening)
+- **`restore-drill.sh --from-remote` PASSED on the Mac** — fetched from
+  the new account's Google Drive (5 min), restored 5 lectures / 2848
+  segments / 3007 chunks / settings, app healthy. Disaster recovery from
+  the off-site copy alone is proven.
+- **Chat "I don't see that covered" after long recordings** — root cause:
+  the context was sized for the configured provider (Gemini: up to 300k
+  chars); when Gemini's quota was spent the cascade handed that prompt to
+  llama3, which Ollama truncates from the front (notes + instructions
+  lost) → refusal. Fix: on fallback to Ollama, re-ask with a local-sized
+  context (notes 8k, transcript tail 10k, docs 4k); prompt now treats
+  summary/overview requests as always answerable. Verified: llama3
+  summarises the 2 h lecture (50 s) instead of refusing.
+- **Chat controls**: × on a message removes that question+answer (server
+  `DELETE …/chat/{id}`, pair semantics); bin in the header clears the
+  conversation (`DELETE …/chat`); answers return stored ids.
+- Operator: Claude credits deferred to next payday.
+
 ### Google Drive folder selector (2026-09-19)
 - Settings → Google Drive → **Choose existing folder…** opens Google's
   Picker (loaded on demand from apis.google.com) with the user's own
@@ -523,8 +541,8 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    now connect a Drive.
 10. Optional next features: Claude API credits; speaker separation
     (post-lecture, see above).
-11. Operator to run once on the Mac: `deploy/restore-drill.sh --from-remote`
-    (the real disaster-recovery path via Google Drive).
+11. ~~Operator to run `deploy/restore-drill.sh --from-remote`~~ — done
+    2026-09-19, PASSED against the new account's Drive.
 12. Optional: revoke/re-create the two Gmail App Passwords that passed through
    chat (`deploy/.env` holds the current ones).
 13. stock-tracker's report emails are failing on a revoked App Password —
