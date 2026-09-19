@@ -78,3 +78,19 @@ def test_docx_builds_with_all_sections():
         "Second paragraph.",
     ):
         assert text in xml, text
+
+
+def test_answer_paragraphs_and_bullets_survive_in_docx():
+    answer = "First paragraph.\n\nSecond paragraph with **bold**.\n\n- point one\n- point two"
+    data = de.build_docx(_lecture(qa=[("user", "Q?", None), ("assistant", answer, "gemini/x")]))
+    with zipfile.ZipFile(BytesIO(data)) as z:
+        xml = z.read("word/document.xml").decode()
+    for text in ("First paragraph.", "Second paragraph with ", "point one", "point two"):
+        assert text in xml
+    assert "First paragraph.\n" not in xml  # separate paragraphs, not one run with newlines
+
+
+def test_answer_paragraphs_survive_in_pdf():
+    answer = "First paragraph.\n\nSecond paragraph.\n\n- point one\n- point two"
+    flow = de._pdf_markdown(answer, body_style="a")
+    assert len(flow) == 3  # two paragraphs + one bullet list, not a single paragraph

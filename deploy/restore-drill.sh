@@ -11,8 +11,9 @@
 #                                           the restored data — a staging test
 #
 # Restores the bundle + audio mirror into a throwaway Compose project
-# ("lecture-drill": its own volumes, app on port $DRILL_PORT, a fresh Tailscale
-# node that is never signed in, so it cannot collide with the live one), then
+# ("lecture-drill": its own volumes, app on port $DRILL_PORT, no Tailscale —
+# a placeholder holds the network slot, so it cannot collide with the live
+# node), then
 # checks that accounts, lectures, settings and audio came back and that the app
 # answers, and tears everything down. Run it every so often; a backup that has
 # never been restored is a hope, not a backup.
@@ -28,12 +29,18 @@ for arg in "$@"; do case "$arg" in --from-remote) FROM_REMOTE=1 ;; --keep) KEEP=
 log() { echo "[drill $(date '+%H:%M:%S')] $*"; }
 fail() { echo "[drill] FAILED: $*" >&2; exit 1; }
 WORK=$(mktemp -d)
-DC="docker compose -p $DRILL -f compose.yml --env-file $WORK/drill.env"
-if [ -n "${DRILL_IMAGE:-}" ]; then
-  # Compose override: run the candidate image instead of lecture-notes-app:latest.
-  printf 'services:\n  app:\n    image: %s\n    build: !reset null\n' "$DRILL_IMAGE" > "$WORK/image.yml"
-  DC="$DC -f $WORK/image.yml"
-fi
+# Compose override for the drill: the app shares the tailscale container's
+# network namespace, and an unsigned-in Tailscale node restarts itself every
+# minute, taking the app's networking with it — so the drill runs a plain
+# placeholder in that slot (the port mapping still works). Optionally a
+# candidate app image instead of lecture-notes-app:latest.
+{
+  printf 'services:\n  tailscale:\n    image: busybox:stable\n    entrypoint: ["sh", "-c", "sleep infinity"]\n    environment: !reset {}\n    healthcheck:\n      disable: true\n'
+  if [ -n "${DRILL_IMAGE:-}" ]; then
+    printf '  app:\n    image: %s\n    build: !reset null\n' "$DRILL_IMAGE"
+  fi
+} > "$WORK/override.yml"
+DC="docker compose -p $DRILL -f compose.yml -f $WORK/override.yml --env-file $WORK/drill.env"
 cleanup() {
   status=$?
   if [ $KEEP = 1 ] && [ $status -eq 0 ]; then

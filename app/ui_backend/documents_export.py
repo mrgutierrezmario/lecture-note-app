@@ -216,14 +216,15 @@ _STYLES = {
     ),
     "txt": ParagraphStyle("txt", parent=_BASE, fontSize=9.5, leading=13.5),
     "q": ParagraphStyle("q", parent=_BASE, fontName="Helvetica-Bold", fontSize=10),
-    "a": ParagraphStyle("a", parent=_BASE, fontSize=9.5, leading=13.5),
+    "a": ParagraphStyle("a", parent=_BASE, fontSize=9.5, leading=13.5, spaceAfter=5),
     "label": ParagraphStyle(
         "label", parent=_BASE, fontSize=7.5, leading=10, textColor=colors.HexColor(FAINT)
     ),
 }
 
 
-def _pdf_markdown(md: str) -> list:
+def _pdf_markdown(md: str, body_style: str = "base") -> list:
+    """Markdown → reportlab flowables (headings, bullet lists, paragraphs)."""
     out, items = [], []
 
     def flush():
@@ -254,7 +255,7 @@ def _pdf_markdown(md: str) -> list:
         out.append(
             Paragraph(
                 _rl_inline(text),
-                _STYLES["h2" if kind == "h2" else "h1" if kind == "h1" else "base"],
+                _STYLES["h2" if kind == "h2" else "h1" if kind == "h1" else body_style],
             )
         )
     flush()
@@ -359,8 +360,10 @@ def build_pdf(lec: LectureDoc) -> bytes:
                         )
                     )
                 else:
+                    # Answers keep their paragraphs and bullets (the model's
+                    # formatting), rendered inside the tinted block.
                     block = Table(
-                        [[Paragraph(_rl_inline(text), S["a"])]],
+                        [[_pdf_markdown(text, body_style="a") or [Paragraph("", S["a"])]]],
                         colWidths=[6.8 * inch],
                         style=TableStyle(
                             [
@@ -522,11 +525,18 @@ def build_docx(lec: LectureDoc) -> bytes:
                         color=FAINT,
                     )
                     lab.paragraph_format.space_after = Pt(0)
-                    a = d.add_paragraph()
-                    _docx_runs(a, text, size=10)
-                    a.paragraph_format.left_indent = DocxInches(0.15)
-                    _docx_shade(a, TINT)
-                    a.paragraph_format.space_after = Pt(10)
+                    blocks = list(_md_blocks(text)) or [("p", "")]
+                    for n, (kind, block_text) in enumerate(blocks):
+                        a = d.add_paragraph(style="List Bullet" if kind == "bullet" else None)
+                        _docx_runs(a, block_text, size=10)
+                        if kind in ("h1", "h2"):
+                            for run in a.runs:
+                                run.bold = True
+                        a.paragraph_format.left_indent = DocxInches(
+                            0.15 if kind != "bullet" else 0.4
+                        )
+                        _docx_shade(a, TINT)
+                        a.paragraph_format.space_after = Pt(10 if n == len(blocks) - 1 else 2)
         else:
             note = d.add_paragraph()
             _docx_runs(
