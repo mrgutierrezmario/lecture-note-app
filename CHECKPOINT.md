@@ -375,9 +375,9 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - **Old do-not-reply housekeeping**: new account added as project
   **Owner** (both listed). Changing the consent-screen support email was
   abandoned — Google demands Search Console ownership of
-  `tail3659a6.ts.net` from the editing account; published config
+  `<tailnet>.ts.net` from the editing account; published config
   untouched. **Backups moved**: rclone reconnected as
-  `mgnts.donotreply@gmail.com`, full re-upload (3007 chunks, ~225 MB,
+  `<new do-not-reply mailbox>`, full re-upload (3007 chunks, ~225 MB,
   10 min) completed; old account's `LectureNotesBackups` folder can be
   trashed.
 
@@ -386,7 +386,7 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   phone limits. **/health** checks Postgres + MinIO, GET or HEAD, 503 when
   degraded. **Container logs** capped 20 MB × 5 per service.
 - **Uptime monitor**: UptimeRobot (account = business email) hits
-  `/health` every 5 min; alerts to mg.net.tech.
+  `/health` every 5 min; alerts to the business email.
 - **Restore drill** `deploy/restore-drill.sh`: restores the newest bundle
   into throwaway project `lecture-drill` (own volumes, port 8020, unsigned
   Tailscale node), verifies users/lectures/segments/notes/schema/audio/
@@ -466,11 +466,11 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   email); test accounts deleted. Sign-up form hides the password fields
   once the account is created.
 - **Email addresses** (updated 2026-09-18): sender is now
-  `mgnts.donotreply@gmail.com` (new App Password, set by the operator in
+  `<new do-not-reply mailbox>` (new App Password, set by the operator in
   `deploy/.env`; test email verified). Reply-To, backup-failure alerts,
   the admin account's email (→ approval requests, admin password reset)
-  and the privacy contact are `mg.net.tech@gmail.com`. The **old**
-  `mgnetwork.donotreply@gmail.com` still owns the Google Cloud project
+  and the privacy contact are `<business email>`. The **old**
+  `<old do-not-reply mailbox>` still owns the Google Cloud project
   `lecture-notes` (consent screen support email, both OAuth clients) and
   the backup Drive folder — optional housekeeping: add the new account as
   project Owner and `rclone config reconnect gdrive:` as the new account.
@@ -597,7 +597,7 @@ accumulate (see the 2026-09-19 dependency review for the worked example).
     2026-09-19, PASSED against the new account's Drive.
 12. ~~Revoke the two Gmail App Passwords that passed through chat~~ — done
     2026-09-19 (both accounts). The current sender password
-    (mgnts.donotreply) was entered directly into `deploy/.env`, never in
+    (the new do-not-reply mailbox) was entered directly into `deploy/.env`, never in
     chat.
 13. stock-tracker's report emails are failing on a revoked App Password —
    unrelated to this app, but noticed while diagnosing.
