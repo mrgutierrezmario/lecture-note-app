@@ -7,6 +7,7 @@ WORKDIR /ui
 COPY app/ui_frontend/package.json app/ui_frontend/package-lock.json ./
 RUN npm ci --no-audit --no-fund
 COPY app/ui_frontend ./
+COPY VERSION /VERSION
 RUN npm run build
 
 # ── Stage 2: backend ──────────────────────────────────────────────────────────
@@ -24,6 +25,7 @@ COPY app/ui_backend/requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt anthropic==0.96.0
 
 COPY app/ui_backend ./
+COPY VERSION /app/VERSION
 COPY --from=ui /ui/dist /app/ui_frontend/dist
 COPY deploy/docker-entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh

@@ -696,6 +696,8 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
         <a href="/guide" target="_blank" rel="noreferrer">User guide</a> — how to record, add slides, ask questions and save to Drive
         {' · '}
         <a href="/privacy" target="_blank" rel="noreferrer">Privacy policy</a>
+        {' · '}
+        <span data-tip="Application version">v{__APP_VERSION__}</span>
       </p>
       </div>
       </div>

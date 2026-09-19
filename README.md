@@ -1,5 +1,6 @@
 # AI Lecture Notes
 
+[![Release](https://img.shields.io/github/v/release/mrgutierrezmario/lecture-note-app?display_name=tag&color=0b74f6)](https://github.com/mrgutierrezmario/lecture-note-app/releases)
 [![CI](https://github.com/mrgutierrezmario/lecture-note-app/actions/workflows/ci.yml/badge.svg)](https://github.com/mrgutierrezmario/lecture-note-app/actions/workflows/ci.yml)
 [![License: PolyForm Noncommercial 1.0.0](https://img.shields.io/badge/license-PolyForm%20Noncommercial%201.0.0-blue.svg)](LICENSE)
 [![Python 3.11+](https://img.shields.io/badge/python-3.11%2B-3776AB.svg?logo=python&logoColor=white)](app/ui_backend)
@@ -588,6 +589,21 @@ on every push and pull request.
 | Empty Gemini answers (`MAX_TOKENS`) | Handled automatically (thinking is disabled per model); update if it recurs |
 | Password reset email never arrives | `MAIL_*` unset, or the Gmail App Password was revoked — re-create it |
 | Recording during a phone/Zoom call captures silence | The OS gives the mic to the call; use speakerphone or Tab audio on a computer |
+
+---
+
+## Versions and releases
+
+The version lives in the `VERSION` file at the repository root — the backend,
+the frontend build and `/health` all read it, and Settings shows it in the
+footer. Releases are git tags (`v1.0.0`) with notes on the
+[Releases](https://github.com/mrgutierrezmario/lecture-note-app/releases)
+page; [CHANGELOG.md](CHANGELOG.md) keeps the history. Semantic versioning:
+patch for fixes, minor for features, major for breaking changes.
+
+To cut a release: bump `VERSION` and `app/ui_frontend/package.json`, add a
+CHANGELOG section, commit, then `git tag vX.Y.Z && git push --tags` and
+create the release on GitHub from the tag.
 
 ---
 

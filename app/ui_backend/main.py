@@ -20,6 +20,7 @@ from accounts.auth import AuthMiddleware
 from core import settings_store
 from core.config import get_settings
 from core.database import AsyncSessionLocal
+from core.version import __version__
 from realtime.websocket_handler import handle_websocket
 from routes import (
     admin_router,
@@ -56,7 +57,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Lecture Notes API",
     description="AI-powered lecture transcription and note-taking",
-    version="1.0.0",
+    version=__version__,
     lifespan=lifespan,
 )
 
@@ -107,7 +108,7 @@ async def health():
     healthy = all(v == "ok" for v in checks.values())
     return JSONResponse(
         status_code=200 if healthy else 503,
-        content={"status": "healthy" if healthy else "degraded", **checks},
+        content={"status": "healthy" if healthy else "degraded", "version": __version__, **checks},
     )
 
 
