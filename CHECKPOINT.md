@@ -220,6 +220,31 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Dependency review, phone fixes, docs (2026-09-19)
+- **Dependabot PRs**: #5 (20 Python bumps: FastAPI 0.109→0.141, pydantic
+  2.6→2.13, websockets 12→17, faster-whisper 1.0→1.2, av 12→18, bcrypt
+  4→5 …) validated by restoring production data into the drill stack with
+  the PR image (`DRILL_IMAGE=`), then a real Whisper transcription and a full
+  websocket session inside it — merged. #3 (React 18→19, Vite 6→8, uuid,
+  react-markdown) built clean, no removed APIs in use — merged. #1 (Python
+  3.14 base image) and #2 (Node 25, non-LTS) declined; dependabot.yml now
+  ignores major/minor Python and major Node base-image bumps. Live stack
+  runs the new set. bcrypt 5 raises on >72-byte passwords → validation cap.
+- **Restore drill**: `DRILL_IMAGE` runs a candidate image (staging test);
+  the drill no longer runs Tailscale at all (a busybox placeholder holds the
+  network slot — an unsigned-in node restarted every minute and took the
+  app's networking with it).
+- **PDF/Word**: answers keep paragraphs/bullets (were flattened); Word gets
+  a rule under the title. **Phone**: five export buttons as a full-width
+  row, app-bar buttons shrink (MP3 / Sign out were cut off). **Transcript**
+  follows only while at the bottom, scrolls its own pane (no more page
+  drag on phones), "Jump to latest" pill.
+- **README**: dark hero (theme-swap tried and reverted by request), light
+  desktop shot re-cropped, phone composite dark-only; new sections on
+  monitoring (`/health` + UptimeRobot), recording controls, notes editing,
+  exports; config table gained WHISPER_LANGUAGE/VOCABULARY,
+  REGISTRATION_APPROVAL, SUPPORT_EMAIL, BACKUP_NOTIFY_EMAIL, GOOGLE_CLIENT_*.
+
 ### PDF / Word export and stored chat (2026-09-18, late)
 - `documents_export.py`: one branded document per lecture — title +
   "Recorded … · duration · Notes version", Contents strip, **1. Notes**
