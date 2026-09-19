@@ -220,6 +220,18 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Version 1.0.0 released (2026-09-19)
+- `VERSION` file at the repo root is the single source: backend
+  (`core/version.py` → FastAPI version, `/health` "version"), Vite
+  (`__APP_VERSION__`, Settings footer "v1.0.0"), Docker (copied to both
+  stages). `package.json` at 1.0.0. `CHANGELOG.md` (Keep a Changelog).
+- Tag `v1.0.0`, GitHub release "v1.0.0 — first release" (notes = changelog
+  section), marked Latest; README release badge + "Versions and releases"
+  (how to cut the next one: bump VERSION + package.json, changelog, commit,
+  tag, `gh release create`).
+- Contributors: Claude appears via the Co-Authored-By trailer; decision:
+  keep it and own it — README "How it was built" section added.
+
 ### Code-quality audit (2026-09-19, late)
 - Verified: ruff format/check clean on all 51 backend files; docstrings on
   every public module/class/function (D100–D107: none missing); every
