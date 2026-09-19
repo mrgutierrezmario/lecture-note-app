@@ -550,8 +550,10 @@ anything beyond a patch bump gets `DRILL_IMAGE=` restore-drill validation
 before merging (see 2026-09-19 dependency review).
 11. ~~Operator to run `deploy/restore-drill.sh --from-remote`~~ — done
     2026-09-19, PASSED against the new account's Drive.
-12. Optional: revoke/re-create the two Gmail App Passwords that passed through
-   chat (`deploy/.env` holds the current ones).
+12. ~~Revoke the two Gmail App Passwords that passed through chat~~ — done
+    2026-09-19 (both accounts). The current sender password
+    (mgnts.donotreply) was entered directly into `deploy/.env`, never in
+    chat.
 13. stock-tracker's report emails are failing on a revoked App Password —
    unrelated to this app, but noticed while diagnosing.
 
