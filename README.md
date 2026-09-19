@@ -44,8 +44,8 @@ optional.
 </picture>
 <p align="center"><em>The same lecture in the other theme (light and dark are both built in).</em></p>
 
-![Three phone screens: the lecture header and transcript in dark mode, the notes in dark mode, and the notes in light mode](design/screenshots/phone.png)
-<p align="center"><em>Installed as a home-screen app on a phone, mostly in dark mode — the easier read on a small screen. Transcript and notes stack vertically.</em></p>
+<p align="center"><img width="560" alt="Two phone screens in dark mode: the lecture header with the live transcript, and the generated notes" src="design/screenshots/phone.png"></p>
+<p align="center"><em>Installed as a home-screen app on a phone, in dark mode — the easier read on a small screen. Transcript and notes stack vertically.</em></p>
 
 ![The empty workspace before recording, light mode](design/screenshots/workspace-empty.png)
 <p align="center"><em>Ready to record: name the lecture, pick a microphone, optionally capture tab audio or skip keeping the audio.</em></p>
