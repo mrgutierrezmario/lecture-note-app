@@ -42,6 +42,7 @@ _OPEN_API_PATHS = {
     "/api/auth/reset",
     "/api/auth/verify",
     "/api/auth/verify/resend",
+    "/api/auth/demo",
 }
 
 

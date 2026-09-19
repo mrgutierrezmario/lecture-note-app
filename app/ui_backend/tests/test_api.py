@@ -35,6 +35,12 @@ def test_public_paths_need_no_login(client):
     assert client.get("/api/auth/status").json()["password_reset_available"] is False
 
 
+def test_demo_login_is_public_but_needs_a_demo_user(client):
+    # Reachable without a cookie; without a database it can't find the demo
+    # user, so anything but 401 proves the middleware lets it through.
+    assert client.post("/api/auth/demo").status_code != 401
+
+
 def test_protected_paths_require_login(client):
     for path in ("/api/sessions", "/api/settings", "/api/drive", "/api/auth/me"):
         assert client.get(path).status_code == 401, path
