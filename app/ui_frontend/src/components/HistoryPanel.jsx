@@ -5,7 +5,7 @@
  * lectures with an owner tag.
  */
 import { useState, useEffect, useCallback } from 'react'
-import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon, SpinnerIcon, PdfIcon, DocIcon } from './Icons'
+import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon, SpinnerIcon, PdfIcon, DocIcon, UserIcon } from './Icons'
 import { useDialog } from './Dialog'
 import { prepareMp3, downloadUrl } from '../lib/mp3'
 
@@ -96,6 +96,30 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
       dialog.notice({ title: 'Could not save to Google Drive', message: err.message })
     } finally {
       setDriveBusy(b => { const n = { ...b }; delete n[item.id]; return n })
+    }
+  }
+
+  // Admin: hand a lecture to another account (the demo account, or a user who
+  // recorded under the wrong login).
+  const reassign = async (item) => {
+    const username = await dialog.prompt({
+      title: `Assign "${item.title || 'Untitled lecture'}" to…`,
+      label: 'Username of the new owner',
+      placeholder: 'e.g. test',
+      confirmLabel: 'Assign',
+    })
+    if (!username || !username.trim()) return
+    try {
+      const response = await fetch(`/api/sessions/${item.id}/owner`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim() }),
+      })
+      const data = await response.json().catch(() => ({}))
+      if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`)
+      await load()
+    } catch (err) {
+      dialog.notice({ title: 'Could not assign', message: err.message })
     }
   }
 
@@ -250,7 +274,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                         ) : (
                           <span className="disabled"><AudioIcon size={14} /> MP3 (audio deleted)</span>
                         )}
-                        {drive?.available && (drive.connected || user.is_admin) && (
+                        {drive?.available && !user.is_demo && (drive.connected || user.is_admin) && (
                           driveBusy[item.id]
                             ? <span className="disabled history-menu-divider"><SpinnerIcon size={14} /> Saving to Drive…</span>
                             : (
@@ -261,6 +285,10 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                         )}
                       </div>
                     </details>
+                    {!user.is_demo && (<>
+                    {user.is_admin && (
+                      <button className="btn-icon" onClick={() => reassign(item)} data-tip="Assign this lecture to another user (e.g. the demo account)" aria-label="Assign to user"><UserIcon size={16} /></button>
+                    )}
                     <button className="btn-icon" onClick={() => rename(item)} data-tip="Rename" aria-label="Rename lecture"><EditIcon size={16} /></button>
                     <button
                       className={`btn-icon${item.locked ? ' btn-icon-active' : ''}`}
@@ -274,6 +302,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                       <button className="btn-icon btn-icon-danger" onClick={() => removeAudio(item)} disabled={item.locked} data-tip={item.locked ? 'Kept — unlock first' : 'Delete audio only (keeps transcript and notes)'} aria-label="Delete audio"><AudioOffIcon size={16} /></button>
                     )}
                     <button className="btn-icon btn-icon-danger" onClick={() => remove(item)} disabled={item.locked} data-tip={item.locked ? 'Kept — unlock first' : 'Delete lecture'} aria-label="Delete lecture"><TrashIcon size={16} /></button>
+                    </>)}
                   </span>
                 </li>
               ))}
@@ -283,7 +312,9 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
           <p className="settings-note settings-note-full history-note">
             {user.is_admin
               ? 'This view includes every lecture on the system. '
-              : 'This view includes the lectures you have recorded. '}
+              : user.is_demo
+                ? 'This is the demo account: these are sample lectures anyone trying the demo can open. '
+                : 'This view includes the lectures you have recorded. '}
             Transcripts and notes are retained indefinitely. Audio recordings are removed automatically
             after {retentionDays} days and count toward the storage shown above. To preserve a recording, download the
             MP3 or mark the lecture as kept — kept lectures are excluded from the cleanup and cannot be

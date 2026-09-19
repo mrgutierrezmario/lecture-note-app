@@ -280,6 +280,11 @@ hashed). Logins last 30 days.
   Password works well — use a dedicated `…donotreply@gmail.com` account so
   replies don't land in your inbox). Without mail, the link isn't offered and
   admins reset passwords from **Settings → Users**.
+- **Demo account (optional):** create a user with the *Demo* switch (Settings →
+  Users) and assign it a lecture or two (History → the person icon). The
+  sign-in page then offers **Try the demo** — a read-only look at those
+  lectures: transcript, notes, questions (tighter usage caps), exports; no
+  recording, uploads, Drive or settings changes, and demo chats aren't stored.
 - Shell fallback: `python -m scripts.manage_users create|list|passwd|delete`.
 
 ---

@@ -35,6 +35,14 @@ export default function useAuth() {
     setUser(data)
   }, [])
 
+  // "Try the demo": the server signs us into the read-only demo account.
+  const demo = useCallback(async () => {
+    const response = await fetch('/api/auth/demo', { method: 'POST' })
+    const data = await response.json().catch(() => ({}))
+    if (!response.ok) throw new Error(data.detail || `Demo unavailable (${response.status})`)
+    setUser(data)
+  }, [])
+
   const register = useCallback(async (username, email, password) => {
     const response = await fetch('/api/auth/register', {
       method: 'POST',
@@ -54,5 +62,5 @@ export default function useAuth() {
     setUser(null)
   }, [])
 
-  return { user, login, register, logout, refresh }
+  return { user, login, register, demo, logout, refresh }
 }

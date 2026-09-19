@@ -19,7 +19,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from accounts import ratelimit
-from accounts.auth import CurrentUser, current_user
+from accounts.auth import CurrentUser, current_user, forbid_demo
 from ai.document_processor import extract_text, image_media_type
 from ai.image_analyzer import caption_image as blip_caption
 from core.config import get_settings
@@ -61,11 +61,15 @@ USAGE_WINDOW = 10 * 60
 USAGE_LIMITS = {"chat": 40, "image": 15, "upload": 20}
 
 
+DEMO_LIMITS = {"chat": 10, "image": 3, "upload": 0}  # the demo is shared by every visitor
+
+
 def _check_usage(user: CurrentUser, kind: str) -> None:
     """Raise 429 when ``user`` has used ``kind`` too often; admins are exempt."""
     if user.is_admin:
         return
-    allowed, wait = ratelimit.allow(f"{kind}:{user.id}", USAGE_LIMITS[kind], USAGE_WINDOW)
+    limits = DEMO_LIMITS if user.is_demo else USAGE_LIMITS
+    allowed, wait = ratelimit.allow(f"{kind}:{user.id}", limits[kind], USAGE_WINDOW)
     if not allowed:
         what = {"chat": "questions", "image": "image questions", "upload": "uploads"}[kind]
         raise HTTPException(
@@ -106,7 +110,10 @@ async def get_session(session_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.patch("/{session_id}", response_model=SessionResponse)
 async def update_session_details(
-    session_id: str, body: SessionDetails, db: AsyncSession = Depends(get_db)
+    session_id: str,
+    body: SessionDetails,
+    db: AsyncSession = Depends(get_db),
+    _guard: CurrentUser = Depends(forbid_demo),
 ):
     """Change a lecture's title, key terms or notes focus (also for past lectures).
 
@@ -201,7 +208,9 @@ async def _store_chat(
 
 
 @router.delete("/{session_id}/chat", status_code=204)
-async def clear_chat(session_id: str, db: AsyncSession = Depends(get_db)):
+async def clear_chat(
+    session_id: str, db: AsyncSession = Depends(get_db), _guard: CurrentUser = Depends(forbid_demo)
+):
     """Forget every question and answer for this lecture."""
     await db.execute(delete(ChatMessage).where(ChatMessage.session_id == session_id))
     await db.commit()
@@ -210,7 +219,10 @@ async def clear_chat(session_id: str, db: AsyncSession = Depends(get_db)):
 
 @router.delete("/{session_id}/chat/{message_id}", status_code=204)
 async def delete_chat_turn(
-    session_id: str, message_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+    session_id: str,
+    message_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    _guard: CurrentUser = Depends(forbid_demo),
 ):
     """Delete one exchange: the message and its partner (a question with its
     answer, or an answer with its question)."""
@@ -239,8 +251,12 @@ async def delete_chat_turn(
 
 
 @router.get("/{session_id}/chat", response_model=list[ChatMessageOut])
-async def chat_history(session_id: str, db: AsyncSession = Depends(get_db)):
+async def chat_history(
+    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
     """Earlier questions and answers for this lecture, oldest first."""
+    if user.is_demo:
+        return []  # every visitor starts clean; demo chats are not stored
     rows = (
         (
             await db.execute(
@@ -342,7 +358,12 @@ async def export_docx(session_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.put("/{session_id}/notes", response_model=NotesResponse)
-async def edit_notes(session_id: str, body: NotesEdit, db: AsyncSession = Depends(get_db)):
+async def edit_notes(
+    session_id: str,
+    body: NotesEdit,
+    db: AsyncSession = Depends(get_db),
+    _guard: CurrentUser = Depends(forbid_demo),
+):
     """Save the user's edited notes as a new version.
 
     Later generation passes merge into this version, so edits made during a
@@ -377,7 +398,9 @@ async def edit_notes(session_id: str, body: NotesEdit, db: AsyncSession = Depend
 
 
 @router.post("/{session_id}/notes/regenerate", response_model=NotesResponse)
-async def regenerate_notes(session_id: str, db: AsyncSession = Depends(get_db)):
+async def regenerate_notes(
+    session_id: str, db: AsyncSession = Depends(get_db), _guard: CurrentUser = Depends(forbid_demo)
+):
     """Rebuild the notes from the whole transcript — e.g. after setting a focus
     on a past lecture. Takes a while for a long lecture; the reply is the
     finished version."""
@@ -497,7 +520,7 @@ async def audio_status(session_id: str):
 
 @router.post("/{session_id}/drive")
 async def save_to_drive(
-    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+    session_id: str, user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)
 ):
     """Save notes, transcript and MP3 to the *owner's* Google Drive (background).
 
@@ -599,7 +622,7 @@ async def stream_audio_chunk(
 async def upload_document(
     session_id: str,
     file: UploadFile = File(...),
-    user: CurrentUser = Depends(current_user),
+    user: CurrentUser = Depends(forbid_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Attach a PDF, PowerPoint, Word file or image to the lecture.
@@ -952,7 +975,11 @@ Instructions:
     except Exception as e:
         answer, provider = f"Error connecting to AI: {str(e)}", "none"
 
-    q_id, a_id = await _store_chat(db, session_id, request.message, answer, provider)
+    q_id, a_id = (
+        (None, None)
+        if user.is_demo
+        else await _store_chat(db, session_id, request.message, answer, provider)
+    )
     return ChatResponse(
         answer=answer,
         session_id=session_id,

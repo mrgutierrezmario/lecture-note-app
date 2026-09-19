@@ -286,6 +286,15 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                     if msg_type == "ping":
                         await websocket.send_json({"type": "pong"})
 
+                    elif msg_type == "start" and user.is_demo:
+                        await websocket.send_json(
+                            {
+                                "type": "status",
+                                "message": "Demo account — recording is disabled. Create your "
+                                "own account to record lectures.",
+                            }
+                        )
+
                     elif msg_type == "start":
                         title = message.get("title")
                         manager.save_storage[session_id] = bool(message.get("save_storage", False))
@@ -397,6 +406,8 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                 break
 
             elif "bytes" in data:
+                if user.is_demo:
+                    continue  # never store or transcribe audio for the demo account
                 audio_data = data["bytes"]
                 current_index = chunk_index
                 chunk_index += 1

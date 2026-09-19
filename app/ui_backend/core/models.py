@@ -33,6 +33,10 @@ class User(Base):
     password_hash = Column(Text, nullable=False)
     is_admin = Column(Boolean, default=False, nullable=False)
     disabled = Column(Boolean, default=False, nullable=False)
+    # A read-only visitor account: "Try the demo" signs into it without a
+    # password; it can read its lectures and ask questions but not record,
+    # upload, connect Drive or change anything (see accounts.auth.forbid_demo).
+    is_demo = Column(Boolean, default=False, nullable=False, server_default="false")
     quota_mb = Column(Integer, nullable=True)  # per-user audio quota; null = global default
     # False only for self-registered accounts that haven't clicked the emailed link yet.
     email_verified = Column(Boolean, default=True, nullable=False, server_default="true")

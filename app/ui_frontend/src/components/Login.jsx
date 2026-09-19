@@ -6,10 +6,11 @@
  */
 import { useState, useEffect } from 'react'
 
-function Login({ onLogin, onRegister }) {
+function Login({ onLogin, onRegister, onDemo }) {
   const [mode, setMode] = useState('login') // 'login' | 'register' | 'forgot'
   const [registrationOpen, setRegistrationOpen] = useState(false)
   const [resetAvailable, setResetAvailable] = useState(false)
+  const [demoAvailable, setDemoAvailable] = useState(false)
   const [sent, setSent] = useState(false)
   const [identifier, setIdentifier] = useState('')
   const [username, setUsername] = useState('')
@@ -38,7 +39,7 @@ function Login({ onLogin, onRegister }) {
   useEffect(() => {
     fetch('/api/auth/status')
       .then(r => (r.ok ? r.json() : {}))
-      .then(d => { setRegistrationOpen(Boolean(d.registration_open)); setResetAvailable(Boolean(d.password_reset_available)) })
+      .then(d => { setRegistrationOpen(Boolean(d.registration_open)); setResetAvailable(Boolean(d.password_reset_available)); setDemoAvailable(Boolean(d.demo_available)) })
       .catch(() => { setRegistrationOpen(false); setResetAvailable(false) })
   }, [])
 
@@ -230,6 +231,20 @@ function Login({ onLogin, onRegister }) {
         ) : !pending && (
           <p className="login-note">
             Already have an account? <button type="button" className="link-button" onClick={() => switchMode('login')}>Sign in</button>
+          </p>
+        )}
+        {demoAvailable && mode === 'login' && !pending && (
+          <p className="login-note login-demo">
+            Just want to look around?{' '}
+            <button
+              type="button"
+              className="link-button"
+              disabled={busy}
+              onClick={async () => { setBusy(true); setError(null); try { await onDemo() } catch (err) { setError(err.message) } finally { setBusy(false) } }}
+            >
+              Try the demo
+            </button>
+            {' '}— a read-only account with a sample lecture.
           </p>
         )}
         <p className="login-note login-legal">

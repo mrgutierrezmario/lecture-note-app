@@ -18,6 +18,7 @@ from accounts.auth import (
     CurrentUser,
     clear_login_cookie,
     current_user,
+    forbid_demo,
     hash_password,
     require_admin,
     set_login_cookie,
@@ -107,13 +108,32 @@ VERIFY_HOURS = 24
 APPROVE_DAYS = 7
 
 
+async def _demo_user(db: AsyncSession) -> User | None:
+    """The demo account, if an admin created one (and it is not disabled)."""
+    return (
+        await db.execute(
+            select(User).where(User.is_demo.is_(True), User.disabled.is_(False)).limit(1)
+        )
+    ).scalar_one_or_none()
+
+
+async def _demo_available(db: AsyncSession) -> bool:
+    """Whether to offer "Try the demo". The sign-in page must render even when
+    the database is unreachable, so a failed lookup just means "no"."""
+    try:
+        return await _demo_user(db) is not None
+    except Exception:  # noqa: BLE001 — degrade to "no demo", never a 500 on the sign-in page
+        return False
+
+
 @router.get("/status", response_model=RegistrationStatus)
-async def registration_status():
+async def registration_status(db: AsyncSession = Depends(get_db)):
     """What the sign-in page may offer; readable without a login."""
     return RegistrationStatus(
         registration_open=get_settings().registration_open,
         registration_approval=get_settings().registration_approval,
         password_reset_available=mailer.configured(),
+        demo_available=await _demo_available(db),
     )
 
 
@@ -534,7 +554,7 @@ async def login(
 async def delete_own_account(
     body: AccountDelete,
     response: Response,
-    user: CurrentUser = Depends(current_user),
+    user: CurrentUser = Depends(forbid_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Delete your own account and everything in it: lectures (transcripts,
@@ -587,6 +607,24 @@ async def delete_own_account(
     return Response(status_code=204)
 
 
+@router.post("/demo", response_model=UserResponse)
+async def demo_login(request: Request, response: Response, db: AsyncSession = Depends(get_db)):
+    """ "Try the demo": sign in as the read-only demo account, no password.
+
+    Rate-limited per address like sign-in, so it can't be used to hammer the
+    server; what the account can do is limited by ``forbid_demo``."""
+    key = f"demo:{_client_ip(request)}"
+    allowed, wait = ratelimit.allow(key, 10, 10 * 60)
+    if not allowed:
+        raise HTTPException(429, f"Too many demo sign-ins — try again in {wait} seconds")
+    user = await _demo_user(db)
+    if user is None:
+        raise HTTPException(404, "There is no demo account on this server")
+    set_login_cookie(response, request, user.id)
+    logger.info("Demo sign-in from %s", _client_ip(request))
+    return user
+
+
 @router.post("/logout", status_code=204)
 async def logout(response: Response):
     """Sign out by clearing the login cookie."""
@@ -604,7 +642,7 @@ async def me(user: CurrentUser = Depends(current_user), db: AsyncSession = Depen
 @router.patch("/me", response_model=UserResponse)
 async def update_profile(
     body: ProfileUpdate,
-    user: CurrentUser = Depends(current_user),
+    user: CurrentUser = Depends(forbid_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Let the signed-in user set or change their email address."""
@@ -627,7 +665,7 @@ async def update_profile(
 @router.post("/password", status_code=204)
 async def change_password(
     body: PasswordChange,
-    user: CurrentUser = Depends(current_user),
+    user: CurrentUser = Depends(forbid_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Change the signed-in user's password after re-checking the current one."""
@@ -658,16 +696,19 @@ async def create_user(body: UserCreate, db: AsyncSession = Depends(get_db)):
     username = _validate_username(body.username)
     email = _validate_email(body.email)
     await _ensure_unique(db, username, email)
+    if body.is_admin and body.is_demo:
+        raise HTTPException(400, "A demo account can't be an admin")
     user = User(
         username=username,
         email=email,
         password_hash=hash_password(_validate_password(body.password)),
         is_admin=body.is_admin,
+        is_demo=body.is_demo,
     )
     db.add(user)
     await db.commit()
     await db.refresh(user)
-    logger.info("User %s created (admin=%s)", username, body.is_admin)
+    logger.info("User %s created (admin=%s, demo=%s)", username, body.is_admin, body.is_demo)
     return user
 
 

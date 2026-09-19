@@ -52,6 +52,7 @@ class CurrentUser:
     id: uuid.UUID
     username: str
     is_admin: bool
+    is_demo: bool = False
 
 
 # ── Passwords ─────────────────────────────────────────────────────────────────
@@ -128,7 +129,9 @@ async def _load_user(user_id: uuid.UUID) -> CurrentUser | None:
         user = result.scalar_one_or_none()
     if user is None:
         return None
-    return CurrentUser(id=user.id, username=user.username, is_admin=user.is_admin)
+    return CurrentUser(
+        id=user.id, username=user.username, is_admin=user.is_admin, is_demo=user.is_demo
+    )
 
 
 # ── Middleware ────────────────────────────────────────────────────────────────
@@ -189,6 +192,19 @@ def current_user(request: Request) -> CurrentUser:
     user = getattr(request.state, "user", None)
     if user is None:
         raise HTTPException(status_code=401, detail="Not signed in")
+    return user
+
+
+def forbid_demo(user: CurrentUser = Depends(current_user)) -> CurrentUser:
+    """FastAPI dependency: the signed-in user unless it is the demo account (403).
+
+    Used on everything that records, uploads, or changes state — the demo is
+    read-only apart from asking questions."""
+    if user.is_demo:
+        raise HTTPException(
+            status_code=403,
+            detail="The demo account can't do that — create your own account to record lectures",
+        )
     return user
 
 

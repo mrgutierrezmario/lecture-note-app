@@ -83,6 +83,8 @@ function ProviderKey({ label, keyMasked, keyInput, onKeyInput, onSaveKey, onClea
 
 function SettingsPanel({ user, onUserChange, onLogout }) {
   const isAdmin = user?.is_admin
+  const isDemo = Boolean(user?.is_demo)
+  const readOnly = isDemo // the demo may look at the admin sections but not change them
   const [open, setOpen] = useState(false)
   const [settings, setSettings] = useState(null)
   const [draft, setDraft] = useState({})
@@ -127,7 +129,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
     }
   }, [])
 
-  useEffect(() => { if (open && isAdmin && !settings) load() }, [open, isAdmin, settings, load])
+  useEffect(() => { if (open && (isAdmin || isDemo) && !settings) load() }, [open, isAdmin, isDemo, settings, load])
 
   // Esc closes the dialog, matching the backdrop click.
   useEffect(() => {
@@ -254,17 +256,21 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
         </div>
       </section>
 
-      <PasswordSection user={user} onUserChange={onUserChange} onDeleted={() => { setOpen(false); onLogout?.() }} />
+      {!isDemo && <PasswordSection user={user} onUserChange={onUserChange} onDeleted={() => { setOpen(false); onLogout?.() }} />}
 
       {/* Admins get this right after the OAuth client fields (inside the admin block below). */}
-      {!isAdmin && <DriveSection isAdmin={false} />}
+      {!isAdmin && !isDemo && <DriveSection isAdmin={false} />}
 
       {error && <div className="settings-error">{error}</div>}
       {message && <div className="settings-message">{message}</div>}
-      {isAdmin && !settings && !error && <p className="settings-loading">Loading…</p>}
+      {(isAdmin || isDemo) && !settings && !error && <p className="settings-loading">Loading…</p>}
+      {isDemo && settings && (
+        <div className="settings-message">Demo — the administrator's settings are shown read-only. API keys and the user list are hidden.</div>
+      )}
 
       {settings && (
         <>
+          {!isDemo && (<>
           <section className="settings-section">
             <h3>API keys</h3>
             <p className="settings-note settings-note-full">Save any keys you have; choose which provider does what under Models below.</p>
@@ -435,8 +441,10 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
           </section>
 
           <DriveSection isAdmin refreshKey={`${settings.google_client_id}|${settings.google_client_secret_masked}|${settings.google_picker_api_key}`} />
+          </>)}
 
           <section className="settings-section">
+          <fieldset disabled={readOnly} className="settings-fieldset">
             <h3>Models</h3>
 
             <label className="settings-field">
@@ -640,9 +648,11 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
                 </button>
               )}
             </div>
+          </fieldset>
           </section>
 
           <section className="settings-section">
+          <fieldset disabled={readOnly} className="settings-fieldset">
             <h3>Sign-up</h3>
             <label className="switch settings-switch">
               <input
@@ -669,9 +679,10 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               once everyone is enrolled — admins can always add accounts below.
               {dirty && ' Save with the Save models button above.'}
             </p>
+          </fieldset>
           </section>
 
-          <UsersSection currentUser={user} />
+          {!isDemo && <UsersSection currentUser={user} />}
 
           <section className="settings-section">
             <h3>Ollama</h3>

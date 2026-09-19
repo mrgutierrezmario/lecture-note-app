@@ -22,6 +22,7 @@ function UsersSection({ currentUser }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isAdmin, setIsAdmin] = useState(false)
+  const [isDemo, setIsDemo] = useState(false)
   const [busy, setBusy] = useState(false)
 
   const load = useCallback(async () => {
@@ -51,8 +52,8 @@ function UsersSection({ currentUser }) {
   const create = (e) => {
     e.preventDefault()
     run(async () => {
-      await api('/api/auth/users', { method: 'POST', body: JSON.stringify({ username, email: email || null, password, is_admin: isAdmin }) })
-      setUsername(''); setEmail(''); setPassword(''); setIsAdmin(false)
+      await api('/api/auth/users', { method: 'POST', body: JSON.stringify({ username, email: email || null, password, is_admin: isAdmin, is_demo: isDemo }) })
+      setUsername(''); setEmail(''); setPassword(''); setIsAdmin(false); setIsDemo(false)
     })
   }
 
@@ -99,6 +100,7 @@ function UsersSection({ currentUser }) {
                   {u.email && <span className="user-row-email">{u.email}</span>}
                 </span>
                 {u.is_admin && <span className="user-badge">admin</span>}
+                {u.is_demo && <span className="user-badge user-badge-you" data-tip="Read-only demo account ('Try the demo' on the sign-in page)">demo</span>}
                 {u.email_verified === false && <span className="user-badge user-badge-warn" data-tip="Signed up but hasn't opened the confirmation email yet">unverified</span>}
                 {u.approved === false && <span className="user-badge user-badge-warn" data-tip="Waiting for an admin to approve the account">pending</span>}
                 {u.id === currentUser.id && <span className="user-badge user-badge-you">you</span>}
@@ -152,9 +154,14 @@ function UsersSection({ currentUser }) {
           required
         />
         <label className="switch">
-          <input type="checkbox" checked={isAdmin} onChange={e => setIsAdmin(e.target.checked)} />
+          <input type="checkbox" checked={isAdmin} disabled={isDemo} onChange={e => setIsAdmin(e.target.checked)} />
           <span className="switch-track" />
           Admin
+        </label>
+        <label className="switch" data-tip="A read-only visitor account: 'Try the demo' on the sign-in page signs into it without a password. It can open its lectures and ask questions, nothing else.">
+          <input type="checkbox" checked={isDemo} disabled={isAdmin} onChange={e => setIsDemo(e.target.checked)} />
+          <span className="switch-track" />
+          Demo
         </label>
         <button type="submit" className="btn-primary user-create-submit" disabled={busy || !username || !password}>
           Add user
@@ -162,6 +169,7 @@ function UsersSection({ currentUser }) {
       </form>
       <p className="settings-note user-create-note">
         Admins can change models and credentials and manage users. Everyone else can record and review their own lectures.
+        A demo account is read-only: assign it a lecture or two (History → the person icon) and visitors can look around without signing up.
       </p>
     </section>
   )

@@ -7,7 +7,7 @@ import ReactMarkdown from 'react-markdown'
 import { NotesIcon, SparklesIcon, EditIcon, SpinnerIcon, CheckIcon, CloseIcon } from './Icons'
 import { useDialog } from './Dialog'
 
-function NotesPane({ notes, version, sessionId, isRecording, onNotesChange }) {
+function NotesPane({ notes, version, sessionId, isRecording, readOnly = false, onNotesChange }) {
   const dialog = useDialog()
   const [editing, setEditing] = useState(false)
   const [draft, setDraft] = useState('')
@@ -77,10 +77,10 @@ function NotesPane({ notes, version, sessionId, isRecording, onNotesChange }) {
           ) : (
             <>
               {version > 0 ? `Version ${version}` : 'Generated while you record'}
-              {notes && (
+              {notes && !readOnly && (
                 <button className="btn-icon" onClick={startEdit} data-tip="Edit the notes (saved as a new version; later passes build on your edit)" aria-label="Edit notes"><EditIcon size={14} /></button>
               )}
-              {notes && !isRecording && (
+              {notes && !isRecording && !readOnly && (
                 <button className="btn-icon" onClick={regenerate} data-tip="Rewrite the notes from the whole transcript with the current focus" aria-label="Regenerate notes"><SparklesIcon size={14} /></button>
               )}
             </>

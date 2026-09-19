@@ -23,7 +23,7 @@ const providerLabel = (p) => {
   }
 }
 
-function ChatPane({ sessionId }) {
+function ChatPane({ sessionId, readOnly = false }) {
   const dialog = useDialog()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
@@ -174,7 +174,7 @@ function ChatPane({ sessionId }) {
           <span className="pane-icon pane-icon-cyan"><ChatIcon /></span>
           <h2>Ask about the lecture</h2>
         </div>
-        {messages.length > 0 && (
+        {messages.length > 0 && !readOnly && (
           <span className="pane-meta pane-actions">
             <button className="btn-icon" onClick={clearChat} disabled={isLoading} data-tip="Clear the whole conversation" aria-label="Clear conversation"><TrashIcon size={14} /></button>
           </span>
@@ -190,7 +190,7 @@ function ChatPane({ sessionId }) {
           <div key={msg.id || i} className={`chat-message ${msg.role}`}>
             <span className="chat-role">
               {msg.role === 'user' ? 'You' : 'AI'}
-              <button
+              {!readOnly && <button
                 type="button"
                 className="chat-remove"
                 onClick={() => removeTurn(msg, i)}
@@ -199,7 +199,7 @@ function ChatPane({ sessionId }) {
                 aria-label="Remove this exchange"
               >
                 <CloseIcon size={12} />
-              </button>
+              </button>}
             </span>
             {msg.imageUrl && (
               <img src={msg.imageUrl} alt="pasted" className="chat-image-preview" />

@@ -612,10 +612,10 @@ function Workspace({ user, onLogout, onUserChange }) {
           sessionId={sessionId}
           title={title}
           onTitleChange={setTitle}
-          disabled={isRecording || viewingPast}
+          disabled={isRecording || viewingPast || user.is_demo}
           vocabulary={vocabulary}
           notesFocus={notesFocus}
-          onEditDetails={() => setDetailsOpen(true)}
+          onEditDetails={user.is_demo ? undefined : () => setDetailsOpen(true)}
         />
 
         <div className="app-bar-actions">
@@ -644,6 +644,13 @@ function Workspace({ user, onLogout, onUserChange }) {
         </div>
       </header>
 
+      {user.is_demo && (
+        <div className="demo-banner">
+          You're in the <strong>demo</strong> — a read-only account. Open a lecture from History, read the transcript and notes, ask questions, download exports.
+          Recording, uploads and settings changes are off. <a href="/" onClick={e => { e.preventDefault(); onLogout() }}>Sign out</a> to create your own account.
+        </div>
+      )}
+
       {detailsOpen && (
         <LectureDetailsDialog
           vocabulary={vocabulary}
@@ -661,7 +668,7 @@ function Workspace({ user, onLogout, onUserChange }) {
           </button>
         )}
         <RecordingControls
-          readOnly={viewingPast}
+          readOnly={viewingPast || user.is_demo}
           isRecording={isRecording}
           isPaused={isPaused}
           onStart={startRecording}
@@ -682,7 +689,7 @@ function Workspace({ user, onLogout, onUserChange }) {
 
         <div className="toolbar-spacer" />
 
-        {!viewingPast && (<>
+        {!viewingPast && !user.is_demo && (<>
         <label className="device-select-label" data-tip="Which microphone to record from">
           <MicIcon />
           <span className="visually-hidden">Audio input</span>
@@ -775,12 +782,13 @@ function Workspace({ user, onLogout, onUserChange }) {
           version={notesVersion}
           sessionId={sessionId}
           isRecording={isRecording}
+          readOnly={user.is_demo}
           onNotesChange={(md, v) => { setNotes(md); setNotesVersion(v) }}
         />
         <div className="right-pane">
           {/* Keyed so uploads and chat history reset when switching lectures. */}
-          <FileUpload key={`upload-${sessionId}`} sessionId={sessionId} />
-          <ChatPane key={`chat-${sessionId}`} sessionId={sessionId} />
+          {!user.is_demo && <FileUpload key={`upload-${sessionId}`} sessionId={sessionId} />}
+          <ChatPane key={`chat-${sessionId}`} sessionId={sessionId} readOnly={user.is_demo} />
         </div>
       </main>
     </div>
@@ -796,12 +804,12 @@ const resetToken = window.location.pathname === '/reset-password'
   : null
 
 function App() {
-  const { user, login, register, logout, refresh } = useAuth()
+  const { user, login, register, demo, logout, refresh } = useAuth()
   if (resetToken) {
     return <ResetPassword token={resetToken} onDone={() => { window.history.replaceState(null, '', '/'); window.location.reload() }} />
   }
   if (user === undefined) return null
-  if (user === null) return <Login onLogin={login} onRegister={register} />
+  if (user === null) return <Login onLogin={login} onRegister={register} onDemo={demo} />
   return <Workspace user={user} onLogout={logout} onUserChange={refresh} />
 }
 

@@ -297,6 +297,7 @@ class UserResponse(BaseModel):
     quota_mb: int | None = None  # None = global default applies
     email_verified: bool = True
     approved: bool = True  # False = waiting for an admin (Settings → Users → Approve)
+    is_demo: bool = False  # read-only visitor account ("Try the demo")
     created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
@@ -323,6 +324,13 @@ class UserCreate(BaseModel):
     password: str
     email: str | None = None
     is_admin: bool = False
+    is_demo: bool = False  # read-only visitor account
+
+
+class SessionOwner(BaseModel):
+    """Admin: hand a lecture to another user (``PATCH /api/sessions/{id}/owner``)."""
+
+    username: str
 
 
 class RegisterRequest(BaseModel):
@@ -345,6 +353,7 @@ class RegistrationStatus(BaseModel):
     registration_open: bool
     registration_approval: bool = False  # new accounts wait for an admin
     password_reset_available: bool  # True when outgoing mail is configured
+    demo_available: bool = False  # a demo account exists: show "Try the demo"
 
 
 class ForgotPasswordRequest(BaseModel):

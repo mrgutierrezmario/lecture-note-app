@@ -9,7 +9,7 @@ import logging
 import httpx
 from fastapi import APIRouter, Depends, HTTPException
 
-from accounts.auth import require_admin
+from accounts.auth import CurrentUser, current_user, require_admin
 from ai import providers
 from core import settings_store
 from core.config import get_settings
@@ -18,7 +18,16 @@ from integrations import google_drive, mailer
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/api/settings", tags=["settings"], dependencies=[Depends(require_admin)])
+router = APIRouter(prefix="/api/settings", tags=["settings"])
+
+
+def admin_or_demo(user: CurrentUser = Depends(current_user)) -> CurrentUser:
+    """Admins manage settings; the demo account may *look* (a reduced,
+    read-only view — see ``read_settings``)."""
+    if not (user.is_admin or user.is_demo):
+        raise HTTPException(status_code=403, detail="Admin only")
+    return user
+
 
 # Fields the panel can change that are not the secret key.
 _OVERRIDE_FIELDS = (
@@ -108,12 +117,29 @@ async def _current(restart_required: list[str] | None = None) -> SettingsRespons
 
 
 @router.get("", response_model=SettingsResponse)
-async def read_settings():
-    """Current settings for the panel (admin only)."""
-    return await _current()
+async def read_settings(user: CurrentUser = Depends(admin_or_demo)):
+    """Current settings for the panel. The demo account gets the same shape
+    with anything secret-adjacent blanked (key previews, OAuth client)."""
+    current = await _current()
+    if user.is_demo:
+        current.auth = AuthStatus(
+            source="none",
+            detail="",
+            key_masked=None,
+            profile_on_disk=False,
+            sdk_version=current.auth.sdk_version,
+            sdk_supports_profiles=current.auth.sdk_supports_profiles,
+            warnings=[],
+        )
+        current.gemini_key_masked = None
+        current.openai_key_masked = None
+        current.google_client_id = ""
+        current.google_client_secret_masked = None
+        current.google_picker_api_key = ""
+    return current
 
 
-@router.put("", response_model=SettingsResponse)
+@router.put("", response_model=SettingsResponse, dependencies=[Depends(require_admin)])
 async def write_settings(update: SettingsUpdate):
     """Apply a partial update. Keys are stored separately from the other
     fields; ``restart_required`` in the reply lists fields that only take
@@ -156,7 +182,9 @@ async def write_settings(update: SettingsUpdate):
     return await _current(restart_required)
 
 
-@router.post("/test-provider/{provider}", response_model=ProviderTest)
+@router.post(
+    "/test-provider/{provider}", response_model=ProviderTest, dependencies=[Depends(require_admin)]
+)
 async def test_provider(provider: str):
     """Cheap connectivity check for one AI provider (uses the saved key)."""
     if provider not in providers.PROVIDERS and provider not in providers.VISION_PROVIDERS:
@@ -167,7 +195,9 @@ async def test_provider(provider: str):
     return ProviderTest(provider=provider, ok=ok, detail=detail)
 
 
-@router.get("/gemini-models", response_model=list[ModelOption])
+@router.get(
+    "/gemini-models", response_model=list[ModelOption], dependencies=[Depends(require_admin)]
+)
 async def gemini_models():
     """Chat-capable Gemini models available to the saved key, from Google's live list."""
     try:

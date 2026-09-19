@@ -6,7 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import case, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from accounts.auth import CurrentUser, current_user
+from accounts.auth import CurrentUser, current_user, forbid_demo, require_admin
 from core.config import get_settings
 from core.database import get_db
 from core.models import (
@@ -18,7 +18,7 @@ from core.models import (
     TranscriptSegment,
     User,
 )
-from core.schemas import SessionLock, SessionRename, SessionSummary, StorageUsage
+from core.schemas import SessionLock, SessionOwner, SessionRename, SessionSummary, StorageUsage
 from storage import quota
 from storage.s3_client import s3_client
 
@@ -136,7 +136,7 @@ async def storage_usage(
 async def set_lock(
     session_id: str,
     body: SessionLock,
-    user: CurrentUser = Depends(current_user),
+    user: CurrentUser = Depends(forbid_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Keep a lecture: its audio is exempt from the retention cleanup and it
@@ -159,7 +159,7 @@ async def set_lock(
 
 @router.delete("/{session_id}/audio", status_code=204)
 async def delete_session_audio(
-    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+    session_id: str, user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)
 ):
     """Free quota by dropping a lecture's audio while keeping transcript and notes."""
     session = await _owned_session(session_id, user, db)
@@ -190,7 +190,7 @@ async def delete_session_audio(
 async def rename_session(
     session_id: str,
     body: SessionRename,
-    user: CurrentUser = Depends(current_user),
+    user: CurrentUser = Depends(forbid_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Set (or clear, with an empty string) a lecture's title."""
@@ -206,7 +206,7 @@ async def rename_session(
 
 @router.delete("/{session_id}", status_code=204)
 async def delete_session(
-    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+    session_id: str, user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)
 ):
     """Delete a lecture entirely: transcript, notes, documents and audio objects.
     Refused while the lecture is kept.
@@ -235,3 +235,26 @@ async def delete_session(
     await db.commit()
     logger.info("Session %s deleted by %s", session_id, user.username)
     return Response(status_code=204)
+
+
+@router.patch("/{session_id}/owner", response_model=SessionSummary)
+async def change_owner(
+    session_id: str,
+    body: SessionOwner,
+    admin: CurrentUser = Depends(require_admin),
+    db: AsyncSession = Depends(get_db),
+):
+    """Admin: hand a lecture to another user (e.g. to the demo account)."""
+    session = await db.get(Session, session_id)
+    if session is None:
+        raise HTTPException(404, "Lecture not found")
+    target = (
+        await db.execute(select(User).where(User.username == body.username.strip().lower()))
+    ).scalar_one_or_none()
+    if target is None:
+        raise HTTPException(404, f"No user named {body.username!r}")
+    session.user_id = target.id
+    await db.commit()
+    logger.info("Session %s given to %s by %s", session_id, target.username, admin.username)
+    rows = await list_sessions(admin, db)
+    return next(r for r in rows if r.id == session_id)

@@ -1519,6 +1519,36 @@ a.btn-icon:hover {
   background: var(--danger-tint);
 }
 
+/* Wraps the Models / Sign-up sections; disabled for the demo's read-only view. */
+.settings-fieldset {
+  border: none;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.settings-fieldset:disabled {
+  opacity: 0.75;
+}
+
+.settings-fieldset:disabled .settings-actions {
+  display: none;
+}
+
+/* Demo notice above the workspace. */
+.demo-banner {
+  padding: 8px 32px;
+  background: var(--warning-tint);
+  color: var(--warning);
+  font-size: 13px;
+  border-bottom: 1px solid var(--border);
+}
+
+.demo-banner a {
+  color: inherit;
+  font-weight: 600;
+}
+
 .settings-danger-heading {
   margin-top: 22px;
   color: var(--danger);
