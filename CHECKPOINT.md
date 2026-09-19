@@ -539,8 +539,15 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    `/privacy` was added (operator contact from `SUPPORT_EMAIL`) and the
    app's own Funnel host was used as the domain. Any Google account can
    now connect a Drive.
-10. Optional next features: Claude API credits; speaker separation
-    (post-lecture, see above).
+10. Optional next features: Claude API credits (operator: next payday);
+    speaker separation (post-lecture, see above). Suggested next *project*:
+    an AWS deployment option (ECS + RDS + S3, IaC) — résumé value and a
+    "runs at home or in the cloud" story; fits as project #2 for LinkedIn.
+
+**Status 2026-09-19:** feature-complete and stable. Nothing required is
+open; remaining items are optional. Weekly Dependabot PRs: CI checks them;
+anything beyond a patch bump gets `DRILL_IMAGE=` restore-drill validation
+before merging (see 2026-09-19 dependency review).
 11. ~~Operator to run `deploy/restore-drill.sh --from-remote`~~ — done
     2026-09-19, PASSED against the new account's Drive.
 12. Optional: revoke/re-create the two Gmail App Passwords that passed through
