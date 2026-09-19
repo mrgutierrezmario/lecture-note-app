@@ -124,6 +124,7 @@ class ChatRequest(BaseModel):
 class ChatMessageOut(BaseModel):
     """A stored chat turn (``GET /api/session/{id}/chat``)."""
 
+    id: UUID
     role: str
     text: str
     provider: Optional[str] = None
@@ -139,6 +140,8 @@ class ChatResponse(BaseModel):
     session_id: str
     provider: Optional[str] = None  # e.g. gemini/gemini-3.6-flash, ollama/llama3, llava, blip
     fallback: Optional[str] = None  # e.g. "Gemini unavailable: quota or rate limit exceeded"
+    question_id: Optional[UUID] = None  # stored ids, so the pair can be deleted from the UI
+    answer_id: Optional[UUID] = None
 
 
 # ── WebSocket messages (server → browser) ─────────────────────────────────────

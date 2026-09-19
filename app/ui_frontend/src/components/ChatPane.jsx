@@ -5,7 +5,8 @@
  */
 import ReactMarkdown from 'react-markdown'
 import { useState, useRef, useEffect, useCallback } from 'react'
-import { ChatIcon, SendIcon, CloseIcon } from './Icons'
+import { ChatIcon, SendIcon, CloseIcon, TrashIcon } from './Icons'
+import { useDialog } from './Dialog'
 
 // "gemini/gemini-3.6-flash" → "Gemini", "ollama/llama3" → "local model (llama3)", etc.
 const providerLabel = (p) => {
@@ -23,6 +24,7 @@ const providerLabel = (p) => {
 }
 
 function ChatPane({ sessionId }) {
+  const dialog = useDialog()
   const [messages, setMessages] = useState([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
@@ -43,7 +45,7 @@ function ChatPane({ sessionId }) {
       .then(r => (r.ok ? r.json() : []))
       .then(rows => {
         if (cancelled || !rows.length) return
-        setMessages(rows.map(m => ({ role: m.role, text: m.text, provider: m.provider || undefined })))
+        setMessages(rows.map(m => ({ id: m.id, role: m.role, text: m.text, provider: m.provider || undefined })))
       })
       .catch(() => {})
     return () => { cancelled = true }
@@ -104,18 +106,58 @@ function ChatPane({ sessionId }) {
         const detail = data?.detail || `Server error (${response.status})`
         setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${detail}` }])
       } else {
-        setMessages(prev => [...prev, {
-          role: 'assistant',
-          text: data.answer || 'No response received.',
-          provider: data.provider,
-          fallback: data.fallback,
-        }])
+        setMessages(prev => {
+          // Attach the stored id to the question we just appended, then the answer.
+          const next = [...prev]
+          for (let k = next.length - 1; k >= 0; k--) {
+            if (next[k].role === 'user' && !next[k].id) { next[k] = { ...next[k], id: data.question_id }; break }
+          }
+          return [...next, {
+            id: data.answer_id,
+            role: 'assistant',
+            text: data.answer || 'No response received.',
+            provider: data.provider,
+            fallback: data.fallback,
+          }]
+        })
       }
     } catch (err) {
       setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${err.message}` }])
     } finally {
       setIsLoading(false)
     }
+  }
+
+  // Remove one exchange (a question and its answer) — from the server when it
+  // was stored, and from the view either way.
+  const removeTurn = async (msg, index) => {
+    if (msg.id) {
+      const response = await fetch(`/api/session/${sessionId}/chat/${msg.id}`, { method: 'DELETE' })
+      if (!response.ok && response.status !== 404) {
+        dialog.notice({ title: 'Could not delete', message: `HTTP ${response.status}` })
+        return
+      }
+    }
+    setMessages(prev => {
+      const partner = msg.role === 'user' ? index + 1 : index - 1
+      return prev.filter((m, i) => i !== index && !(prev[partner] && i === partner && prev[partner].role !== msg.role))
+    })
+  }
+
+  const clearChat = async () => {
+    const ok = await dialog.confirm({
+      title: 'Clear this conversation?',
+      message: 'All questions and answers for this lecture are removed — from the export too. The transcript and notes are not affected.',
+      confirmLabel: 'Clear',
+      danger: true,
+    })
+    if (!ok) return
+    const response = await fetch(`/api/session/${sessionId}/chat`, { method: 'DELETE' })
+    if (!response.ok) {
+      dialog.notice({ title: 'Could not clear', message: `HTTP ${response.status}` })
+      return
+    }
+    setMessages([])
   }
 
   const handleKeyDown = (e) => {
@@ -132,6 +174,11 @@ function ChatPane({ sessionId }) {
           <span className="pane-icon pane-icon-cyan"><ChatIcon /></span>
           <h2>Ask about the lecture</h2>
         </div>
+        {messages.length > 0 && (
+          <span className="pane-meta pane-actions">
+            <button className="btn-icon" onClick={clearChat} disabled={isLoading} data-tip="Clear the whole conversation" aria-label="Clear conversation"><TrashIcon size={14} /></button>
+          </span>
+        )}
       </header>
       <div className="pane-body chat-messages">
         {messages.length === 0 && (
@@ -140,8 +187,20 @@ function ChatPane({ sessionId }) {
           </div>
         )}
         {messages.map((msg, i) => (
-          <div key={i} className={`chat-message ${msg.role}`}>
-            <span className="chat-role">{msg.role === 'user' ? 'You' : 'AI'}</span>
+          <div key={msg.id || i} className={`chat-message ${msg.role}`}>
+            <span className="chat-role">
+              {msg.role === 'user' ? 'You' : 'AI'}
+              <button
+                type="button"
+                className="chat-remove"
+                onClick={() => removeTurn(msg, i)}
+                disabled={isLoading}
+                data-tip="Remove this question and its answer"
+                aria-label="Remove this exchange"
+              >
+                <CloseIcon size={12} />
+              </button>
+            </span>
             {msg.imageUrl && (
               <img src={msg.imageUrl} alt="pasted" className="chat-image-preview" />
             )}

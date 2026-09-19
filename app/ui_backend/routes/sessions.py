@@ -10,11 +10,12 @@ import asyncio
 import base64
 import logging
 import re
+import uuid
 
 import httpx
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 from fastapi.responses import FileResponse, Response, StreamingResponse
-from sqlalchemy import func, select
+from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from accounts import ratelimit
@@ -190,11 +191,51 @@ async def get_notes(session_id: str, db: AsyncSession = Depends(get_db)):
 
 async def _store_chat(
     db: AsyncSession, session_id: str, question: str, answer: str, provider: str | None
-) -> None:
+) -> tuple[uuid.UUID, uuid.UUID]:
     """Keep the exchange with the lecture (pasted images are not stored)."""
-    db.add(ChatMessage(session_id=session_id, role="user", text=question))
-    db.add(ChatMessage(session_id=session_id, role="assistant", text=answer, provider=provider))
+    q = ChatMessage(session_id=session_id, role="user", text=question)
+    a = ChatMessage(session_id=session_id, role="assistant", text=answer, provider=provider)
+    db.add_all([q, a])
     await db.commit()
+    return q.id, a.id
+
+
+@router.delete("/{session_id}/chat", status_code=204)
+async def clear_chat(session_id: str, db: AsyncSession = Depends(get_db)):
+    """Forget every question and answer for this lecture."""
+    await db.execute(delete(ChatMessage).where(ChatMessage.session_id == session_id))
+    await db.commit()
+    return Response(status_code=204)
+
+
+@router.delete("/{session_id}/chat/{message_id}", status_code=204)
+async def delete_chat_turn(
+    session_id: str, message_id: uuid.UUID, db: AsyncSession = Depends(get_db)
+):
+    """Delete one exchange: the message and its partner (a question with its
+    answer, or an answer with its question)."""
+    rows = (
+        (
+            await db.execute(
+                select(ChatMessage)
+                .where(ChatMessage.session_id == session_id)
+                .order_by(ChatMessage.created_at, ChatMessage.id)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    index = next((i for i, m in enumerate(rows) if m.id == message_id), None)
+    if index is None:
+        raise HTTPException(status_code=404, detail="Message not found")
+    doomed = {rows[index].id}
+    if rows[index].role == "user" and index + 1 < len(rows) and rows[index + 1].role == "assistant":
+        doomed.add(rows[index + 1].id)
+    elif rows[index].role == "assistant" and index > 0 and rows[index - 1].role == "user":
+        doomed.add(rows[index - 1].id)
+    await db.execute(delete(ChatMessage).where(ChatMessage.id.in_(doomed)))
+    await db.commit()
+    return Response(status_code=204)
 
 
 @router.get("/{session_id}/chat", response_model=list[ChatMessageOut])
@@ -735,37 +776,43 @@ async def chat(
     )
     latest_notes = notes_result.scalar_one_or_none()
 
-    # How much transcript the active text provider can take. Cloud models have
-    # very large context windows; local Ollama is bounded by num_ctx (set in
-    # providers.py), so keep its share modest.
+    # How much lecture content a provider can take. Cloud models have very
+    # large context windows; local Ollama is bounded by num_ctx (8192 tokens,
+    # roughly 30k characters — see ai/providers.py), so its shares are modest
+    # and the *end* of the transcript is kept when it must be trimmed.
     from ai.providers import active_provider
 
-    transcript_budget = 16_000 if active_provider() == "ollama" else 300_000
-
-    context_parts = []
-    if latest_notes and latest_notes.notes_md.strip():
-        context_parts.append(f"## Lecture Notes (so far)\n{latest_notes.notes_md[:20_000]}")
-    if transcript_text:
-        window = transcript_text[-transcript_budget:]
-        label = (
-            "Lecture Transcript"
-            if len(window) == len(transcript_text)
-            else "Lecture Transcript (most recent part)"
-        )
-        context_parts.append(f"## {label}\n{window}")
-    for doc in docs:
-        context_parts.append(f"## Document: {doc.filename}\n{doc.extracted_text[:20_000]}")
-
-    context = "\n\n".join(context_parts) if context_parts else "No lecture content available yet."
-    # Recent exchanges, so a follow-up ("when is that due?") has its referent.
-    # Bounded so a long chat can't crowd out the lecture itself.
     turns = [t for t in request.history[-8:] if t.text.strip() and t.text != "(image)"]
-    if turns:
-        lines = [
-            f"{'Student' if t.role == 'user' else 'Assistant'}: {t.text.strip()[:1500]}"
-            for t in turns
-        ]
-        context += "\n\n## Conversation so far\n" + "\n\n".join(lines)
+
+    def build_context(local: bool) -> str:
+        notes_cap, transcript_cap, doc_cap = (
+            (8_000, 10_000, 4_000) if local else (20_000, 300_000, 20_000)
+        )
+        parts = []
+        if latest_notes and latest_notes.notes_md.strip():
+            parts.append(f"## Lecture Notes (so far)\n{latest_notes.notes_md[:notes_cap]}")
+        if transcript_text:
+            window = transcript_text[-transcript_cap:]
+            label = (
+                "Lecture Transcript"
+                if len(window) == len(transcript_text)
+                else "Lecture Transcript (most recent part)"
+            )
+            parts.append(f"## {label}\n{window}")
+        for doc in docs:
+            parts.append(f"## Document: {doc.filename}\n{doc.extracted_text[:doc_cap]}")
+        text = "\n\n".join(parts) if parts else "No lecture content available yet."
+        # Recent exchanges, so a follow-up ("when is that due?") has its
+        # referent. Bounded so a long chat can't crowd out the lecture itself.
+        if turns:
+            lines = [
+                f"{'Student' if t.role == 'user' else 'Assistant'}: {t.text.strip()[:1500]}"
+                for t in turns
+            ]
+            text += "\n\n## Conversation so far\n" + "\n\n".join(lines)
+        return text
+
+    context = build_context(local=active_provider() == "ollama")
 
     # Image path: Claude API → llava fallback → error
     if request.image_base64:
@@ -849,22 +896,31 @@ async def chat(
                 answer = f"Error analyzing image: {str(e)}"
                 provider = "none"
         logger.info("Image question answered by %s", provider)
-        await _store_chat(db, session_id, request.message, answer, provider)
-        return ChatResponse(answer=answer, session_id=session_id, provider=provider)
+        q_id, a_id = await _store_chat(db, session_id, request.message, answer, provider)
+        return ChatResponse(
+            answer=answer,
+            session_id=session_id,
+            provider=provider,
+            question_id=q_id,
+            answer_id=a_id,
+        )
 
-    # Text-only path: llama3
-    prompt = f"""You are a helpful teaching assistant. Answer the student's question using ONLY the
-lecture content provided below.
+    # Text-only path
+    def build_prompt(ctx: str) -> str:
+        return f"""You are a helpful teaching assistant. Answer the student's question using ONLY
+the lecture content provided below.
 
-{context}
+{ctx}
 
 Question: {request.message}
 
 Instructions:
 - Answer directly and concisely
+- If the student asks for a summary, overview, recap or the main points, write it from the
+  notes and transcript above — that is always answerable when there is content
 - The question may refer back to the conversation so far ("that", "it", "the first one");
   resolve such references using the earlier exchanges before answering
-- If the answer is not in the provided content, say
+- Only when a specific fact is genuinely absent from the content, say
   "I don't see that covered in the lecture materials"
 - Do not make up information not present in the content above"""
 
@@ -872,7 +928,21 @@ Instructions:
     try:
         from ai.providers import generate_text
 
-        result = await generate_text(prompt, max_tokens=600, temperature=0.1, timeout=180.0)
+        result = await generate_text(
+            build_prompt(context), max_tokens=600, temperature=0.1, timeout=180.0
+        )
+        if result.provider.startswith("ollama") and active_provider() != "ollama":
+            # A cloud provider failed and the local model answered — but it was
+            # handed a cloud-sized prompt, which Ollama truncates from the front
+            # (dropping the notes and the instructions). Ask it again with a
+            # context sized for it.
+            logger.info("Chat fell back to Ollama; re-asking with a local-sized context")
+            result = await generate_text(
+                build_prompt(build_context(local=True)),
+                max_tokens=600,
+                temperature=0.1,
+                timeout=180.0,
+            )
         answer, provider = (
             result.text or "Sorry, I could not generate an answer at this time.",
             result.provider,
@@ -882,5 +952,12 @@ Instructions:
     except Exception as e:
         answer, provider = f"Error connecting to AI: {str(e)}", "none"
 
-    await _store_chat(db, session_id, request.message, answer, provider)
-    return ChatResponse(answer=answer, session_id=session_id, provider=provider, fallback=fallback)
+    q_id, a_id = await _store_chat(db, session_id, request.message, answer, provider)
+    return ChatResponse(
+        answer=answer,
+        session_id=session_id,
+        provider=provider,
+        fallback=fallback,
+        question_id=q_id,
+        answer_id=a_id,
+    )
