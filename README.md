@@ -637,6 +637,12 @@ they surfaced, and the fixes that followed.
 
 ### Timeline
 
+It didn't start as any of this. The first version, in January 2026, was a
+voice recorder: press record, get a transcript, get some notes from a local
+model. Using it in a real classroom every week for six months is what turned
+it into what's here today — each feature below exists because a lecture
+showed it was missing.
+
 This repository's history starts on 2026-09-14, when the project went public
 and the earlier history — which contained personal details and development
 noise — was squashed into one commit. The project itself is older:
