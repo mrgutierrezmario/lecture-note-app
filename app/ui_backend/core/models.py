@@ -248,4 +248,20 @@ class ChatMessage(Base):
     role = Column(String(16), nullable=False)  # "user" | "assistant"
     text = Column(Text, nullable=False)
     provider = Column(String(64), nullable=True)  # which model answered
+    # Who asked: a viewer of a shared lecture has their own conversation.
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SessionShare(Base):
+    """A lecture shared read-only with another user: they see it in History,
+    can read the transcript and notes, ask their own questions and download
+    exports, but only the owner (or an admin) can change it."""
+
+    __tablename__ = "session_shares"
+
+    session_id = Column(String(36), ForeignKey("sessions.id", ondelete="CASCADE"), primary_key=True)
+    user_id = Column(
+        UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), primary_key=True, index=True
+    )
     created_at = Column(DateTime, default=datetime.utcnow)

@@ -15,10 +15,18 @@ from core.models import (
     DriveFile,
     NotesVersion,
     Session,
+    SessionShare,
     TranscriptSegment,
     User,
 )
-from core.schemas import SessionLock, SessionOwner, SessionRename, SessionSummary, StorageUsage
+from core.schemas import (
+    SessionLock,
+    SessionOwner,
+    SessionRename,
+    SessionShares,
+    SessionSummary,
+    StorageUsage,
+)
 from storage import quota
 from storage.s3_client import s3_client
 
@@ -85,9 +93,20 @@ async def list_sessions(
         .order_by(Session.created_at.desc())
     )
     if not user.is_admin:
-        query = query.where(Session.user_id == user.id)
+        shared_ids = select(SessionShare.session_id).where(SessionShare.user_id == user.id)
+        query = query.where((Session.user_id == user.id) | Session.id.in_(shared_ids))
 
     rows = (await db.execute(query)).all()
+    # Who each lecture is shared with (owner/admin see this on the row).
+    shares: dict[str, list[str]] = {}
+    for sid, uname in (
+        await db.execute(
+            select(SessionShare.session_id, User.username)
+            .join(User, User.id == SessionShare.user_id)
+            .where(SessionShare.session_id.in_([r[0].id for r in rows] or [""]))
+        )
+    ).all():
+        shares.setdefault(sid, []).append(uname)
     return [
         SessionSummary(
             id=s.id,
@@ -101,9 +120,61 @@ async def list_sessions(
             locked=bool(s.locked),
             owner=username if user.is_admin else None,
             drive_saved_at=saved_at,
+            can_edit=user.is_admin or s.user_id == user.id,
+            shared_by=None if (user.is_admin or s.user_id == user.id) else username,
+            shared_with=sorted(shares.get(s.id, []))
+            if (user.is_admin or s.user_id == user.id)
+            else [],
         )
         for s, segments, chunk_count, kept, username, saved_at in rows
     ]
+
+
+@router.get("/{session_id}/shares", response_model=SessionShares)
+async def get_shares(
+    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
+    """Usernames a lecture is shared with (owner or admin)."""
+    await _owned_session(session_id, user, db)
+    names = (
+        (
+            await db.execute(
+                select(User.username)
+                .join(SessionShare, SessionShare.user_id == User.id)
+                .where(SessionShare.session_id == session_id)
+                .order_by(User.username)
+            )
+        )
+        .scalars()
+        .all()
+    )
+    return SessionShares(usernames=list(names))
+
+
+@router.put("/{session_id}/shares", response_model=SessionShares)
+async def set_shares(
+    session_id: str,
+    body: SessionShares,
+    user: CurrentUser = Depends(forbid_demo),
+    db: AsyncSession = Depends(get_db),
+):
+    """Replace the set of users a lecture is shared with (owner or admin).
+    Unticking someone in the dialog removes their access immediately."""
+    session = await _owned_session(session_id, user, db)
+    wanted = {u.strip().lower() for u in body.usernames if u.strip()}
+    targets = (
+        (await db.execute(select(User).where(User.username.in_(wanted or [""])))).scalars().all()
+    )
+    missing = wanted - {t.username for t in targets}
+    if missing:
+        raise HTTPException(404, f"No user named {sorted(missing)[0]!r}")
+    await db.execute(delete(SessionShare).where(SessionShare.session_id == session_id))
+    for t in targets:
+        if t.id != session.user_id:  # sharing with the owner is meaningless
+            db.add(SessionShare(session_id=session_id, user_id=t.id))
+    await db.commit()
+    logger.info("Session %s shared with %s by %s", session_id, sorted(wanted), user.username)
+    return SessionShares(usernames=sorted(t.username for t in targets if t.id != session.user_id))
 
 
 async def _locked_count(db: AsyncSession, user_id) -> int:

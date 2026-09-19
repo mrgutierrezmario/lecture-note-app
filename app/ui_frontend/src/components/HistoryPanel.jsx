@@ -8,7 +8,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon, SpinnerIcon, PdfIcon, DocIcon, UserIcon } from './Icons'
 import { useDialog } from './Dialog'
 import { prepareMp3, downloadUrl } from '../lib/mp3'
-import AssignOwnerDialog from './AssignOwnerDialog'
+import ShareDialog from './ShareDialog'
 
 const formatMB = bytes => `${Math.round(bytes / 1048576)} MB`
 
@@ -100,15 +100,13 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
     }
   }
 
-  // Admin: hand a lecture to another account (the demo account, or a user who
-  // recorded under the wrong login). The dialog lists the registered users.
-  const [assigning, setAssigning] = useState(null) // the lecture being reassigned
-  const reassign = (item) => setAssigning(item)
-  const assignTo = async (username) => {
-    const response = await fetch(`/api/sessions/${assigning.id}/owner`, {
-      method: 'PATCH',
+  // Share a lecture read-only with other accounts (owner or admin).
+  const [sharing, setSharing] = useState(null) // the lecture being shared
+  const shareWith = async (usernames) => {
+    const response = await fetch(`/api/sessions/${sharing.id}/shares`, {
+      method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username }),
+      body: JSON.stringify({ usernames }),
     })
     const data = await response.json().catch(() => ({}))
     if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`)
@@ -235,6 +233,8 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                         ? <span className="history-tag history-tag-busy"><SpinnerIcon size={12} /> Saving to Drive: {driveBusy[item.id]}</span>
                         : item.drive_saved_at && <span className="history-tag" data-tip={`Saved to Google Drive ${formatDate(item.drive_saved_at)}`}><DriveIcon size={12} /> Drive</span>}
                       {user.is_admin && item.owner && <span className="history-tag history-owner">{item.owner}</span>}
+                      {item.shared_by && <span className="history-tag" data-tip="Shared with you — read-only"><UserIcon size={12} /> shared by {item.shared_by}</span>}
+                      {item.can_edit && item.shared_with?.length > 0 && <span className="history-tag" data-tip={`Shared with ${item.shared_with.join(', ')}`}><UserIcon size={12} /> shared</span>}
                     </span>
                   </button>
                   <span className="user-row-actions">
@@ -277,10 +277,8 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                         )}
                       </div>
                     </details>
-                    {!user.is_demo && (<>
-                    {user.is_admin && (
-                      <button className="btn-icon" onClick={() => reassign(item)} data-tip="Assign this lecture to another user (e.g. the demo account)" aria-label="Assign to user"><UserIcon size={16} /></button>
-                    )}
+                    {!user.is_demo && item.can_edit && (<>
+                    <button className={`btn-icon${item.shared_with?.length ? ' btn-icon-active' : ''}`} onClick={() => setSharing(item)} data-tip={item.shared_with?.length ? `Shared with ${item.shared_with.join(', ')} — click to change` : 'Share read-only with other accounts'} aria-label="Share lecture"><UserIcon size={16} /></button>
                     <button className="btn-icon" onClick={() => rename(item)} data-tip="Rename" aria-label="Rename lecture"><EditIcon size={16} /></button>
                     <button
                       className={`btn-icon${item.locked ? ' btn-icon-active' : ''}`}
@@ -301,13 +299,8 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
             </ul>
           )}
 
-          {assigning && (
-            <AssignOwnerDialog
-              lecture={assigning}
-              currentOwner={assigning.owner}
-              onAssign={assignTo}
-              onClose={() => setAssigning(null)}
-            />
+          {sharing && (
+            <ShareDialog lecture={sharing} onSave={shareWith} onClose={() => setSharing(null)} />
           )}
 
           <p className="settings-note settings-note-full history-note">

@@ -280,8 +280,11 @@ hashed). Logins last 30 days.
   Password works well — use a dedicated `…donotreply@gmail.com` account so
   replies don't land in your inbox). Without mail, the link isn't offered and
   admins reset passwords from **Settings → Users**.
+- **Sharing:** the person icon on a History row shares a lecture read-only
+  with other accounts (tick/untick users). They see it in their History,
+  can read, ask their own questions and export; only the owner can change it.
 - **Demo account (optional):** create a user with the *Demo* switch (Settings →
-  Users) and assign it a lecture or two (History → the person icon). The
+  Users) and share a lecture or two with it (History → the person icon). The
   sign-in page then offers **Try the demo** — a read-only look at those
   lectures: transcript, notes, questions (tighter usage caps), exports; no
   recording, uploads, Drive or settings changes, and demo chats aren't stored.

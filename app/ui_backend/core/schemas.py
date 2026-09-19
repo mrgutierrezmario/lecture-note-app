@@ -333,6 +333,19 @@ class SessionOwner(BaseModel):
     username: str
 
 
+class SessionShares(BaseModel):
+    """Who a lecture is shared with (``GET``/``PUT /api/sessions/{id}/shares``)."""
+
+    usernames: list[str]
+
+
+class UserName(BaseModel):
+    """A registered account, as much as any signed-in user may see of others."""
+
+    username: str
+    is_demo: bool = False
+
+
 class RegisterRequest(BaseModel):
     """Self-registration from the sign-in page; email is required here."""
 

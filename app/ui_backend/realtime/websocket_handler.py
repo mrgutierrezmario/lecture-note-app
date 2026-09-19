@@ -25,7 +25,7 @@ import logging
 import uuid as uuid_module
 
 from fastapi import WebSocket, WebSocketDisconnect
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -35,7 +35,7 @@ from ai.transcriber import build_prompt, set_session_prompt, transcribe_chunk
 from ai.transcriber import reset_session as reset_transcriber_session
 from core.config import get_settings
 from core.database import AsyncSessionLocal
-from core.models import AudioChunk, Session, TranscriptSegment
+from core.models import AudioChunk, Session, SessionShare, TranscriptSegment
 from integrations import google_drive
 from storage import quota
 from storage.s3_client import s3_client
@@ -245,12 +245,24 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
 
     async with AsyncSessionLocal() as db:
         session = await ensure_session_exists(db, session_id, user.id)
-        if not user.is_admin and session.user_id != user.id:
-            logger.warning(
-                "User %s tried to join session %s owned by someone else", user.username, session_id
+        # Owner and admins may record; a user the lecture is shared with may
+        # watch it live (transcript and notes arrive on the socket) but never
+        # send audio; the demo account is a viewer too.
+        can_record = (user.is_admin or session.user_id == user.id) and not user.is_demo
+        if not can_record and not user.is_demo:
+            shared = await db.scalar(
+                select(func.count())
+                .select_from(SessionShare)
+                .where(SessionShare.session_id == session_id, SessionShare.user_id == user.id)
             )
-            await websocket.close(code=1008)
-            return
+            if not shared:
+                logger.warning(
+                    "User %s tried to join session %s owned by someone else",
+                    user.username,
+                    session_id,
+                )
+                await websocket.close(code=1008)
+                return
 
         existing_chunks = await db.execute(
             select(AudioChunk)
@@ -286,12 +298,17 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                     if msg_type == "ping":
                         await websocket.send_json({"type": "pong"})
 
-                    elif msg_type == "start" and user.is_demo:
+                    elif msg_type == "start" and not can_record:
                         await websocket.send_json(
                             {
                                 "type": "status",
-                                "message": "Demo account — recording is disabled. Create your "
-                                "own account to record lectures.",
+                                "message": (
+                                    "Demo account — recording is disabled. Create your own "
+                                    "account to record lectures."
+                                    if user.is_demo
+                                    else "This lecture was shared with you — only its owner can "
+                                    "record into it."
+                                ),
                             }
                         )
 
@@ -406,8 +423,8 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                 break
 
             elif "bytes" in data:
-                if user.is_demo:
-                    continue  # never store or transcribe audio for the demo account
+                if not can_record:
+                    continue  # viewers (shared / demo) never add audio
                 audio_data = data["bytes"]
                 current_index = chunk_index
                 chunk_index += 1

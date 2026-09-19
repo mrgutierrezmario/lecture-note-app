@@ -42,7 +42,14 @@ def test_demo_login_is_public_but_needs_a_demo_user(client):
 
 
 def test_protected_paths_require_login(client):
-    for path in ("/api/sessions", "/api/settings", "/api/drive", "/api/auth/me"):
+    for path in (
+        "/api/sessions",
+        "/api/settings",
+        "/api/drive",
+        "/api/auth/me",
+        "/api/auth/users/names",
+        "/api/sessions/x/shares",
+    ):
         assert client.get(path).status_code == 401, path
 
 

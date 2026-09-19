@@ -36,6 +36,8 @@ function Workspace({ user, onLogout, onUserChange }) {
   const [sessionId, setSessionId] = useState(() => uuidv4())
   // Opened from history: transcript/notes/chat/exports work, recording is off.
   const [viewingPast, setViewingPast] = useState(false)
+  // True when the open lecture was shared with us: read it, ask about it, but don't change it.
+  const [viewerReadOnly, setViewerReadOnly] = useState(false)
   const [title, setTitle] = useState('')
   const [isRecording, setIsRecording] = useState(false)
   const [transcript, setTranscript] = useState([])
@@ -520,6 +522,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     currentSessionRef.current = item.id
     setSessionId(item.id)
     setViewingPast(true)
+    setViewerReadOnly(item.can_edit === false)
     setTitle(item.title || '')
     setVocabulary('')
     setNotesFocus('')
@@ -578,6 +581,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     currentSessionRef.current = fresh
     setSessionId(fresh)
     setViewingPast(false)
+    setViewerReadOnly(false)
     setTitle('')
     setVocabulary('')
     setNotesFocus('')
@@ -615,7 +619,7 @@ function Workspace({ user, onLogout, onUserChange }) {
           disabled={isRecording || viewingPast || user.is_demo}
           vocabulary={vocabulary}
           notesFocus={notesFocus}
-          onEditDetails={user.is_demo ? undefined : () => setDetailsOpen(true)}
+          onEditDetails={user.is_demo || viewerReadOnly ? undefined : () => setDetailsOpen(true)}
         />
 
         <div className="app-bar-actions">
@@ -753,7 +757,7 @@ function Workspace({ user, onLogout, onUserChange }) {
 
       {viewingPast && (
         <p className="toolbar-hint toolbar-hint-info">
-          Viewing a past lecture — you can read, export, and ask questions about it. Recording is off; use New lecture to record.
+          {viewerReadOnly ? 'This lecture was shared with you — read, export and ask questions about it; only its owner can change it. ' : 'Viewing a past lecture — you can read, export, and ask questions about it. Recording is off; use New lecture to record.'}
         </p>
       )}
 
@@ -782,12 +786,12 @@ function Workspace({ user, onLogout, onUserChange }) {
           version={notesVersion}
           sessionId={sessionId}
           isRecording={isRecording}
-          readOnly={user.is_demo}
+          readOnly={user.is_demo || viewerReadOnly}
           onNotesChange={(md, v) => { setNotes(md); setNotesVersion(v) }}
         />
         <div className="right-pane">
           {/* Keyed so uploads and chat history reset when switching lectures. */}
-          {!user.is_demo && <FileUpload key={`upload-${sessionId}`} sessionId={sessionId} />}
+          {!user.is_demo && !viewerReadOnly && <FileUpload key={`upload-${sessionId}`} sessionId={sessionId} />}
           <ChatPane key={`chat-${sessionId}`} sessionId={sessionId} readOnly={user.is_demo} />
         </div>
       </main>

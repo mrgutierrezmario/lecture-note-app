@@ -19,7 +19,7 @@ from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from accounts import ratelimit
-from accounts.auth import CurrentUser, current_user, forbid_demo
+from accounts.auth import CurrentUser, current_user
 from ai.document_processor import extract_text, image_media_type
 from ai.image_analyzer import caption_image as blip_caption
 from core.config import get_settings
@@ -31,6 +31,7 @@ from core.models import (
     DriveLink,
     NotesVersion,
     Session,
+    SessionShare,
     TranscriptSegment,
 )
 from core.schemas import (
@@ -80,17 +81,53 @@ def _check_usage(user: CurrentUser, kind: str) -> None:
         )
 
 
+async def _is_shared_with(db: AsyncSession, session_id: str, user_id) -> bool:
+    return (
+        await db.scalar(
+            select(func.count())
+            .select_from(SessionShare)
+            .where(SessionShare.session_id == session_id, SessionShare.user_id == user_id)
+        )
+        or 0
+    ) > 0
+
+
 async def session_access(
     session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
 ):
-    """Every route here is scoped to one session: the owner or an admin may use
-    it. Sessions recorded before accounts existed have no owner and are
-    admin-only. A session that does not exist yet (the first websocket 'start'
-    creates it) is fine — the caller will get a 404 from its own lookup."""
+    """Every route here is scoped to one session: the owner, an admin, or a
+    user the lecture is shared with may *read* it (writes need
+    ``session_writer``). Sessions recorded before accounts existed have no
+    owner and are admin-only. A session that does not exist yet (the first
+    websocket 'start' creates it) is fine — the caller will get a 404 from
+    its own lookup."""
     result = await db.execute(select(Session).where(Session.id == session_id))
     session = result.scalar_one_or_none()
-    if session is not None and not user.is_admin and session.user_id != user.id:
+    if session is None or user.is_admin or session.user_id == user.id:
+        return
+    if not await _is_shared_with(db, session_id, user.id):
         raise HTTPException(status_code=403, detail="This lecture belongs to another user")
+
+
+async def session_writer(
+    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+) -> CurrentUser:
+    """The owner or an admin — the only ones who may change a lecture. Viewers
+    of a shared lecture and the demo account are read-only."""
+    if user.is_demo:
+        raise HTTPException(
+            status_code=403,
+            detail="The demo account can't do that — create your own account to record lectures",
+        )
+    session = (
+        await db.execute(select(Session).where(Session.id == session_id))
+    ).scalar_one_or_none()
+    if session is not None and not user.is_admin and session.user_id != user.id:
+        raise HTTPException(
+            status_code=403,
+            detail="Only the lecture's owner can change it (it was shared with you)",
+        )
+    return user
 
 
 router = APIRouter(prefix="/api/session", tags=["sessions"], dependencies=[Depends(session_access)])
@@ -113,7 +150,7 @@ async def update_session_details(
     session_id: str,
     body: SessionDetails,
     db: AsyncSession = Depends(get_db),
-    _guard: CurrentUser = Depends(forbid_demo),
+    _guard: CurrentUser = Depends(session_writer),
 ):
     """Change a lecture's title, key terms or notes focus (also for past lectures).
 
@@ -197,11 +234,18 @@ async def get_notes(session_id: str, db: AsyncSession = Depends(get_db)):
 
 
 async def _store_chat(
-    db: AsyncSession, session_id: str, question: str, answer: str, provider: str | None
+    db: AsyncSession,
+    session_id: str,
+    user_id,
+    question: str,
+    answer: str,
+    provider: str | None,
 ) -> tuple[uuid.UUID, uuid.UUID]:
-    """Keep the exchange with the lecture (pasted images are not stored)."""
-    q = ChatMessage(session_id=session_id, role="user", text=question)
-    a = ChatMessage(session_id=session_id, role="assistant", text=answer, provider=provider)
+    """Keep the exchange with the lecture, per asking user (images not stored)."""
+    q = ChatMessage(session_id=session_id, user_id=user_id, role="user", text=question)
+    a = ChatMessage(
+        session_id=session_id, user_id=user_id, role="assistant", text=answer, provider=provider
+    )
     db.add_all([q, a])
     await db.commit()
     return q.id, a.id
@@ -209,10 +253,16 @@ async def _store_chat(
 
 @router.delete("/{session_id}/chat", status_code=204)
 async def clear_chat(
-    session_id: str, db: AsyncSession = Depends(get_db), _guard: CurrentUser = Depends(forbid_demo)
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    _guard: CurrentUser = Depends(session_writer),
 ):
-    """Forget every question and answer for this lecture."""
-    await db.execute(delete(ChatMessage).where(ChatMessage.session_id == session_id))
+    """Forget every question and answer of yours for this lecture."""
+    await db.execute(
+        delete(ChatMessage).where(
+            ChatMessage.session_id == session_id, ChatMessage.user_id == _guard.id
+        )
+    )
     await db.commit()
     return Response(status_code=204)
 
@@ -222,7 +272,7 @@ async def delete_chat_turn(
     session_id: str,
     message_id: uuid.UUID,
     db: AsyncSession = Depends(get_db),
-    _guard: CurrentUser = Depends(forbid_demo),
+    _guard: CurrentUser = Depends(session_writer),
 ):
     """Delete one exchange: the message and its partner (a question with its
     answer, or an answer with its question)."""
@@ -230,7 +280,7 @@ async def delete_chat_turn(
         (
             await db.execute(
                 select(ChatMessage)
-                .where(ChatMessage.session_id == session_id)
+                .where(ChatMessage.session_id == session_id, ChatMessage.user_id == _guard.id)
                 .order_by(ChatMessage.created_at, ChatMessage.id)
             )
         )
@@ -271,8 +321,10 @@ async def chat_history(
     return rows
 
 
-async def _lecture_doc(session_id: str, db: AsyncSession) -> documents_export.LectureDoc:
-    """Gather title, notes, transcript and Q&A for a PDF/Word export."""
+async def _lecture_doc(
+    session_id: str, db: AsyncSession, user_id=None
+) -> documents_export.LectureDoc:
+    """Gather title, notes, transcript and the requesting user's Q&A for an export."""
     session = (
         await db.execute(select(Session).where(Session.id == session_id))
     ).scalar_one_or_none()
@@ -334,9 +386,11 @@ def _export_filename(title: str, session_id: str, ext: str) -> str:
 
 
 @router.get("/{session_id}/export/lecture.pdf")
-async def export_pdf(session_id: str, db: AsyncSession = Depends(get_db)):
+async def export_pdf(
+    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
     """Notes, questions & answers and the full transcript as one PDF."""
-    lec = await _lecture_doc(session_id, db)
+    lec = await _lecture_doc(session_id, db, user.id)
     data = await asyncio.to_thread(documents_export.build_pdf, lec)
     return Response(
         content=data,
@@ -346,9 +400,11 @@ async def export_pdf(session_id: str, db: AsyncSession = Depends(get_db)):
 
 
 @router.get("/{session_id}/export/lecture.docx")
-async def export_docx(session_id: str, db: AsyncSession = Depends(get_db)):
+async def export_docx(
+    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+):
     """The same document as a Word file."""
-    lec = await _lecture_doc(session_id, db)
+    lec = await _lecture_doc(session_id, db, user.id)
     data = await asyncio.to_thread(documents_export.build_docx, lec)
     return Response(
         content=data,
@@ -362,7 +418,7 @@ async def edit_notes(
     session_id: str,
     body: NotesEdit,
     db: AsyncSession = Depends(get_db),
-    _guard: CurrentUser = Depends(forbid_demo),
+    _guard: CurrentUser = Depends(session_writer),
 ):
     """Save the user's edited notes as a new version.
 
@@ -399,7 +455,9 @@ async def edit_notes(
 
 @router.post("/{session_id}/notes/regenerate", response_model=NotesResponse)
 async def regenerate_notes(
-    session_id: str, db: AsyncSession = Depends(get_db), _guard: CurrentUser = Depends(forbid_demo)
+    session_id: str,
+    db: AsyncSession = Depends(get_db),
+    _guard: CurrentUser = Depends(session_writer),
 ):
     """Rebuild the notes from the whole transcript — e.g. after setting a focus
     on a past lecture. Takes a while for a long lecture; the reply is the
@@ -520,7 +578,7 @@ async def audio_status(session_id: str):
 
 @router.post("/{session_id}/drive")
 async def save_to_drive(
-    session_id: str, user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)
+    session_id: str, user: CurrentUser = Depends(session_writer), db: AsyncSession = Depends(get_db)
 ):
     """Save notes, transcript and MP3 to the *owner's* Google Drive (background).
 
@@ -622,7 +680,7 @@ async def stream_audio_chunk(
 async def upload_document(
     session_id: str,
     file: UploadFile = File(...),
-    user: CurrentUser = Depends(forbid_demo),
+    user: CurrentUser = Depends(session_writer),
     db: AsyncSession = Depends(get_db),
 ):
     """Attach a PDF, PowerPoint, Word file or image to the lecture.
@@ -978,7 +1036,7 @@ Instructions:
     q_id, a_id = (
         (None, None)
         if user.is_demo
-        else await _store_chat(db, session_id, request.message, answer, provider)
+        else await _store_chat(db, session_id, user.id, request.message, answer, provider)
     )
     return ChatResponse(
         answer=answer,

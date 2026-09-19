@@ -49,6 +49,7 @@ from core.schemas import (
     RegistrationStatus,
     ResetPasswordRequest,
     UserCreate,
+    UserName,
     UserResponse,
     UserUpdate,
 )
@@ -679,6 +680,22 @@ async def change_password(
 
 
 # ── Admin: user management ────────────────────────────────────────────────────
+
+
+@router.get("/users/names", response_model=list[UserName])
+async def list_usernames(
+    user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)
+):
+    """Usernames only (no emails or roles beyond the demo flag), so any user
+    can pick who to share a lecture with."""
+    rows = (
+        await db.execute(
+            select(User.username, User.is_demo)
+            .where(User.disabled.is_(False), User.approved.is_(True))
+            .order_by(User.username)
+        )
+    ).all()
+    return [UserName(username=u, is_demo=d) for u, d in rows if u != user.username]
 
 
 @router.get("/users", response_model=list[UserResponse], dependencies=[Depends(require_admin)])
