@@ -236,6 +236,12 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   moved under the storage field.
 - Released as **v1.1.0** (minor: sharing + demo are new features since
   1.0.0).
+- **Operator runbook** `deploy/OPERATIONS.md`: the to-do list (automatic
+  things, weekly Dependabot glance, monthly pull + rebuild on the first
+  Monday, restore drill every few months, major-bump validation, yearly
+  items, site-down and data-loss steps, account recovery, where things
+  live). Linked from the README. Calendar reminder (.ics, first Monday
+  monthly 09:00 from 2026-10-05) handed to the operator to import.
 - Noticed: "GDP and CPI Class" is *owned* by `test`, not shared — fine for
   the demo, but the operator cannot rename/keep it from the admin account.
 

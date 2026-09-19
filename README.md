@@ -32,7 +32,7 @@ optional.
 | Afterwards | Edit or regenerate the notes; ask follow-up questions (chat is kept with the lecture); export as Markdown, text, PDF, Word or MP3 |
 | Works on | Desktop browsers and phones (installable as a home-screen app; the screen stays awake while recording) |
 | Your data | Nightly encrypted off-site backups with a scripted restore drill; users can keep their own copy of every lecture in their Google Drive |
-| Operations | `/health` reports the database and storage for an uptime monitor (UptimeRobot works on the free tier), backup failures email you, container logs rotate, CI runs lint + tests on every push |
+| Operations | `/health` reports the database and storage for an uptime monitor (UptimeRobot works on the free tier), backup failures email you, container logs rotate, CI runs lint + tests on every push; [`deploy/OPERATIONS.md`](deploy/OPERATIONS.md) is the operator's to-do list |
 
 <details>
 <summary><strong>More screenshots</strong> — light mode, phone, history, settings</summary>
@@ -198,6 +198,9 @@ deploy/stop.sh                                   # stop; data is kept
 docker compose -f deploy/compose.yml logs -f app # follow the app log
 docker compose -f deploy/compose.yml exec app python -m scripts.manage_users list
 ```
+
+What you actually have to do once it runs — weekly, monthly, when it's
+down — is one page: [`deploy/OPERATIONS.md`](deploy/OPERATIONS.md).
 
 ### Keeping it up after a reboot
 
