@@ -560,9 +560,16 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
     "runs at home or in the cloud" story; fits as project #2 for LinkedIn.
 
 **Status 2026-09-19:** feature-complete and stable. Nothing required is
-open; remaining items are optional. Weekly Dependabot PRs: CI checks them;
-anything beyond a patch bump gets `DRILL_IMAGE=` restore-drill validation
-before merging (see 2026-09-19 dependency review).
+open; remaining items are optional.
+
+**Dependabot routine** (the one recurring chore): every Monday it opens PRs
+bumping pinned libraries; GitHub emails the owner on open and when CI
+finishes. Handling: patch bumps with green CI → merge; major/minor jumps →
+build the image and validate with `DRILL_IMAGE=… deploy/restore-drill.sh`
+before merging; Python/Node base-image majors → decline (ignored in
+dependabot.yml). Merging changes the repo only — the live site updates on
+the next image build/deploy. Ignoring PRs breaks nothing; they just
+accumulate (see the 2026-09-19 dependency review for the worked example).
 11. ~~Operator to run `deploy/restore-drill.sh --from-remote`~~ — done
     2026-09-19, PASSED against the new account's Drive.
 12. ~~Revoke the two Gmail App Passwords that passed through chat~~ — done
