@@ -10,6 +10,7 @@ into someone else's account.
 
 import contextlib
 import logging
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
@@ -68,7 +69,8 @@ async def callback(
 ):
     """Google's return trip: store the refresh token, then land back in the app."""
     if error or not code or not state:
-        return RedirectResponse(f"/?drive=error&reason={error or 'cancelled'}", status_code=302)
+        reason = quote(error or "cancelled")
+        return RedirectResponse(f"/?drive=error&reason={reason}", status_code=302)
     if not google_drive.check_state(state, user.id):
         return RedirectResponse("/?drive=error&reason=expired", status_code=302)
     try:
