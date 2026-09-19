@@ -237,6 +237,11 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   1.0.0"): first commit 2026-01-29, first real lecture 2026-03-26, work in
   Jan/Mar/Apr/Sep, daily use through the summer, v1.0.0 on 09-19 — mined
   from `backup-full-history-2026-09-14` (95 commits; still never pushed).
+- **"GDP and CPI Class" (2026-03-26) restored** into the live DB from the
+  09-13 snapshot (session, 24 segments, 2 notes versions; audio chunk rows
+  marked deleted; owner = admin) so History shows the first recorded class.
+  Screenshot `design/screenshots/history-timeline.png` under the README
+  timeline (March → September rows).
 
 ### Code-quality audit (2026-09-19, late)
 - Verified: ruff format/check clean on all 51 backend files; docstrings on
