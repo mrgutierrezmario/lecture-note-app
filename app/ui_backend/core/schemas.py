@@ -429,6 +429,9 @@ class SessionSummary(BaseModel):
     locked: bool = False  # "kept": exempt from cleanup and deletion
     owner: str | None = None  # username; only filled in for admins
     drive_saved_at: datetime | None = None  # last "save to Google Drive"
+    can_edit: bool = True  # False for a lecture shared with the viewer (read-only)
+    shared_by: str | None = None  # owner's username when the viewer isn't the owner
+    shared_with: list[str] = []  # usernames it is shared with (owner/admin view)
 
 
 class SessionRename(BaseModel):
