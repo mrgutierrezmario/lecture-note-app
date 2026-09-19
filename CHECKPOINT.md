@@ -236,6 +236,10 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   drill scripts), `python -m scripts.manage_users` (start.sh, README).
 - Verified: ruff clean, 40 tests, and a full restore drill on the built
   image (migrations, health, Whisper, websocket, CLI) before deploying.
+- Both READMEs describe the new layout (root: Project layout tree; backend
+  README: package table). **License unchanged** — PolyForm Noncommercial
+  1.0.0 covers the same code; new deps reportlab (BSD) and python-docx
+  (MIT) are permissive; pymupdf (AGPL) is dev-only, not shipped.
 
 ### Dependency review, phone fixes, docs (2026-09-19)
 - **Dependabot PRs**: #5 (20 Python bumps: FastAPI 0.109→0.141, pydantic
