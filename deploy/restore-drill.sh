@@ -5,6 +5,10 @@
 #   deploy/restore-drill.sh --from-remote   fetch the off-site copy first (what a
 #                                           real disaster recovery would do)
 #   deploy/restore-drill.sh --keep          leave the drill stack running to poke at
+#   DRILL_IMAGE=lecture-notes-app:candidate deploy/restore-drill.sh
+#                                           run a different app image (e.g. one built
+#                                           from a dependency-update branch) against
+#                                           the restored data — a staging test
 #
 # Restores the bundle + audio mirror into a throwaway Compose project
 # ("lecture-drill": its own volumes, app on port $DRILL_PORT, a fresh Tailscale
@@ -25,6 +29,11 @@ log() { echo "[drill $(date '+%H:%M:%S')] $*"; }
 fail() { echo "[drill] FAILED: $*" >&2; exit 1; }
 WORK=$(mktemp -d)
 DC="docker compose -p $DRILL -f compose.yml --env-file $WORK/drill.env"
+if [ -n "${DRILL_IMAGE:-}" ]; then
+  # Compose override: run the candidate image instead of lecture-notes-app:latest.
+  printf 'services:\n  app:\n    image: %s\n    build: !reset null\n' "$DRILL_IMAGE" > "$WORK/image.yml"
+  DC="$DC -f $WORK/image.yml"
+fi
 cleanup() {
   status=$?
   if [ $KEEP = 1 ] && [ $status -eq 0 ]; then
@@ -53,7 +62,7 @@ BUNDLE=$(ls -1t "$SRC"/daily/lecture-notes-*.tar.gz 2>/dev/null | head -1)
 [ -n "$BUNDLE" ] || fail "no bundle under $SRC/daily"
 tar -C "$WORK" -xzf "$BUNDLE"
 STAGE=$(ls -d "$WORK"/lecture-notes-*)
-log "Bundle: $(basename "$BUNDLE")"
+log "Bundle: $(basename "$BUNDLE")${DRILL_IMAGE:+ · app image: $DRILL_IMAGE}"
 
 # The bundle's .env gives the drill the same DB/MinIO passwords the dump and
 # settings expect; ports and the Tailscale name are overridden so nothing

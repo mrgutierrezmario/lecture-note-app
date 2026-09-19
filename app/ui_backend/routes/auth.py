@@ -61,6 +61,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 _USERNAME_RE = re.compile(r"^[a-zA-Z0-9._-]{2,64}$")
 _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 MIN_PASSWORD = 8
+MAX_PASSWORD_BYTES = 72  # bcrypt's input limit; newer bcrypt raises instead of truncating
 
 
 def _validate_username(username: str) -> str:
@@ -96,6 +97,8 @@ async def _ensure_unique(db: AsyncSession, username: str, email: str | None) -> 
 def _validate_password(password: str) -> str:
     if len(password) < MIN_PASSWORD:
         raise HTTPException(400, f"Password must be at least {MIN_PASSWORD} characters")
+    if len(password.encode()) > MAX_PASSWORD_BYTES:
+        raise HTTPException(400, f"Password must be at most {MAX_PASSWORD_BYTES} characters")
     return password
 
 
