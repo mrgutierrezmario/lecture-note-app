@@ -613,6 +613,28 @@ To cut a release: bump `VERSION` and `app/ui_frontend/package.json`, add a
 CHANGELOG section, commit, then `git tag vX.Y.Z && git push --tags` and
 create the release on GitHub from the tag.
 
+### Keeping dependencies current
+
+Dependabot opens grouped update PRs every Monday (Python, frontend) and
+monthly (Docker base images, GitHub Actions); CI runs on each. A workflow
+(`.github/workflows/dependabot-auto-merge.yml`) lets **patch and minor**
+bumps merge themselves once CI is green, and comments on the rest — major
+bumps and base-image changes — which wait for a person. For those, build
+the candidate image and run it against a restored copy of real data before
+merging:
+
+```bash
+docker build -t lecture-notes-app:candidate -f deploy/Dockerfile .
+DRILL_IMAGE=lecture-notes-app:candidate deploy/restore-drill.sh
+```
+
+Merging changes the repository only. The running site picks up new
+libraries at the next image build on the server — `git pull` then
+`deploy/start.sh` — so do that on a schedule (first Monday of the month
+works) rather than after every merge. Security advisories arrive as
+separate PRs as soon as they are published, plus an alert under the repo's
+Security tab.
+
 ---
 
 ## Contributing

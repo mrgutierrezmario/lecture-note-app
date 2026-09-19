@@ -1,0 +1,51 @@
+# Let Dependabot's routine PRs merge themselves once CI is green.
+#
+# Patch and minor bumps are enabled for auto-merge here; GitHub then merges
+# the PR only after the required checks (branch protection) pass. Major
+# bumps — and the Docker base images, which are deliberate upgrades — are
+# left for a person: build the candidate image and run
+# `DRILL_IMAGE=… deploy/restore-drill.sh` before merging.
+#
+# Merging changes the repository only. The live site picks up the new
+# libraries at the next image build on the server (deploy/start.sh).
+name: Dependabot auto-merge
+
+on:
+  pull_request:
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Read the update's metadata
+        id: meta
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Enable auto-merge for patch and minor updates
+        if: >-
+          steps.meta.outputs.package-ecosystem != 'docker' &&
+          (steps.meta.outputs.update-type == 'version-update:semver-patch' ||
+           steps.meta.outputs.update-type == 'version-update:semver-minor')
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Leave a note on the ones that need a person
+        if: >-
+          steps.meta.outputs.package-ecosystem == 'docker' ||
+          steps.meta.outputs.update-type == 'version-update:semver-major'
+        run: >-
+          gh pr comment "$PR_URL" --body
+          "Not auto-merged: ${{ steps.meta.outputs.update-type }} on ${{ steps.meta.outputs.package-ecosystem }}.
+          Build the image and run \`DRILL_IMAGE=lecture-notes-app:candidate deploy/restore-drill.sh\` before merging."
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

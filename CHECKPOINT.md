@@ -647,12 +647,16 @@ open; remaining items are optional.
 
 **Dependabot routine** (the one recurring chore): every Monday it opens PRs
 bumping pinned libraries; GitHub emails the owner on open and when CI
-finishes. Handling: patch bumps with green CI → merge; major/minor jumps →
-build the image and validate with `DRILL_IMAGE=… deploy/restore-drill.sh`
-before merging; Python/Node base-image majors → decline (ignored in
-dependabot.yml). Merging changes the repo only — the live site updates on
-the next image build/deploy. Ignoring PRs breaks nothing; they just
-accumulate (see the 2026-09-19 dependency review for the worked example).
+finishes. Since 2026-09-19 `.github/workflows/dependabot-auto-merge.yml`
+auto-merges **patch and minor** bumps once CI is green (repo settings
+"Allow auto-merge" + "delete branch on merge" enabled via API) and comments
+on majors / Docker base images, which a person validates with
+`DRILL_IMAGE=… deploy/restore-drill.sh` before merging. Python/Node
+base-image majors are ignored in dependabot.yml. Merging changes the repo
+only — the live site updates on the next image build (`git pull` +
+`deploy/start.sh`; first Monday of the month). Ignoring PRs breaks nothing;
+they just accumulate (see the 2026-09-19 dependency review for the worked
+example).
 11. ~~Operator to run `deploy/restore-drill.sh --from-remote`~~ — done
     2026-09-19, PASSED against the new account's Drive.
 12. ~~Revoke the two Gmail App Passwords that passed through chat~~ — done
