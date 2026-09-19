@@ -1085,6 +1085,7 @@ a.btn-icon:hover {
   border-top: 1px solid var(--border);
   font-size: 12px;
   color: var(--faint);
+  text-align: center;
 }
 
 .settings-section h3 {
