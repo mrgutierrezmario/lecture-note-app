@@ -506,11 +506,35 @@ see nothing in the user's Drive except the files it created.
    value). Paste the Client ID and secret into **Settings → API keys → Google
    Drive (OAuth client)**.
 
-Optional: to let users pick an *existing* Drive folder with Google's chooser,
-enable the **Google Picker API** in the same project, create an **API key**
-restricted to it (Credentials → Create credentials → API key) and paste it
-under Settings → API keys → **Google Drive folder selector**. Without it users can still create
-folders (and move them anywhere afterwards).
+### Folder selector (optional)
+
+By default users type a folder name and the app creates it. With the folder
+selector they can instead pick a folder that already exists in their Drive,
+through Google's own chooser dialog — and the app is granted access to just
+that folder (the `drive.file` permission stays as narrow as before). It needs
+an API key, in the same Cloud project as the OAuth client:
+
+1. **Enable the API:** APIs & Services → Library → search **Google Picker API**
+   → Enable.
+2. **Create the key:** APIs & Services → Credentials → **+ Create credentials
+   → API key**. Give it a name such as `Lecture Notes Picker`.
+3. **Restrict it** (the key is visible in the browser by design, so make it
+   useless anywhere else): open the key → *Application restrictions* →
+   **Websites** → add `https://<your host>/*` · *API restrictions* →
+   **Restrict key** → tick **Google Picker API** only → Save.
+4. **Paste it into the app:** Settings → API keys → **Google Drive folder
+   selector** → *Folder selector API key* → Save.
+
+Users then see **Choose existing folder…** next to *Create folder* under
+Settings → Google Drive. When they pick one, the app records it, shows its name
+in *Folder in Drive*, and new saves go there.
+
+How it works: the browser asks the server for a short-lived access token for
+the user's own Drive (`GET /api/drive/picker-token`) and opens the picker with
+that token, the API key and the app id (the Cloud project number, which is
+the first part of the OAuth client id). Google ties the chosen folder to the
+app, so it can be read and written under `drive.file`; the server then
+confirms it can see the folder and saves its id.
 
 Refresh tokens are stored encrypted with `SECRET_KEY`; disconnecting revokes
 them at Google.
