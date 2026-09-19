@@ -233,6 +233,11 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   Picker API, created a key restricted to it and to the site, saved it;
   picked a folder and exported to it successfully.
 - Tests: +2 (app id, picker availability) → 42.
+- Settings sub-section renamed **Google Drive folder selector** (operator
+  kept missing "Picker API key"). README: "Folder selector (optional)" —
+  enable Google Picker API, create + restrict the key (Websites, Picker
+  API only), paste into Settings; how the token/app-id handshake works.
+  Guide notes the button appears only once an admin enabled it.
 
 ### Backend reorganised into packages (2026-09-19)
 - `app/ui_backend/` now has only `main.py` at the top level; modules moved
