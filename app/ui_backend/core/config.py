@@ -10,7 +10,6 @@ are visible everywhere immediately.
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -56,7 +55,7 @@ class Settings(BaseSettings):
     # Anthropic. vision_model reads lecture slides, diagrams and equations from
     # screenshots the student pastes into chat — the weakest vision tier struggles
     # with dense slides, so this defaults to the strongest rather than the cheapest.
-    anthropic_api_key: Optional[str] = None
+    anthropic_api_key: str | None = None
     vision_model: str = "claude-opus-5"
 
     # Notes + chat text generation: "ollama" (local, default), "gemini" or "openai".
@@ -67,9 +66,9 @@ class Settings(BaseSettings):
     # Slides/images: "claude" (default), "gemini", "openai", or "llava" (local only).
     # Falls back to llava, then BLIP.
     vision_provider: str = "claude"
-    gemini_api_key: Optional[str] = None
+    gemini_api_key: str | None = None
     gemini_model: str = "gemini-3.6-flash"
-    openai_api_key: Optional[str] = None
+    openai_api_key: str | None = None
     openai_model: str = "gpt-4o-mini"
 
     # Signs login cookies. Unset: a random key is generated at startup, which
@@ -96,7 +95,7 @@ class Settings(BaseSettings):
     # their own Google Drive. Set from the Settings panel; the secret lives in
     # STATE_DIR/.env. Redirect URI to register: <public_url>/api/drive/callback
     google_client_id: str = ""
-    google_client_secret: Optional[str] = None
+    google_client_secret: str | None = None
     # API key (restricted to the Google Picker API) that lets users pick an
     # existing Drive folder with Google's own chooser. Optional: without it the
     # app can only create folders. Set from the Settings panel.
@@ -125,7 +124,7 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=str(STATE_DIR / ".env"), env_file_encoding="utf-8")
 
 
-@lru_cache()
+@lru_cache
 def get_settings() -> Settings:
     """The single shared ``Settings`` instance (cached for the process lifetime)."""
     return Settings()

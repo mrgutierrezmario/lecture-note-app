@@ -6,7 +6,6 @@ Field comments explain anything that isn't obvious from the name.
 """
 
 from datetime import datetime
-from typing import Optional
 from uuid import UUID
 
 from pydantic import BaseModel, ConfigDict
@@ -18,12 +17,12 @@ class SessionResponse(BaseModel):
     """A lecture session row (``GET /api/session/{id}``)."""
 
     id: str
-    title: Optional[str]
+    title: str | None
     created_at: datetime
     updated_at: datetime
     last_notes_version: int
-    vocabulary: Optional[str] = None  # key terms for the transcriber
-    notes_focus: Optional[str] = None  # what the notes should emphasise
+    vocabulary: str | None = None  # key terms for the transcriber
+    notes_focus: str | None = None  # what the notes should emphasise
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -31,9 +30,9 @@ class SessionResponse(BaseModel):
 class SessionDetails(BaseModel):
     """Editable per-lecture settings (``PATCH /api/session/{id}``)."""
 
-    title: Optional[str] = None
-    vocabulary: Optional[str] = None
-    notes_focus: Optional[str] = None
+    title: str | None = None
+    vocabulary: str | None = None
+    notes_focus: str | None = None
 
 
 class NotesEdit(BaseModel):
@@ -64,14 +63,14 @@ class AudioChunkResponse(BaseModel):
 
     id: UUID
     chunk_index: int
-    s3_key: Optional[str]
+    s3_key: str | None
     size_bytes: int
     received_at: datetime
     decode_ok: bool
     transcribed_ok: bool
-    error: Optional[str]
+    error: str | None
     deleted_from_s3: bool
-    deleted_at: Optional[datetime]
+    deleted_at: datetime | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -116,8 +115,8 @@ class ChatRequest(BaseModel):
     """A question about the lecture, optionally with a pasted image."""
 
     message: str
-    image_base64: Optional[str] = None  # base64-encoded image, data-URL prefix stripped
-    image_media_type: Optional[str] = None  # e.g. "image/png"
+    image_base64: str | None = None  # base64-encoded image, data-URL prefix stripped
+    image_media_type: str | None = None  # e.g. "image/png"
     history: list[ChatTurn] = []  # the most recent exchanges, oldest first
 
 
@@ -127,8 +126,8 @@ class ChatMessageOut(BaseModel):
     id: UUID
     role: str
     text: str
-    provider: Optional[str] = None
-    created_at: Optional[datetime] = None
+    provider: str | None = None
+    created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -138,10 +137,10 @@ class ChatResponse(BaseModel):
 
     answer: str
     session_id: str
-    provider: Optional[str] = None  # e.g. gemini/gemini-3.6-flash, ollama/llama3, llava, blip
-    fallback: Optional[str] = None  # e.g. "Gemini unavailable: quota or rate limit exceeded"
-    question_id: Optional[UUID] = None  # stored ids, so the pair can be deleted from the UI
-    answer_id: Optional[UUID] = None
+    provider: str | None = None  # e.g. gemini/gemini-3.6-flash, ollama/llama3, llava, blip
+    fallback: str | None = None  # e.g. "Gemini unavailable: quota or rate limit exceeded"
+    question_id: UUID | None = None  # stored ids, so the pair can be deleted from the UI
+    answer_id: UUID | None = None
 
 
 # ── WebSocket messages (server → browser) ─────────────────────────────────────
@@ -181,7 +180,7 @@ class AuthStatus(BaseModel):
 
     source: str  # api_key | auth_token | profile | misconfigured | none
     detail: str
-    key_masked: Optional[str] = None  # last four characters only
+    key_masked: str | None = None  # last four characters only
     profile_on_disk: bool
     sdk_version: str
     sdk_supports_profiles: bool
@@ -215,12 +214,12 @@ class SettingsResponse(BaseModel):
     active_vision_provider: str
     claude_text_model: str
     gemini_model: str
-    gemini_key_masked: Optional[str] = None
+    gemini_key_masked: str | None = None
     openai_model: str
-    openai_key_masked: Optional[str] = None
+    openai_key_masked: str | None = None
     google_client_id: str = ""
     google_picker_api_key: str = ""
-    google_client_secret_masked: Optional[str] = None
+    google_client_secret_masked: str | None = None
     google_redirect_uri: str = ""
     ollama_base_url: str
     ollama_reachable: bool
@@ -238,28 +237,28 @@ class SettingsUpdate(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    anthropic_api_key: Optional[str] = None
-    vision_model: Optional[str] = None
-    ollama_model: Optional[str] = None
-    whisper_model: Optional[str] = None
-    notes_interval_seconds: Optional[int] = None
-    storage_quota_mb: Optional[int] = None
-    audio_retention_days: Optional[int] = None
-    whisper_language: Optional[str] = None
-    whisper_vocabulary: Optional[str] = None
-    registration_open: Optional[bool] = None
-    registration_approval: Optional[bool] = None
-    max_locked_lectures: Optional[int] = None
-    text_provider: Optional[str] = None
-    vision_provider: Optional[str] = None
-    claude_text_model: Optional[str] = None
-    gemini_model: Optional[str] = None
-    gemini_api_key: Optional[str] = None
-    openai_model: Optional[str] = None
-    openai_api_key: Optional[str] = None
-    google_client_id: Optional[str] = None
-    google_picker_api_key: Optional[str] = None
-    google_client_secret: Optional[str] = None
+    anthropic_api_key: str | None = None
+    vision_model: str | None = None
+    ollama_model: str | None = None
+    whisper_model: str | None = None
+    notes_interval_seconds: int | None = None
+    storage_quota_mb: int | None = None
+    audio_retention_days: int | None = None
+    whisper_language: str | None = None
+    whisper_vocabulary: str | None = None
+    registration_open: bool | None = None
+    registration_approval: bool | None = None
+    max_locked_lectures: int | None = None
+    text_provider: str | None = None
+    vision_provider: str | None = None
+    claude_text_model: str | None = None
+    gemini_model: str | None = None
+    gemini_api_key: str | None = None
+    openai_model: str | None = None
+    openai_api_key: str | None = None
+    google_client_id: str | None = None
+    google_picker_api_key: str | None = None
+    google_client_secret: str | None = None
 
 
 class ProviderTest(BaseModel):
@@ -292,13 +291,13 @@ class UserResponse(BaseModel):
 
     id: UUID
     username: str
-    email: Optional[str] = None
+    email: str | None = None
     is_admin: bool
     disabled: bool
-    quota_mb: Optional[int] = None  # None = global default applies
+    quota_mb: int | None = None  # None = global default applies
     email_verified: bool = True
     approved: bool = True  # False = waiting for an admin (Settings → Users → Approve)
-    created_at: Optional[datetime] = None
+    created_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -322,7 +321,7 @@ class UserCreate(BaseModel):
 
     username: str
     password: str
-    email: Optional[str] = None
+    email: str | None = None
     is_admin: bool = False
 
 
@@ -337,7 +336,7 @@ class RegisterRequest(BaseModel):
 class ProfileUpdate(BaseModel):
     """Fields a user may change on their own account."""
 
-    email: Optional[str] = None
+    email: str | None = None
 
 
 class RegistrationStatus(BaseModel):
@@ -377,7 +376,7 @@ class PasswordReset(BaseModel):
 class UserUpdate(BaseModel):
     """Admin edits to a user; ``clear_quota`` restores the global default."""
 
-    quota_mb: Optional[int] = None  # 0 = unlimited
+    quota_mb: int | None = None  # 0 = unlimited
     clear_quota: bool = False
 
 
@@ -398,7 +397,7 @@ class SessionSummary(BaseModel):
     """One row of the History drawer."""
 
     id: str
-    title: Optional[str]
+    title: str | None
     created_at: datetime
     updated_at: datetime
     segment_count: int
@@ -406,8 +405,8 @@ class SessionSummary(BaseModel):
     duration_seconds: int  # approximate: chunk count × 5 s
     has_audio: bool  # any chunk still in object storage
     locked: bool = False  # "kept": exempt from cleanup and deletion
-    owner: Optional[str] = None  # username; only filled in for admins
-    drive_saved_at: Optional[datetime] = None  # last "save to Google Drive"
+    owner: str | None = None  # username; only filled in for admins
+    drive_saved_at: datetime | None = None  # last "save to Google Drive"
 
 
 class SessionRename(BaseModel):
@@ -427,19 +426,19 @@ class DriveStatus(BaseModel):
 
     available: bool  # an admin has configured a Google OAuth client
     connected: bool
-    email: Optional[str] = None
+    email: str | None = None
     auto_export: bool = False
     folder_name: str = "AI Lecture Notes"
-    folder_url: Optional[str] = None
+    folder_url: str | None = None
     picker_available: bool = False  # an admin saved a Picker API key
 
 
 class DriveUpdate(BaseModel):
     """Change automatic saving, the folder path, or point at a picked folder."""
 
-    auto_export: Optional[bool] = None
-    folder_name: Optional[str] = None
-    folder_id: Optional[str] = None  # an existing folder chosen with Google's picker
+    auto_export: bool | None = None
+    folder_name: str | None = None
+    folder_id: str | None = None  # an existing folder chosen with Google's picker
 
 
 class DrivePickerToken(BaseModel):

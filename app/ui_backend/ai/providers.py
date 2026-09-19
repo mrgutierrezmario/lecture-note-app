@@ -240,7 +240,7 @@ async def _openai(prompt: str, max_tokens: int, temperature: float, timeout: flo
     try:
         text = r.json()["choices"][0]["message"]["content"].strip()
     except (KeyError, IndexError, TypeError):
-        raise ProviderError("OpenAI returned no text")
+        raise ProviderError("OpenAI returned no text") from None
     return Generation(text, f"openai/{s.openai_model}")
 
 

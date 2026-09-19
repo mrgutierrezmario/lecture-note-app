@@ -18,7 +18,6 @@ import secrets
 import time
 import uuid
 from dataclasses import dataclass
-from typing import Optional
 
 import bcrypt
 from fastapi import Depends, HTTPException, Request, WebSocket
@@ -73,7 +72,7 @@ def verify_password(password: str, password_hash: str) -> bool:
 
 # ── Signed cookie ─────────────────────────────────────────────────────────────
 
-_runtime_key: Optional[str] = None
+_runtime_key: str | None = None
 
 
 def _secret() -> bytes:
@@ -98,7 +97,7 @@ def make_token(user_id: uuid.UUID) -> str:
     return f"{payload}:{_sign(payload)}"
 
 
-def parse_token(token: str) -> Optional[uuid.UUID]:
+def parse_token(token: str) -> uuid.UUID | None:
     """Return the user id from a token, or ``None`` if the signature or expiry is bad."""
     try:
         user_id, expires, signature = token.rsplit(":", 2)
@@ -112,7 +111,7 @@ def parse_token(token: str) -> Optional[uuid.UUID]:
         return None
 
 
-def _cookie_from_headers(headers) -> Optional[str]:
+def _cookie_from_headers(headers) -> str | None:
     for name, value in headers:
         if name.lower() != b"cookie":
             continue
@@ -123,7 +122,7 @@ def _cookie_from_headers(headers) -> Optional[str]:
     return None
 
 
-async def _load_user(user_id: uuid.UUID) -> Optional[CurrentUser]:
+async def _load_user(user_id: uuid.UUID) -> CurrentUser | None:
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.id == user_id, User.disabled.is_(False)))
         user = result.scalar_one_or_none()
@@ -200,7 +199,7 @@ def require_admin(user: CurrentUser = Depends(current_user)) -> CurrentUser:
     return user
 
 
-def websocket_user(websocket: WebSocket) -> Optional[CurrentUser]:
+def websocket_user(websocket: WebSocket) -> CurrentUser | None:
     """The signed-in user for a WebSocket connection (set by the middleware), or ``None``."""
     return websocket.scope.get("state", {}).get("user")
 

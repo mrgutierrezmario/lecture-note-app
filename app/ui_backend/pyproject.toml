@@ -5,7 +5,12 @@ extend-exclude = ["venv", "alembic/versions"]
 
 [tool.ruff.lint]
 # pycodestyle (E, W), pyflakes (F), import ordering (I)
-select = ["E", "W", "F", "I", "D1"]  # D1: every public module/class/function needs a docstring
+# E/W pycodestyle, F pyflakes, I import order, D1 docstrings on every public
+# module/class/function, B bugbear, UP modern syntax, SIM simplifications,
+# C4 comprehensions.
+select = ["E", "W", "F", "I", "D1", "B", "UP", "SIM", "C4"]
+# B008: FastAPI's `Depends(...)` in defaults is the framework's idiom.
+ignore = ["B008"]
 
 [tool.ruff.lint.per-file-ignores]
 # Test functions describe themselves by name; module docstrings still apply.

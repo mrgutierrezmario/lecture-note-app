@@ -592,7 +592,7 @@ async def stream_audio_chunk(
             headers={"Content-Disposition": f'inline; filename="chunk-{chunk_index}.webm"'},
         )
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=str(e)) from e
 
 
 @router.post("/{session_id}/documents", response_model=DocumentUploadResponse)
@@ -635,16 +635,16 @@ async def upload_document(
                 base64.b64encode(content).decode(), media_type
             )
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to read image: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to read image: {e}") from e
         file_type = "image"
         logger.info("Image %s transcribed by %s", file.filename, provider)
     else:
         try:
             file_type, extracted_text = extract_text(file.filename, content)
         except ValueError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e)) from e
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Failed to extract text: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to extract text: {e}") from e
 
     doc = DocumentUpload(
         session_id=session_id,

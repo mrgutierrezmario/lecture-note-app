@@ -8,6 +8,7 @@ parameter is bound to the signed-in user so a callback can't be replayed
 into someone else's account.
 """
 
+import contextlib
 import logging
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -103,7 +104,7 @@ async def picker_token(
     try:
         token = await google_drive.access_token_for(link)
     except google_drive.DriveError as e:
-        raise HTTPException(status_code=502, detail=str(e))
+        raise HTTPException(status_code=502, detail=str(e)) from e
     return DrivePickerToken(
         access_token=token,
         api_key=google_drive.settings.google_picker_api_key.strip(),
@@ -132,7 +133,7 @@ async def update(
         try:
             name = await google_drive.folder_name_of(link, body.folder_id.strip())
         except google_drive.DriveError as e:
-            raise HTTPException(status_code=400, detail=str(e))
+            raise HTTPException(status_code=400, detail=str(e)) from e
         link.folder_id = body.folder_id.strip()
         link.folder_name = name
     elif body.folder_name is not None:
@@ -144,7 +145,7 @@ async def update(
             try:
                 link.folder_id = await google_drive.create_folder_now(link)
             except google_drive.DriveError as e:
-                raise HTTPException(status_code=502, detail=str(e))
+                raise HTTPException(status_code=502, detail=str(e)) from e
     await db.commit()
     return _status(link)
 
@@ -155,10 +156,9 @@ async def disconnect(user: CurrentUser = Depends(current_user), db: AsyncSession
     the Drive stay there — they belong to the user."""
     link = await db.get(DriveLink, user.id)
     if link is not None:
-        try:
+        # An unreadable token means there is nothing to revoke.
+        with contextlib.suppress(google_drive.DriveError):
             await google_drive.revoke(google_drive.decrypt(link.refresh_token))
-        except google_drive.DriveError:
-            pass  # unreadable token: nothing to revoke
         await db.delete(link)
         await db.commit()
         logger.info("User %s disconnected Google Drive", user.username)

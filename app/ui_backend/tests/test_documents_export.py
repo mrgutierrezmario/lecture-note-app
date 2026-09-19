@@ -8,20 +8,20 @@ from exports import documents_export as de
 
 
 def _lecture(**overrides):
-    base = dict(
-        title="Test <Lecture> & co",
-        recorded_at=datetime(2026, 9, 14, 21, 56),
-        duration_seconds=6780,
-        notes_version=3,
-        notes_md="## Key Concepts\n- **Strategy**: a plan\n- with *italic* and `code`\n",
-        transcript=[
+    base = {
+        "title": "Test <Lecture> & co",
+        "recorded_at": datetime(2026, 9, 14, 21, 56),
+        "duration_seconds": 6780,
+        "notes_version": 3,
+        "notes_md": "## Key Concepts\n- **Strategy**: a plan\n- with *italic* and `code`\n",
+        "transcript": [
             (0.5, "Hello."),
             (4.0, "Welcome."),
             (35.0, "Second paragraph."),
             (70.0, "Third."),
         ],
-        qa=[("user", "How many?", None), ("assistant", "There is **one**.", "gemini/flash")],
-    )
+        "qa": [("user", "How many?", None), ("assistant", "There is **one**.", "gemini/flash")],
+    }
     base.update(overrides)
     return de.LectureDoc(**base)
 

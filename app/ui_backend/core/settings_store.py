@@ -21,7 +21,7 @@ import json
 import logging
 import os
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 from core.config import STATE_DIR, get_settings
 
@@ -147,7 +147,7 @@ def update_overrides(updates: dict[str, Any]) -> tuple[dict[str, Any], list[str]
         try:
             value = expected(raw)
         except (TypeError, ValueError):
-            raise ValueError(f"{name} must be {expected.__name__}")
+            raise ValueError(f"{name} must be {expected.__name__}") from None
         if expected is str and not value.strip() and name not in _MAY_BE_EMPTY:
             raise ValueError(f"{name} must not be empty")
         if expected is str:
@@ -176,7 +176,7 @@ def update_overrides(updates: dict[str, Any]) -> tuple[dict[str, Any], list[str]
 # ── Anthropic key (secret) ────────────────────────────────────────────────────
 
 
-def _rewrite_env_key(env_var: str, key: Optional[str]) -> None:
+def _rewrite_env_key(env_var: str, key: str | None) -> None:
     """Set or remove one ``VAR=`` line in .env, preserving everything else.
 
     Removing means deleting the line outright, never writing ``VAR=``. An empty
@@ -195,7 +195,7 @@ def _rewrite_env_key(env_var: str, key: Optional[str]) -> None:
         logger.warning("Could not tighten permissions on .env: %s", e)
 
 
-def set_secret(env_var: str, key: Optional[str]) -> None:
+def set_secret(env_var: str, key: str | None) -> None:
     """Store (or clear) an API key in .env, os.environ and live settings."""
     attr = SECRET_FIELDS[env_var]
     key = (key or "").strip() or None
@@ -208,12 +208,12 @@ def set_secret(env_var: str, key: Optional[str]) -> None:
     logger.info("%s %s", env_var, "set" if key else "cleared")
 
 
-def set_api_key(key: Optional[str]) -> None:
+def set_api_key(key: str | None) -> None:
     """Store or clear the Anthropic API key (shorthand for ``set_secret``)."""
     set_secret(KEY_ENV_VAR, key)
 
 
-def masked(key: Optional[str]) -> Optional[str]:
+def masked(key: str | None) -> str | None:
     """The last four characters of a key for display, or ``None`` if unset."""
     return f"...{key[-4:]}" if key else None
 

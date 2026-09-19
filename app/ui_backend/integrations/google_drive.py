@@ -17,14 +17,15 @@ whose authorised redirect URI is ``<PUBLIC_URL>/api/drive/callback``.
 
 import asyncio
 import base64
+import contextlib
 import hashlib
 import json
 import logging
 import time
 import uuid
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from typing import Awaitable, Callable, Optional
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -141,7 +142,9 @@ def decrypt(ciphertext: str) -> str:
     try:
         return _fernet().decrypt(ciphertext.encode()).decode()
     except InvalidToken:
-        raise DriveError("Stored Google credentials can't be read — reconnect Google Drive")
+        raise DriveError(
+            "Stored Google credentials can't be read — reconnect Google Drive"
+        ) from None
 
 
 # ── OAuth ─────────────────────────────────────────────────────────────────────
@@ -177,7 +180,7 @@ def auth_url(user_id: uuid.UUID) -> str:
     return str(httpx.URL(AUTH_URL, params=params))
 
 
-async def exchange_code(code: str) -> tuple[str, Optional[str]]:
+async def exchange_code(code: str) -> tuple[str, str | None]:
     """Trade the callback code for a refresh token and the account's email."""
     async with httpx.AsyncClient(timeout=20) as client:
         response = await client.post(
@@ -258,7 +261,7 @@ class Drive:
         )
         return response.status_code == 200 and not response.json().get("trashed")
 
-    async def find_folder(self, name: str, parent: Optional[str]) -> Optional[str]:
+    async def find_folder(self, name: str, parent: str | None) -> str | None:
         """Id of an untrashed folder with this name under ``parent`` (or root)."""
         safe = name.replace("\\", "\\\\").replace("'", "\\'")
         q = f"name = '{safe}' and mimeType = '{FOLDER_MIME}' and trashed = false"
@@ -269,7 +272,7 @@ class Drive:
         files = data.get("files", [])
         return files[0]["id"] if files else None
 
-    async def create_folder(self, name: str, parent: Optional[str]) -> str:
+    async def create_folder(self, name: str, parent: str | None) -> str:
         """Make a folder and return its id."""
         body = {"name": name, "mimeType": FOLDER_MIME}
         if parent:
@@ -279,19 +282,19 @@ class Drive:
         )
         return data["id"]
 
-    async def ensure_folder(self, name: str, parent: Optional[str]) -> str:
+    async def ensure_folder(self, name: str, parent: str | None) -> str:
         """Find-or-create a folder."""
         return await self.find_folder(name, parent) or await self.create_folder(name, parent)
 
     async def ensure_path(self, path: str) -> str:
         """Find-or-create each level of ``a/b/c`` under the Drive root; returns the last id."""
-        parent: Optional[str] = None
+        parent: str | None = None
         for part in path.split("/"):
             parent = await self.ensure_folder(part, parent)
         return parent or await self.ensure_folder(ROOT_FOLDER_NAME, None)
 
     async def upload(
-        self, name: str, mime: str, content: bytes, parent: str, existing: Optional[str]
+        self, name: str, mime: str, content: bytes, parent: str, existing: str | None
     ) -> str:
         """Create a file, or overwrite ``existing`` in place; returns the file id."""
         if existing and await self.exists(existing):
@@ -329,11 +332,11 @@ class Job:
     session_id: str
     status: str = "running"  # running | done | error
     step: str = "Preparing"
-    notify: Optional[StatusCallback] = None  # broadcast to the live recorder
+    notify: StatusCallback | None = None  # broadcast to the live recorder
     files: dict[str, str] = field(default_factory=dict)  # kind -> Drive file id
-    folder_url: Optional[str] = None
-    error: Optional[str] = None
-    finished_at: Optional[float] = None
+    folder_url: str | None = None
+    error: str | None = None
+    finished_at: float | None = None
 
     def progress(self) -> dict:
         """The status payload the API returns."""
@@ -349,12 +352,12 @@ class Job:
 _jobs: dict[str, Job] = {}
 
 
-def status(session_id: str) -> Optional[Job]:
+def status(session_id: str) -> Job | None:
     """The most recent export job for a lecture, if any."""
     return _jobs.get(session_id)
 
 
-def start(session_id: str, notify: Optional[StatusCallback] = None) -> Job:
+def start(session_id: str, notify: StatusCallback | None = None) -> Job:
     """Kick off an export unless one is already running."""
     job = _jobs.get(session_id)
     if job and job.status == "running":
@@ -365,7 +368,7 @@ def start(session_id: str, notify: Optional[StatusCallback] = None) -> Job:
     return job
 
 
-async def auto_export(session_id: str, notify: Optional[StatusCallback] = None) -> None:
+async def auto_export(session_id: str, notify: StatusCallback | None = None) -> None:
     """Export after a recording stops, if the owner turned that on.
 
     ``notify`` (the websocket broadcast) lets the recorder show progress."""
@@ -391,22 +394,21 @@ async def create_folder_now(link: DriveLink) -> str:
 async def _set_step(job: Job, step: str) -> None:
     job.step = step
     if job.notify:
-        try:
+        # A dead socket must not fail the export.
+        with contextlib.suppress(Exception):
             await job.notify(
                 job.session_id, {"type": "status", "message": f"Saving to Google Drive: {step}…"}
             )
-        except Exception:  # noqa: BLE001 — a dead socket must not fail the export
-            pass
 
 
-def _slug(title: Optional[str], created_at: datetime) -> str:
+def _slug(title: str | None, created_at: datetime) -> str:
     base = (title or "Untitled lecture").strip() or "Untitled lecture"
     base = "".join(ch for ch in base if ch not in '\\/:*?"<>|').strip()[:80]
     return f"{created_at:%Y-%m-%d} {base}"
 
 
 async def _run(job: Job) -> None:
-    drive: Optional[Drive] = None
+    drive: Drive | None = None
     try:
         async with AsyncSessionLocal() as db:
             session = await db.get(Session, job.session_id)
@@ -503,7 +505,7 @@ async def _run(job: Job) -> None:
             await drive.close()
 
 
-async def _contents(db: AsyncSession, session: Session) -> tuple[Optional[str], str, list[str]]:
+async def _contents(db: AsyncSession, session: Session) -> tuple[str | None, str, list[str]]:
     """Latest notes (Markdown), the transcript text, and retained chunk keys."""
     notes_row = (
         await db.execute(

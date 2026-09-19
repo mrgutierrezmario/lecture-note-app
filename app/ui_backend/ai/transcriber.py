@@ -206,7 +206,7 @@ def transcribe_wav_sync(wav_path: str, session_id: str | None = None) -> list[di
         language=None if language == "auto" else language,
         initial_prompt=_session_prompts.get(session_id or "") or None,
         vad_filter=True,
-        vad_parameters=dict(threshold=0.5, min_silence_duration_ms=500, speech_pad_ms=200),
+        vad_parameters={"threshold": 0.5, "min_silence_duration_ms": 500, "speech_pad_ms": 200},
         no_speech_threshold=0.6,
         log_prob_threshold=-1.0,
         compression_ratio_threshold=2.4,

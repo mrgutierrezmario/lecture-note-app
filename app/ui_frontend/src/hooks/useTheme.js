@@ -1,3 +1,6 @@
+// Light / dark / system theme. The choice is per browser (localStorage) and
+// applied as `data-theme` on <html>; "system" follows prefers-color-scheme and
+// updates live when the OS setting changes.
 import { useState, useEffect, useCallback } from 'react'
 
 const STORAGE_KEY = 'theme'

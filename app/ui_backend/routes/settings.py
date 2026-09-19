@@ -151,7 +151,7 @@ async def write_settings(update: SettingsUpdate):
         try:
             _, restart_required = settings_store.update_overrides(overrides)
         except ValueError as e:
-            raise HTTPException(status_code=422, detail=str(e))
+            raise HTTPException(status_code=422, detail=str(e)) from e
 
     return await _current(restart_required)
 
@@ -173,4 +173,4 @@ async def gemini_models():
     try:
         return await providers.list_gemini_models()
     except Exception as e:
-        raise HTTPException(status_code=502, detail=str(e)[:200])
+        raise HTTPException(status_code=502, detail=str(e)[:200]) from e

@@ -1,5 +1,6 @@
 """Login, logout, and user management (admin)."""
 
+import contextlib
 import hashlib
 import logging
 import re
@@ -473,7 +474,7 @@ async def approve_user(
     try:
         user = await db.get(User, uuid.UUID(user_id))
     except ValueError:
-        raise HTTPException(404, "User not found")
+        raise HTTPException(404, "User not found") from None
     if user is None:
         raise HTTPException(404, "User not found")
     if not user.approved:
@@ -553,10 +554,8 @@ async def delete_own_account(
     # Google Drive: revoke and forget.
     link = await db.get(DriveLink, row.id)
     if link is not None:
-        try:
+        with contextlib.suppress(google_drive.DriveError):
             await google_drive.revoke(google_drive.decrypt(link.refresh_token))
-        except google_drive.DriveError:
-            pass
         await db.delete(link)
 
     # Lectures and their audio objects.
@@ -611,11 +610,14 @@ async def update_profile(
     """Let the signed-in user set or change their email address."""
     row = (await db.execute(select(User).where(User.id == user.id))).scalar_one()
     email = _validate_email(body.email)
-    if email and email != row.email:
-        if (
+    if (
+        email
+        and email != row.email
+        and (
             await db.execute(select(User).where(User.email == email, User.id != user.id))
-        ).scalar_one_or_none():
-            raise HTTPException(409, "An account with that email already exists")
+        ).scalar_one_or_none()
+    ):
+        raise HTTPException(409, "An account with that email already exists")
     row.email = email
     await db.commit()
     await db.refresh(row)

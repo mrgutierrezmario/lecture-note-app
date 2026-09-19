@@ -19,7 +19,7 @@ the bucket (an object that already exists with the same size is skipped).
 import io
 import sys
 import tarfile
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from storage.s3_client import s3_client
 
@@ -51,7 +51,7 @@ def export() -> None:
         data = manifest.encode()
         info = tarfile.TarInfo(MANIFEST)
         info.size = len(data)
-        info.mtime = int(datetime.now(timezone.utc).timestamp())
+        info.mtime = int(datetime.now(UTC).timestamp())
         tar.addfile(info, io.BytesIO(data))
 
         sent = 0
