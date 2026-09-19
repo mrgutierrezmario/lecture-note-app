@@ -539,8 +539,11 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    `/privacy` was added (operator contact from `SUPPORT_EMAIL`) and the
    app's own Funnel host was used as the domain. Any Google account can
    now connect a Drive.
-10. Optional next features: Claude API credits (operator: next payday);
-    speaker separation (post-lecture, see above). Suggested next *project*:
+10. Optional: Claude API credits (operator: next payday). Speaker separation
+    **dropped from the list** 2026-09-19 — no benefit for the actual setups
+    (mixed Zoom channel / far-field phone mic) against real CPU and setup
+    cost; revisit only if usage shifts to in-room, discussion-heavy classes.
+    Suggested next *project*:
     an AWS deployment option (ECS + RDS + S3, IaC) — résumé value and a
     "runs at home or in the cloud" story; fits as project #2 for LinkedIn.
 
