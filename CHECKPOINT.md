@@ -589,7 +589,11 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    `/privacy` was added (operator contact from `SUPPORT_EMAIL`) and the
    app's own Funnel host was used as the domain. Any Google account can
    now connect a Drive.
-10. Optional: Claude API credits (operator: next payday). Speaker separation
+10. Optional: Claude API credits (operator: next payday). **If the live URL
+    is ever shared publicly**: build a read-only demo account ("Try the
+    demo" on the sign-in page — sample lecture visible, chat under the
+    per-user caps, no recording/uploads/Drive/settings; ~2 h); until then
+    the README screenshots are the showcase. Speaker separation
     **dropped from the list** 2026-09-19 — no benefit for the actual setups
     (mixed Zoom channel / far-field phone mic) against real CPU and setup
     cost; revisit only if usage shifts to in-room, discussion-heavy classes.
