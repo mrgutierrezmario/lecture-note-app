@@ -52,9 +52,9 @@ function ShareDialog({ lecture, onSave, onClose }) {
     <div className="dialog-backdrop" onClick={onClose}>
       <form className="dialog" role="dialog" aria-labelledby="share-title" onClick={e => e.stopPropagation()} onSubmit={share}>
         <h2 id="share-title">Share lecture</h2>
+        <p className="dialog-subtitle">{lecture.title || 'Untitled lecture'}</p>
         <p className="dialog-message">
-          The person you share with sees <strong>{lecture.title || 'this lecture'}</strong> in their History: transcript,
-          notes, their own questions, exports. Only you can change it.
+          Read-only: they can view the transcript and notes, ask their own questions and export, but not change anything.
         </p>
         <label className="dialog-field">
           Share with

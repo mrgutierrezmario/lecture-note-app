@@ -1557,6 +1557,17 @@ a.btn-icon:hover {
   font-weight: 600;
 }
 
+/* Dialog subtitle: the item the dialog is about, directly under the heading. */
+.dialog-subtitle {
+  margin: -8px 0 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* Share dialog: who already has the lecture, one row each with Remove. */
 .share-list {
   display: flex;
