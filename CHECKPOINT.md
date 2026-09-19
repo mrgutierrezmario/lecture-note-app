@@ -230,7 +230,13 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   (how to cut the next one: bump VERSION + package.json, changelog, commit,
   tag, `gh release create`).
 - Contributors: Claude appears via the Co-Authored-By trailer; decision:
-  keep it and own it — README "How it was built" section added.
+  keep it and own it — README "How it was built" section added. **From
+  2026-09-19 commits carry no Claude trailer** (operator instruction, saved
+  in memory); earlier history untouched.
+- **Timeline made public** (README "Timeline" table + CHANGELOG "Before
+  1.0.0"): first commit 2026-01-29, first real lecture 2026-03-26, work in
+  Jan/Mar/Apr/Sep, daily use through the summer, v1.0.0 on 09-19 — mined
+  from `backup-full-history-2026-09-14` (95 commits; still never pushed).
 
 ### Code-quality audit (2026-09-19, late)
 - Verified: ruff format/check clean on all 51 backend files; docstrings on
