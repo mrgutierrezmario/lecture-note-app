@@ -402,8 +402,13 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
             {settings.google_client_id && settings.google_client_secret_masked && (
               <p className="settings-inline-ok">Configured — users can connect their Drive from Settings.</p>
             )}
+            <h4 className="settings-subheading">Google Drive folder selector</h4>
+            <p className="settings-note settings-note-full">
+              Lets users pick an <em>existing</em> Drive folder with Google's chooser instead of only creating one.
+              Optional — needs an API key from the same Cloud project.
+            </p>
             <label className="settings-field">
-              <span>Picker API key</span>
+              <span>Folder selector API key</span>
               <input
                 type="text"
                 placeholder={settings.google_picker_api_key ? `Saved (…${settings.google_picker_api_key.slice(-4)}) — paste to replace` : 'AIza… (optional)'}
@@ -413,18 +418,20 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               />
             </label>
             <p className="settings-note">
-              Optional. Lets users pick an <em>existing</em> Drive folder with Google's chooser. In the same Cloud
-              project: enable the <strong>Google Picker API</strong>, then Credentials → Create credentials →
-              <strong> API key</strong>, restricted to the Google Picker API.
+              In the Cloud project: enable the <strong>Google Picker API</strong>, then Credentials → Create
+              credentials → <strong>API key</strong>, restricted to the Google Picker API and to this site.
             </p>
             <div className="settings-actions">
-              <button disabled={saving || !pickerKey.trim()} onClick={async () => { if (await save({ google_picker_api_key: pickerKey.trim() }, 'Picker API key saved.')) setPickerKey('') }}>
-                Save Picker key
+              <button disabled={saving || !pickerKey.trim()} onClick={async () => { if (await save({ google_picker_api_key: pickerKey.trim() }, 'Folder selector key saved.')) setPickerKey('') }}>
+                Save folder selector key
               </button>
               {settings.google_picker_api_key && (
-                <button className="btn-secondary" disabled={saving} onClick={() => save({ google_picker_api_key: '' }, 'Picker API key cleared.')}>Clear</button>
+                <button className="btn-secondary" disabled={saving} onClick={() => save({ google_picker_api_key: '' }, 'Folder selector key cleared.')}>Clear</button>
               )}
             </div>
+            {settings.google_picker_api_key && (
+              <p className="settings-inline-ok">Enabled — users see "Choose existing folder" under Google Drive.</p>
+            )}
           </section>
 
           <DriveSection isAdmin refreshKey={`${settings.google_client_id}|${settings.google_client_secret_masked}|${settings.google_picker_api_key}`} />
