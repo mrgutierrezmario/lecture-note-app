@@ -220,6 +220,21 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Repo hygiene and GitHub settings (2026-09-19)
+- Scrubbed hostnames/mailbox names/GCP project id from CHECKPOINT (they
+  had crept back since 09-18; the hostname remains in ~40 commits of
+  public history — decision: leave, site is login/approval/rate-limit
+  gated and force-push is now blocked). Untracked the personal
+  `design/profile-README.md` (kept on disk, git-ignored). VS Code path
+  made relative. Root `start.sh`/`docker-compose.yml` are the dev
+  quick-start — keep; `design/*.dc.html` are the redesign mockups — keep.
+- GitHub: enabled Dependabot security alerts + automatic security fixes,
+  secret scanning + push protection, CodeQL default setup; branch
+  protection on `main` (CI checks required, no force-push/deletion,
+  admins not enforced so direct deploy commits still work). Operator to
+  set the **social preview image** (Settings → General) with
+  `design/screenshots/lecture-dark.png`.
+
 ### Version 1.0.0 released (2026-09-19)
 - `VERSION` file at the repo root is the single source: backend
   (`core/version.py` → FastAPI version, `/health` "version"), Vite
