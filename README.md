@@ -619,6 +619,14 @@ cd ../ui_frontend && npm run build                                              
 Never commit `.env` files, `deploy/.env`, or anything under `deploy/state/`
 (all git-ignored). API keys belong in the Settings panel, not in the repo.
 
+## How it was built
+
+Designed, specified and operated by Mario Gutierrez (M.G. Network and
+Technology Solutions), and developed with [Claude Code](https://claude.com/claude-code)
+as a pair-programming assistant — which is why commits carry a `Co-Authored-By`
+line. Every feature was driven by real use: recorded lectures, the problems
+they surfaced, and the fixes that followed.
+
 ## License
 
 [PolyForm Noncommercial 1.0.0](LICENSE) — © 2026 M.G. Network and Technology Solutions.
