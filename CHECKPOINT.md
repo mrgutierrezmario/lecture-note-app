@@ -220,6 +220,30 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Demo account and lecture sharing (2026-09-19/20)
+- **Demo account** (migration 015 `users.is_demo`): "Try the demo" on the
+  sign-in page (`POST /api/auth/demo`, open path, rate-limited per IP)
+  signs into the flagged account without a password. Read-only: reads,
+  chat (10/10 min, not stored, no history), exports; websocket connects
+  but `start`/audio ignored; 403 on every write (`session_writer` /
+  `forbid_demo`); Settings opens read-only (Models, Sign-up, Ollama) with
+  keys/users hidden. Admin: *Demo* switch on Add user, "demo" badge.
+  Account **`test`** created (random password; never needed).
+- **Sharing** (migration 016 `session_shares`, `chat_messages.user_id`):
+  person icon on a History row → checkbox per registered user
+  (`GET /api/auth/users/names`, no emails) → `PUT …/shares` replaces the
+  set (untick = remove). Viewers: "shared by X" tag, `can_edit=false`,
+  read/own chat/exports/live socket, no writes. Replaced the short-lived
+  "Assign to user" (which *moved* ownership; the operator's clicks on it
+  moved two lectures to `test` — moved back). `PATCH …/owner` kept as an
+  admin API (no UI).
+- Dialog buttons centred (btn-primary's icon padding); PDF builder crashed
+  on plain-paragraph notes (`KeyError: 'base'`) — fixed + test.
+- The March "GDP and CPI Class" transcript is prototype-era nonsense — fine
+  as a dated artifact, not as a demo sample. **Operator to record a short
+  public-safe sample lecture and share it with `test`**; nothing is shared
+  with the demo at the moment.
+
 ### Repo hygiene and GitHub settings (2026-09-19)
 - Scrubbed hostnames/mailbox names/GCP project id from CHECKPOINT (they
   had crept back since 09-18; the hostname remains in ~40 commits of
@@ -589,11 +613,9 @@ is the permanent URL. Docker memory: 12 GB → 8 GB after Ollama left Docker.
    `/privacy` was added (operator contact from `SUPPORT_EMAIL`) and the
    app's own Funnel host was used as the domain. Any Google account can
    now connect a Drive.
-10. Optional: Claude API credits (operator: next payday). **If the live URL
-    is ever shared publicly**: build a read-only demo account ("Try the
-    demo" on the sign-in page — sample lecture visible, chat under the
-    per-user caps, no recording/uploads/Drive/settings; ~2 h); until then
-    the README screenshots are the showcase. Speaker separation
+10. Optional: Claude API credits (operator: next payday). Demo account
+    built (see above) — **needs a sample lecture shared with `test`**.
+    Speaker separation
     **dropped from the list** 2026-09-19 — no benefit for the actual setups
     (mixed Zoom channel / far-field phone mic) against real CPU and setup
     cost; revisit only if usage shifts to in-room, discussion-heavy classes.
