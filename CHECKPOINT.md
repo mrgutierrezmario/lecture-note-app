@@ -245,6 +245,12 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
   majors (React 19 / Vite 8 / TS 7, pydantic 2.13) were validated against a
   restored dump and merged; its live site rebuild is pending a quiet day.
   All three projects have a `deploy/OPERATIONS.md` in the same shape.
+- **Project #4 designed, not started**: `../homelab-gitops/DESIGN.md` — k3s
+  + Argo CD + Tailscale operator running *staging copies* of the three apps
+  restored from the nightly backups; production stays on Compose. Decision
+  pending on where it runs (a VM on the mini vs a second box) after a week
+  of memory measurements. Start after the LinkedIn post and a week of MCP
+  use.
 - Lessons that cost time today: Tailscale serve strips its path prefix;
   `docker compose up` on a dependent service re-runs one-shot config
   containers (use `--no-deps`; serve.json now written atomically); a
