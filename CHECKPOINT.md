@@ -240,6 +240,11 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - **InsiderTrack**: Ollama added as a local provider; the daily Model Desk
   brief prefers it (`AI_BATCH_PROVIDER=ollama`), cloud keys kept for
   visitor notes and vision; Admin → AI usage table per job/provider.
+- InsiderTrack's folder is now `../insidertrack` (renamed to match the
+  repo; Compose project name pinned so nothing restarted). Its Dependabot
+  majors (React 19 / Vite 8 / TS 7, pydantic 2.13) were validated against a
+  restored dump and merged; its live site rebuild is pending a quiet day.
+  All three projects have a `deploy/OPERATIONS.md` in the same shape.
 - Lessons that cost time today: Tailscale serve strips its path prefix;
   `docker compose up` on a dependent service re-runs one-shot config
   containers (use `--no-deps`; serve.json now written atomically); a
