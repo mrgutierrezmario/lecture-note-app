@@ -220,6 +220,21 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Other projects touched from this session (2026-09-20)
+- **insidertrack-mcp** (new repo, private, v0.1.0): MCP server over
+  InsiderTrack's API — nine read tools, two resources, two prompts, bearer /
+  `X-API-Key` auth, rate limit, audit log, stateless streamable HTTP; runs
+  as the `mcp` service in the InsiderTrack stack behind `/mcp` on its
+  Funnel URL; connected to claude.ai as a custom connector (No sign-in +
+  `X-API-Key`). Its `CLAUDE.md` is the working-notes file for that repo.
+- **InsiderTrack**: Ollama added as a local provider; the daily Model Desk
+  brief prefers it (`AI_BATCH_PROVIDER=ollama`), cloud keys kept for
+  visitor notes and vision; Admin → AI usage table per job/provider.
+- Lessons that cost time today: Tailscale serve strips its path prefix;
+  `docker compose up` on a dependent service re-runs one-shot config
+  containers (use `--no-deps`; serve.json now written atomically); a
+  stateful MCP server loses clients on restart (now stateless).
+
 ### v1.1.0 — UI polish after the demo/sharing work (2026-09-19, afternoon)
 - Settings and History panels: the panel clips to its radius and an inner
   `.settings-scroll` body scrolls, so the scrollbar no longer squares off
