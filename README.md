@@ -16,6 +16,11 @@ optional.
 
 **By M.G. Network and Technology Solutions.**
 
+**Live site: [mgnts-note-app.tail3659a6.ts.net](https://mgnts-note-app.tail3659a6.ts.net)** —
+accounts are by approval, but **Try the demo** on the sign-in page opens a
+read-only look at a sample lecture. It runs on a Mac mini at home, so if it
+is ever down, it is being worked on.
+
 ![A past lecture open in dark mode: full transcript on the left, generated notes in the middle, and the chat on the right answering a question and then a follow-up about the lecture](design/screenshots/lecture-dark.png)
 
 <p align="center"><em>Transcript, generated notes, and "Ask about the lecture" — with a follow-up question. Dark mode; light mode below.</em></p>
