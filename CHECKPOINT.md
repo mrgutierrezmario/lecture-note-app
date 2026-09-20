@@ -220,6 +220,16 @@ Gmail credentials for reset emails, `PUBLIC_URL`.
 - Tested end to end by the operator (connected with the do-not-reply
   account; files landed; folder creation works).
 
+### Public links (2026-09-20)
+- README header now links the **live site** and the repo's Website field is
+  set (both `https://mgnts-note-app.tail3659a6.ts.net`). Decision: fine to
+  publish — visitors land on the sign-in page and the read-only demo. That
+  makes the **empty demo the one visible gap**: share a public-safe lecture
+  with `test` (History → person icon → `test` → Share).
+- The checkout's `origin` had been switched to the insidertrack repo by
+  another tool/session (git refused the push, nothing landed wrong); fixed
+  by editing `.git/config`. One session per repo from now on.
+
 ### Other projects touched from this session (2026-09-20)
 - **insidertrack-mcp** (new repo, private, v0.1.0): MCP server over
   InsiderTrack's API — nine read tools, two resources, two prompts, bearer /
