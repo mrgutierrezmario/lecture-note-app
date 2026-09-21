@@ -26,6 +26,15 @@ gen() { python3 -c "import secrets; print(secrets.token_urlsafe(${1:-24}))"; }
 command -v docker >/dev/null || { echo "Docker is not installed or not on PATH." >&2; exit 1; }
 docker info >/dev/null 2>&1 || { echo "Docker is not running — start Docker Desktop first." >&2; exit 1; }
 
+# Every image here is public, so a Docker credential helper that cannot run
+# (a dev container's helper outside VS Code, a missing keychain) must not
+# stop the pulls: fall back to an empty Docker config for this run.
+creds=$(python3 -c "import json,os; print(json.load(open(os.path.expanduser('~/.docker/config.json'))).get('credsStore',''))" 2>/dev/null || true)
+if [ -n "$creds" ] && ! echo | "docker-credential-$creds" list >/dev/null 2>&1; then
+  log "Docker credential helper '$creds' is not working here; pulling anonymously."
+  export DOCKER_CONFIG; DOCKER_CONFIG=$(mktemp -d); echo '{}' > "$DOCKER_CONFIG/config.json"
+fi
+
 # ── First run: create deploy/.env with generated secrets ──────────────────────
 if [ ! -f .env ]; then
   log "Creating deploy/.env with generated secrets..."
@@ -51,7 +60,7 @@ $DC up -d --build --remove-orphans
 if [ "$BUNDLED_OLLAMA" = 1 ]; then
   for i in $(seq 1 30); do $DC exec -T ollama ollama list >/dev/null 2>&1 && break; sleep 2; done
   for model in "${OLLAMA_MODEL:-llama3}" llava; do
-    if ! $DC exec -T ollama ollama list 2>/dev/null | grep -q "^${model}"; then
+    if ! $DC exec -T ollama ollama list 2>/dev/null | grep "^${model}" >/dev/null; then
       log "Pulling Ollama model $model (one-time, several GB)..."
       $DC exec -T ollama ollama pull "$model"
     fi
@@ -60,7 +69,7 @@ fi
 
 # ── Tailscale: sign in once ───────────────────────────────────────────────────
 ts() { $DC exec -T tailscale tailscale "$@"; }
-for i in $(seq 1 30); do ts status >/dev/null 2>&1 && break; ts status 2>&1 | grep -q "Logged out\|NeedsLogin\|log in" && break; sleep 2; done
+for i in $(seq 1 30); do ts status >/dev/null 2>&1 && break; ts status 2>&1 | grep "Logged out\|NeedsLogin\|log in" >/dev/null && break; sleep 2; done
 if ! ts status >/dev/null 2>&1; then
   URL=$($DC logs tailscale 2>&1 | grep -oE 'https://login\.tailscale\.com/a/[a-z0-9]+' | tail -1)
   echo
@@ -86,7 +95,7 @@ $DC exec -T app curl -fs http://localhost:8000/health >/dev/null 2>&1 || {
   echo "App did not become healthy. Logs:" >&2; $DC logs --tail=40 app >&2; exit 1; }
 
 # ── First admin ───────────────────────────────────────────────────────────────
-if ! $DC exec -T app python -m scripts.manage_users list 2>/dev/null | grep -q " admin"; then
+if ! $DC exec -T app python -m scripts.manage_users list 2>/dev/null | grep " admin" >/dev/null; then
   ADMIN="${ADMIN_USERNAME:-admin}"
   log "No admin account yet — creating '$ADMIN'..."
   $DC exec -T app python -m scripts.manage_users create "$ADMIN" --admin --generate
@@ -108,7 +117,7 @@ if [ "$BUNDLED_OLLAMA" = 0 ]; then
     echo "  WARNING: external Ollama at ${OLLAMA_BASE_URL} is not reachable — notes will use the basic fallback until it is."
   fi
 fi
-if [ -n "$PUBLIC" ] && ! ts funnel status 2>/dev/null | grep -q "Funnel on"; then
+if [ -n "$PUBLIC" ] && ! ts funnel status 2>/dev/null | grep "Funnel on" >/dev/null; then
   echo "  Funnel is not enabled for your Tailscale account yet. Run:"
   echo "    docker compose -f deploy/compose.yml exec tailscale tailscale funnel --bg 8000"
   echo "  and open the link it prints, then re-run deploy/start.sh."

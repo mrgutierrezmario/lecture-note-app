@@ -10,6 +10,9 @@ All notable changes to AI Lecture Notes. The format follows
 ### Added
 - **Self-healing public URL**: the `tailscale` service now has a healthcheck that fetches the public Funnel URL end to end, and a new `watchdog` service restarts `tailscale` and `app` after three consecutive misses. Covers tailscaled's HTTPS listener hanging while the node still reports online (the 2026-09-20 outage), which `/health` and the uptime monitor could only report, not fix.
 
+### Fixed
+- `deploy/start.sh` falsely reported "Funnel is not enabled" (and could have tried to create a second admin): `grep -q` closing the pipe early made `pipefail` fail the check. It also now pulls images anonymously when the Docker credential helper cannot run (e.g. from a dev container shell), instead of failing the build.
+
 ## [1.1.0] — 2026-09-19
 
 ### Added
