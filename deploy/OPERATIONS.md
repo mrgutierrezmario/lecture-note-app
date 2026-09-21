@@ -87,7 +87,13 @@ base images are ignored by design (native wheels lag new Pythons).
 
 ## When the site is down
 
-The uptime monitor emails you. In order:
+The stack heals the most common case itself: the `tailscale` service's
+healthcheck fetches the public URL through Funnel every minute, and after
+three misses the `watchdog` service restarts `tailscale` and `app` (about
+3 minutes end to end, data untouched). So the first thing to do when the
+uptime monitor emails you is nothing for five minutes; if the recovery mail
+doesn't follow, `docker compose -f deploy/compose.yml logs watchdog` shows
+what it tried, and then in order:
 
 1. Is the Mac on and signed in? (A reboot needs Docker Desktop running;
    it starts at sign-in.)
@@ -99,8 +105,21 @@ The uptime monitor emails you. In order:
 4. Reachable locally but not from the internet → Tailscale:
    `docker compose -f deploy/compose.yml logs --tail=50 tailscale`, and
    check the machine in the Tailscale admin console.
+   If `tailscale status` says the machine is online and the Funnel URL is
+   listed but browsers get a TLS error (`unexpected eof`), tailscaled's
+   HTTPS listener is hung (seen 2026-09-20 after a control-plane
+   reconnect). `docker compose -f deploy/compose.yml restart tailscale app`
+   fixes it in under a minute — both, because the app shares the Tailscale
+   container's network.
 5. Still stuck → `deploy/stop.sh && deploy/start.sh` restarts the whole
    stack without touching data.
+
+Restart with `start.sh` or `docker compose … restart`, not a bare
+`docker compose … up` from a random shell: `up` re-reads configuration, and
+any `POSTGRES_PASSWORD` (or other variable from `deploy/.env`) already set in
+that shell wins over the file — a dev container's `/etc/environment` did
+exactly that on 2026-09-21 and the app came back unable to log in to its
+own database. `start.sh` exports `deploy/.env` first, so it is immune.
 
 ## When data is lost
 
@@ -131,4 +150,5 @@ machine, `deploy/backup-setup.sh` first to reconnect the off-site remote.
 | Backups, off-site | the rclone remote set up by `backup-setup.sh` |
 | Backup schedule | `~/Library/LaunchAgents/com.mgnetwork.lecture-backup.plist` |
 | App log | `docker compose -f deploy/compose.yml logs app` |
+| Self-healing log | `docker compose -f deploy/compose.yml logs watchdog` |
 | Version running | Settings footer, or `/health` |

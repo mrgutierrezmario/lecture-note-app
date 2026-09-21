@@ -5,6 +5,11 @@ All notable changes to AI Lecture Notes. The format follows
 [Semantic Versioning](https://semver.org/). The current version lives in the
 `VERSION` file and is shown in Settings and at `/health`.
 
+## [Unreleased]
+
+### Added
+- **Self-healing public URL**: the `tailscale` service now has a healthcheck that fetches the public Funnel URL end to end, and a new `watchdog` service restarts `tailscale` and `app` after three consecutive misses. Covers tailscaled's HTTPS listener hanging while the node still reports online (the 2026-09-20 outage), which `/health` and the uptime monitor could only report, not fix.
+
 ## [1.1.0] — 2026-09-19
 
 ### Added

@@ -225,6 +225,13 @@ monitor at it — [UptimeRobot](https://uptimerobot.com) on a 5-minute interval
 is enough — and you get an email within minutes of an outage and another when
 it recovers, including the case where Docker is up but Postgres died.
 
+The public URL also heals itself: the Tailscale container's healthcheck
+fetches the public URL end to end every minute, and a small `watchdog`
+container restarts Tailscale and the app after three misses — about three
+minutes from outage to recovery, no login needed. (This is the Compose
+equivalent of a Kubernetes liveness probe; Docker alone only marks a
+container unhealthy.)
+
 Two more things watch themselves: the nightly backup emails
 `BACKUP_NOTIFY_EMAIL` if it fails, and Docker rotates container logs
 (20 MB × 5 per service) so they can't fill the disk.
