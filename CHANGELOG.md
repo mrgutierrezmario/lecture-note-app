@@ -10,6 +10,9 @@ All notable changes to AI Lecture Notes. The format follows
 ### Added
 - **Self-healing public URL**: the `tailscale` service now has a healthcheck that fetches the public Funnel URL end to end, and a new `watchdog` service restarts `tailscale` and `app` after three consecutive misses. Covers tailscaled's HTTPS listener hanging while the node still reports online (the 2026-09-20 outage), which `/health` and the uptime monitor could only report, not fix.
 
+- **Chat helps with the assignment**: "make a strategy", "brainstorm", "explain X", "outline my answer" are now answered — using the lecture as the brief and the assistant's own knowledge for the rest, with the lecture's part marked. Questions about what the professor said stay grounded in the transcript. Answer cap raised from 600 to 1500 tokens.
+- **Recording survives losing the microphone**: when Zoom, a phone call or a backgrounded tab takes the mic, the recorder now restarts itself on the same session (retrying for 10 minutes, and immediately when the tab returns), instead of silently sending nothing while the page still said Recording.
+
 ### Fixed
 - `deploy/start.sh` falsely reported "Funnel is not enabled" (and could have tried to create a second admin): `grep -q` closing the pipe early made `pipefail` fail the check. It also now pulls images anonymously when the Docker credential helper cannot run (e.g. from a dev container shell), instead of failing the build.
 

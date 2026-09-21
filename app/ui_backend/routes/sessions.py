@@ -987,9 +987,15 @@ async def chat(
         )
 
     # Text-only path
+    # Two kinds of question come through here and they need opposite rules.
+    # "What did the professor say?" must stay grounded in the transcript —
+    # never invent lecture content. "Help me do what the class asks" (draft the
+    # strategy, brainstorm, explain a concept) must be answered with the
+    # assistant's own knowledge, using the lecture as the brief; the old
+    # lecture-only rule answered those with "I don't see that covered".
     def build_prompt(ctx: str) -> str:
-        return f"""You are a helpful teaching assistant. Answer the student's question using ONLY
-the lecture content provided below.
+        return f"""You are a teaching assistant for one lecture. The lecture content (notes and
+transcript) is below; the student is asking about it or working on what it asks of them.
 
 {ctx}
 
@@ -997,20 +1003,27 @@ Question: {request.message}
 
 Instructions:
 - Answer directly and concisely
-- If the student asks for a summary, overview, recap or the main points, write it from the
-  notes and transcript above — that is always answerable when there is content
+- Questions about what was said, taught, assigned or wanted in this lecture: answer from
+  the content above only. Never invent lecture content. If a specific fact is genuinely
+  absent, say "I don't see that covered in the lecture materials"
+- A summary, overview, recap or the main points: always answerable from the content when
+  there is any — write it from the notes and transcript
+- Requests to help with the work the lecture asks for — draft, brainstorm, plan, argue,
+  outline, make a strategy, explain a concept the lecture mentions, work an example:
+  do the work. Use the lecture's framing, constraints and terms as the brief, and your
+  own knowledge for the rest. Start from what the lecture actually asked for. Do not
+  refuse these because the answer is not in the transcript — it is not supposed to be
+- When you go beyond the lecture, make that visible: a short line like "From the lecture:
+  …" for what the professor said, then your own contribution
 - The question may refer back to the conversation so far ("that", "it", "the first one");
-  resolve such references using the earlier exchanges before answering
-- Only when a specific fact is genuinely absent from the content, say
-  "I don't see that covered in the lecture materials"
-- Do not make up information not present in the content above"""
+  resolve such references using the earlier exchanges before answering"""
 
     fallback = None
     try:
         from ai.providers import generate_text
 
         result = await generate_text(
-            build_prompt(context), max_tokens=600, temperature=0.1, timeout=180.0
+            build_prompt(context), max_tokens=1500, temperature=0.1, timeout=180.0
         )
         if result.provider.startswith("ollama") and active_provider() != "ollama":
             # A cloud provider failed and the local model answered — but it was
@@ -1020,7 +1033,7 @@ Instructions:
             logger.info("Chat fell back to Ollama; re-asking with a local-sized context")
             result = await generate_text(
                 build_prompt(build_context(local=True)),
-                max_tokens=600,
+                max_tokens=1500,
                 temperature=0.1,
                 timeout=180.0,
             )

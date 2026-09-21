@@ -83,6 +83,10 @@ function Workspace({ user, onLogout, onUserChange }) {
 
   const mediaRecorderRef = useRef(null)
   const streamRef = useRef(null)
+  // Set by the user's own Stop; distinguishes it from the recorder dying.
+  const stoppingRef = useRef(false)
+  const micMutedRef = useRef(false)
+  const recoverTimerRef = useRef(null)
   const audioContextRef = useRef(null)
   const micTrackRef = useRef(null)
 
@@ -288,7 +292,98 @@ function Workspace({ user, onLogout, onUserChange }) {
   isConnectedRef.current = isConnected
   sendMessageRef.current = sendMessage
 
+  const recoverMicRef = useRef(null)
+  // Build and start a MediaRecorder on `stream`, wired so that losing the
+  // stream triggers recovery instead of silence.
+  const startCapture = useCallback((stream) => {
+    const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
+      ? 'audio/webm;codecs=opus'
+      : 'audio/webm'
+    const mediaRecorder = new MediaRecorder(stream, { mimeType })
+    mediaRecorderRef.current = mediaRecorder
+
+    mediaRecorder.ondataavailable = (event) => {
+      // Every chunk is sent — even while disconnected (the socket hook queues
+      // and replays them) and even while the mic is muted. A muted track
+      // yields silence, which the server skips before transcription; dropping
+      // chunks instead would break the stream: the first chunk carries the
+      // WebM header every later chunk needs, and gaps shift the timestamps.
+      if (event.data.size > 0) sendBinary(event.data)
+    }
+    const lost = (reason) => () => {
+      if (mediaRecorderRef.current !== mediaRecorder) return // superseded
+      recoverMicRef.current?.(reason)
+    }
+    mediaRecorder.onerror = (e) => lost(`recorder error: ${e.error?.name || 'unknown'}`)()
+    // `stop` without the user pressing Stop means the stream ended under it.
+    mediaRecorder.onstop = () => { if (!stoppingRef.current) lost('recorder stopped')() }
+    const micTrack = micTrackRef.current
+    if (micTrack) micTrack.onended = lost('microphone track ended')
+
+    mediaRecorder.start(5000)
+    startLevelMeter(stream)
+  }, [sendBinary, startLevelMeter])
+
+  // The microphone can be taken away mid-recording: Zoom or a phone call
+  // grabs it, a phone locks or backgrounds the tab, a USB mic is unplugged.
+  // The track fires `ended`, the MediaRecorder stops, and — without this —
+  // nothing else happens: the page still says Recording while no audio is
+  // sent (2026-09-21, chunks stopped mid-lecture). Re-acquire the mic and
+  // start a fresh recorder on the same session; its first chunk carries a
+  // new WebM header, which the server picks up for the chunks that follow.
+  // Retries every few seconds because on a phone getUserMedia only succeeds
+  // again once the tab is back in the foreground.
+  const RECOVER_EVERY_MS = 3000
+  const RECOVER_FOR_MS = 10 * 60 * 1000
+  const recoverMic = useCallback(async (reason, startedAt = Date.now()) => {
+    if (!isRecordingRef.current || stoppingRef.current) return
+    if (recoverTimerRef.current) { clearTimeout(recoverTimerRef.current); recoverTimerRef.current = null }
+    setStatus('Microphone lost — trying to get it back…')
+    try {
+      const constraints = {
+        audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
+      }
+      const micStream = await navigator.mediaDevices.getUserMedia(constraints)
+      if (!isRecordingRef.current || stoppingRef.current) { micStream.getTracks().forEach(t => t.stop()); return }
+      const micTrack = micStream.getAudioTracks()[0]
+      micTrack.enabled = !micMutedRef.current
+      micTrackRef.current = micTrack
+      // Tab audio cannot be re-requested without a picker; carry on mic-only.
+      if (streamRef.current?.mic) streamRef.current.tab?.getTracks().forEach(t => t.stop())
+      if (audioContextRef.current) { audioContextRef.current.close(); audioContextRef.current = null }
+      const lostTabAudio = tabAudioActiveRef.current
+      tabAudioActiveRef.current = false
+      streamRef.current = micStream
+      startCapture(micStream)
+      console.warn(`Microphone recovered after it was lost (${reason})`)
+      setStatus(`Recording resumed — microphone was lost for a moment${lostTabAudio ? ' (tab audio not restored)' : ''}${micMutedRef.current ? ' — mic muted' : ''}`)
+    } catch (err) {
+      if (Date.now() - startedAt < RECOVER_FOR_MS) {
+        recoverTimerRef.current = setTimeout(() => recoverMic(reason, startedAt), RECOVER_EVERY_MS)
+      } else {
+        console.error('Could not get the microphone back:', err)
+        setStatus('Microphone lost — press Stop, then Start recording to continue')
+        dialog.notice({ title: 'Microphone lost', message: 'Another app or the system took the microphone and it could not be reacquired. Press Stop, then Start recording; the lecture continues in the same session.' })
+      }
+    }
+  }, [selectedDeviceId, dialog, startCapture])
+  recoverMicRef.current = recoverMic
+
+  // Coming back to the foreground on a phone: if the recorder died while the
+  // tab was hidden, recover now rather than waiting for the retry timer.
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== 'visible' || !isRecordingRef.current) return
+      const rec = mediaRecorderRef.current
+      const track = micTrackRef.current
+      if (rec?.state === 'inactive' || track?.readyState === 'ended') recoverMicRef.current?.('tab returned to foreground')
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [])
+
   const startRecording = useCallback(async () => {
+    stoppingRef.current = false
     try {
       const constraints = {
         audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
@@ -331,26 +426,9 @@ function Workspace({ user, onLogout, onUserChange }) {
         streamRef.current = micStream
       }
 
-      const mimeType = MediaRecorder.isTypeSupported('audio/webm;codecs=opus')
-        ? 'audio/webm;codecs=opus'
-        : 'audio/webm'
-
-      const mediaRecorder = new MediaRecorder(recordingStream, { mimeType })
-      mediaRecorderRef.current = mediaRecorder
-
-      mediaRecorder.ondataavailable = (event) => {
-        // Every chunk is sent — even while disconnected (the socket hook queues
-        // and replays them) and even while the mic is muted. A muted track
-        // yields silence, which the server skips before transcription; dropping
-        // chunks instead would break the stream: the first chunk carries the
-        // WebM header every later chunk needs, and gaps shift the timestamps.
-        if (event.data.size > 0) sendBinary(event.data)
-      }
-
-      mediaRecorder.start(5000)
-      startLevelMeter(recordingStream)
       setIsRecording(true)
       isRecordingRef.current = true
+      startCapture(recordingStream)
       saveStorageRef.current = saveStorage
       acquireWakeLock()
       if (micState !== 'granted') { setMicState('granted'); loadDevices() }
@@ -361,13 +439,14 @@ function Workspace({ user, onLogout, onUserChange }) {
       if (error?.name === 'NotAllowedError') setMicState('denied')
       setStatus(micErrorMessage(error))
     }
-  }, [sendMessage, sendBinary, title, saveStorage, vocabulary, notesFocus, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, startLevelMeter, acquireWakeLock])
+  }, [sendMessage, startCapture, title, saveStorage, vocabulary, notesFocus, selectedDeviceId, audioDevices, captureTabAudio, micState, loadDevices, micErrorMessage, acquireWakeLock])
 
   // Mute only disables the mic track: the recorder and the stream keep going,
   // so the transcript resumes the moment the mic is enabled again.
   const toggleMicMute = useCallback(() => {
     setMicMuted(prev => {
       const next = !prev
+      micMutedRef.current = next
       if (micTrackRef.current) {
         micTrackRef.current.enabled = !next
       }
@@ -400,6 +479,8 @@ function Workspace({ user, onLogout, onUserChange }) {
   }, [micMuted])
 
   const stopRecording = useCallback(() => {
+    stoppingRef.current = true
+    if (recoverTimerRef.current) { clearTimeout(recoverTimerRef.current); recoverTimerRef.current = null }
     stopLevelMeter()
     releaseWakeLock()
     isPausedRef.current = false
@@ -425,6 +506,7 @@ function Workspace({ user, onLogout, onUserChange }) {
 
     micTrackRef.current = null
     tabAudioActiveRef.current = false
+    micMutedRef.current = false
     setMicMuted(false)
     setIsRecording(false)
     isRecordingRef.current = false
