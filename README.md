@@ -505,6 +505,11 @@ own mail account) whenever a nightly backup fails. The log is
 
 ---
 
+**A staging copy** runs on Kubernetes, restored from these same off-site
+bundles: [homelab-gitops](https://github.com/mrgutierrezmario/homelab-gitops).
+CI pushes the production image there as `ghcr.io/mrgutierrezmario/lecture-note-app`
+(`:main` follows the branch, `:1.2.3`-style tags are releases, amd64 and arm64).
+
 ## Google Drive for users
 
 Each user can connect their **own** Google Drive from Settings and keep a
