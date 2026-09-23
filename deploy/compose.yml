@@ -136,6 +136,11 @@ services:
     image: lecture-notes-app:latest
     restart: *restart
     logging: *logging
+    # A ceiling for the container, one core above WHISPER_THREADS so the web
+    # app and websockets are not fighting the transcription threads for the
+    # same quota. Leaves the rest of the Mac to macOS, Docker and everything
+    # else. Raise both together if transcription ever falls behind.
+    cpus: ${APP_CPUS:-5}
     network_mode: service:tailscale
     depends_on:
       postgres:
@@ -154,6 +159,13 @@ services:
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
       WHISPER_MODEL: ${WHISPER_MODEL:-small}
+      # How many threads Whisper may use. Without this, faster-whisper calls
+      # WhisperModel(device="cpu") with no cpu_threads, so CTranslate2 sizes
+      # its OpenMP pool from every core it can see — all of the Mac's — and a
+      # lecture makes the whole machine unresponsive. `small` transcribes a
+      # 5 s chunk in ~1.1 s using everything; at 4 threads it is nearer 2 s,
+      # still comfortably ahead of the 5 s recording cadence.
+      OMP_NUM_THREADS: ${WHISPER_THREADS:-4}
       SECRET_KEY: ${SECRET_KEY:?set SECRET_KEY in deploy/.env}
       AUDIO_RETENTION_DAYS: ${AUDIO_RETENTION_DAYS:-14}
       MAIL_USERNAME: ${MAIL_USERNAME:-}

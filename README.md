@@ -410,6 +410,8 @@ runtime from the admin Settings panel and persist in the app-state volume.
 | `OLLAMA_BASE_URL` | bundled | Point at a native Ollama: `http://host.docker.internal:11434` |
 | `OLLAMA_MODEL` *(panel)* | `llama3` | Local notes/chat model |
 | `WHISPER_MODEL` *(panel, restart)* | `small` | `base` is faster, `medium`/`large-v3` more accurate but slower than real time on CPU |
+| `WHISPER_THREADS` | `4` | CPU threads Whisper may use (`OMP_NUM_THREADS`). Unset, faster-whisper sizes its pool from *every* core on the host, and recording a lecture makes the whole machine unresponsive. `small` does a 5 s chunk in ~1.1 s using everything, ~2 s at 4 threads — still well ahead of the 5 s cadence |
+| `APP_CPUS` | `5` | The container's core limit. Keep it one above `WHISPER_THREADS` so the web app and websockets are not competing with transcription for the same quota |
 | `NOTES_INTERVAL_SECONDS` *(panel)* | `60` | How often notes regenerate |
 | `STORAGE_QUOTA_MB` *(panel)* | `500` | Retained audio per user (0 = unlimited) |
 | `MAX_LOCKED_LECTURES` *(panel)* | `5` | Kept lectures per regular user (admins unlimited) |
