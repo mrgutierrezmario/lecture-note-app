@@ -425,7 +425,12 @@ class SessionSummary(BaseModel):
     segment_count: int
     notes_version: int
     duration_seconds: int  # approximate: chunk count × 5 s
-    has_audio: bool  # any chunk still in object storage
+    # True when any chunk is not yet marked deleted_from_s3 — a database
+    # flag the retention cleanup sets, NOT a live check of object storage.
+    # They agree in normal operation; they diverge if the bucket is emptied
+    # behind the database's back (restoring a dump without the audio does
+    # exactly that), and then the UI offers audio the server cannot serve.
+    has_audio: bool
     locked: bool = False  # "kept": exempt from cleanup and deletion
     owner: str | None = None  # username; only filled in for admins
     drive_saved_at: datetime | None = None  # last "save to Google Drive"
