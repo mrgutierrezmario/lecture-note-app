@@ -24,6 +24,13 @@ for var in ("MAIL_USERNAME", "MAIL_PASSWORD", "MAIL_FROM", "ANTHROPIC_API_KEY", 
     os.environ.pop(var, None)
 os.environ["POSTGRES_HOST"] = "127.0.0.1"
 os.environ["POSTGRES_PORT"] = "1"  # nothing listens: DB checks must fail fast, not hang
+# The app connects through DATABASE_URL and S3_ENDPOINT_URL, whose defaults are
+# the dev Postgres and MinIO on localhost. Point both at the dead port too:
+# the TestClient runs the app's startup, which starts the audio retention
+# cleanup, and with a dev database running that cleanup deleted real audio
+# (2026-09-26).
+os.environ["DATABASE_URL"] = "postgresql+asyncpg://test:test@127.0.0.1:1/test"
+os.environ["S3_ENDPOINT_URL"] = "http://127.0.0.1:1"
 
 # faster-whisper (and its native libraries) are not needed to test the logic
 # around transcription; give the transcriber module something to import.
