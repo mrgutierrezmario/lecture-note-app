@@ -45,13 +45,15 @@ function DialogBox({ kind, options, onClose }) {
   const [value, setValue] = useState(defaultValue)
   const inputRef = useRef(null)
   const confirmRef = useRef(null)
+  const cancelRef = useRef(null)
 
   useEffect(() => {
-    (kind === 'prompt' ? inputRef : confirmRef).current?.focus()
+    // A dangerous confirm starts on Cancel, so a reflexive Enter can't delete.
+    (kind === 'prompt' ? inputRef : kind === 'confirm' && danger ? cancelRef : confirmRef).current?.focus()
     const onKey = e => { if (e.key === 'Escape') onClose(kind === 'prompt' ? null : false) }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [kind, onClose])
+  }, [kind, danger, onClose])
 
   const submit = (e) => {
     e?.preventDefault()
@@ -85,7 +87,7 @@ function DialogBox({ kind, options, onClose }) {
         )}
         <div className="dialog-actions">
           {kind !== 'notice' && (
-            <button type="button" className="btn-secondary" onClick={cancel}>{cancelLabel}</button>
+            <button ref={cancelRef} type="button" className="btn-secondary" onClick={cancel}>{cancelLabel}</button>
           )}
           <button ref={confirmRef} type="submit" className={danger ? 'btn-danger' : 'btn-primary'}>
             {confirmLabel}

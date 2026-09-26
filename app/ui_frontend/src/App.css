@@ -1700,6 +1700,79 @@ a.btn-icon:hover {
   color: var(--primary);
 }
 
+.history-row.selected {
+  background: var(--danger-tint);
+}
+
+/* Bulk selection: a bar above the list, a checkbox column in each row. The
+   bar sticks to the top of the scrolling list so "Delete N selected" stays in
+   view while ticking rows further down. */
+.history-toolbar {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.history-select-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.history-bulk-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13px;
+}
+
+.history-bulk-delete:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.history-bulk-delete:hover:not(:disabled) {
+  background: var(--danger-tint);
+}
+
+.history-bulk-progress {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.history-select {
+  flex: 0 0 auto;
+  display: inline-flex;
+  width: 20px;
+  margin-left: 12px;
+}
+
+.history-select-all input,
+.history-select input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  accent-color: var(--danger);
+  cursor: pointer;
+}
+
+.history-select input:disabled {
+  cursor: not-allowed;
+}
+
 .history-open {
   flex-grow: 1;
   min-width: 0;
@@ -2053,6 +2126,7 @@ a.btn-icon:hover {
   font-size: 14px;
   line-height: 1.5;
   color: var(--muted);
+  white-space: pre-line; /* multi-line messages, e.g. bulk-delete failures */
 }
 
 .dialog-field {

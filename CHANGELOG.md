@@ -12,10 +12,15 @@ All notable changes to AI Lecture Notes. The format follows
 
 - **Chat helps with the assignment**: "make a strategy", "brainstorm", "explain X", "outline my answer" are now answered — using the lecture as the brief and the assistant's own knowledge for the rest, with the lecture's part marked. Questions about what the professor said stay grounded in the transcript. Answer cap raised from 600 to 1500 tokens.
 - **Recording survives losing the microphone**: when Zoom, a phone call or a backgrounded tab takes the mic, the recorder now restarts itself on the same session (retrying for 10 minutes, and immediately when the tab returns), instead of silently sending nothing while the page still said Recording.
+- **Delete lectures in bulk**: History has a checkbox per lecture, "Select all" and "Delete N selected" in a bar that stays pinned while scrolling. The confirmation names every lecture it will delete. Kept lectures and the one open in the workspace (it may be recording) can't be selected, and while anything is ticked the per-row delete buttons are hidden so a row's trash can't be mistaken for the bulk delete.
+
+### Changed
+- **Delete confirmations** ask "Are you sure…?", say plainly there is no trash or undo, and explain how to keep a copy first (Download menu or Google Drive). Every dangerous confirmation now opens with Cancel focused, so a reflexive Enter can't delete.
 
 ### Fixed
 - `deploy/start.sh` falsely reported "Funnel is not enabled" (and could have tried to create a second admin): `grep -q` closing the pipe early made `pipefail` fail the check. It also now pulls images anonymously when the Docker credential helper cannot run (e.g. from a dev container shell), instead of failing the build.
 - **Times were hours off** (4 h in New York): the API sent UTC timestamps without a zone, so browsers read them as local time. They now end in `Z` and every viewer sees their own local time. PDF and Word exports — downloads and "Save to Google Drive" — print the recorded time in the reader's timezone with the zone shown ("05:47 PM EDT"), and date the page header, footer and Drive folder where the reader is. Without a browser timezone (the automatic Drive export after a recording) they print UTC, labelled.
+- **Lectures without a transcript were invisible** in History, so they could be neither seen nor deleted — including a recording whose transcription failed, whose audio still counted toward the storage quota. History now lists every lecture that holds anything (transcript, audio, notes or documents); only the empty sessions created by page loads stay hidden.
 
 ## [1.1.0] — 2026-09-19
 

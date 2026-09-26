@@ -2,20 +2,31 @@
  * "Your lectures" drawer: past recordings with download, rename, keep (lock),
  * delete-audio and delete actions, plus the storage-quota bar. Opening a row
  * loads that lecture read-only into the workspace. Admins see every user's
- * lectures with an owner tag.
+ * lectures with an owner tag. Rows can be selected and deleted in bulk; kept
+ * lectures and the one open in the workspace are never selectable.
  */
 import { useState, useEffect, useCallback } from 'react'
 import { HistoryIcon, CloseIcon, TrashIcon, EditIcon, NotesIcon, AudioIcon, AudioOffIcon, DownloadIcon, TranscriptIcon, LockIcon, UnlockIcon, DriveIcon, SpinnerIcon, PdfIcon, DocIcon, UserIcon } from './Icons'
 import { useDialog } from './Dialog'
 import { prepareMp3, downloadUrl } from '../lib/mp3'
-import ShareDialog from './ShareDialog'
 import { tzQuery } from '../lib/timezone'
+import ShareDialog from './ShareDialog'
 
 const formatMB = bytes => `${Math.round(bytes / 1048576)} MB`
 
 const formatDate = iso => new Date(iso).toLocaleString(undefined, {
   month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit',
 })
+
+// Shared by the single and bulk delete confirmations. There is no undo and no
+// trash: say so plainly, and say how to keep a copy before it is too late.
+const deleteWarning = what => (
+  `${what} will be deleted permanently: transcript, notes, chat and audio.\n\n` +
+  `There is no trash and no undo: once deleted, it's gone for good.\n\n` +
+  `Need a copy? Cancel, then use the Download menu on a lecture to save the ` +
+  `transcript, notes, PDF, Word file or MP3, or save it to Google Drive. ` +
+  `Copies already in your Drive are not affected.`
+)
 
 const formatDuration = s => {
   if (s < 60) return `${s}s`
@@ -33,12 +44,17 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
   const [mp3Busy, setMp3Busy] = useState({}) // session id -> progress label
   const [driveBusy, setDriveBusy] = useState({}) // session id -> step label
   const [drive, setDrive] = useState(null) // /api/drive status for the signed-in user
+  const [selected, setSelected] = useState(() => new Set()) // session ids ticked for bulk delete
+  const [bulkBusy, setBulkBusy] = useState(null) // progress label while a bulk delete runs
 
   const load = useCallback(async () => {
     try {
       const [list, use, drv] = await Promise.all([fetch('/api/sessions'), fetch('/api/sessions/usage'), fetch('/api/drive')])
       if (!list.ok) throw new Error(`HTTP ${list.status}`)
-      setItems(await list.json())
+      const fresh = await list.json()
+      setItems(fresh)
+      // Drop ticks for rows that are gone (deleted, or now kept elsewhere).
+      setSelected(prev => new Set(fresh.filter(i => prev.has(i.id) && !i.locked).map(i => i.id)))
       if (use.ok) setUsage(await use.json())
       if (drv.ok) setDrive(await drv.json())
       setError(null)
@@ -154,16 +170,71 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
   }
 
   const remove = async (item) => {
-    const label = item.title || 'this untitled lecture'
     const ok = await dialog.confirm({
-      title: 'Delete this lecture?',
-      message: `${label[0].toUpperCase() + label.slice(1)} — its transcript, notes and audio — will be removed permanently. This can't be undone.`,
-      confirmLabel: 'Delete lecture',
+      title: 'Are you sure you want to delete this lecture?',
+      message: deleteWarning(item.title ? `"${item.title}"` : 'This untitled lecture'),
+      confirmLabel: 'Delete forever',
       danger: true,
     })
     if (!ok) return
     const response = await fetch(`/api/sessions/${item.id}`, { method: 'DELETE' })
     if (response.ok) load()
+  }
+
+  // Bulk delete. Kept lectures are refused by the server anyway; the open one
+  // is excluded here because it may be recording right now.
+  const selectable = item => !user.is_demo && item.can_edit && !item.locked && item.id !== currentSessionId
+  const selectableItems = (items || []).filter(selectable)
+  const allSelected = selectableItems.length > 0 && selectableItems.every(i => selected.has(i.id))
+
+  const toggleSelected = id => setSelected(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+
+  const toggleAll = () => setSelected(allSelected ? new Set() : new Set(selectableItems.map(i => i.id)))
+
+  const removeSelected = async () => {
+    const targets = selectableItems.filter(i => selected.has(i.id))
+    if (targets.length === 0) return
+    const n = targets.length
+    // Name every lecture, so the popup can't be mistaken for a single delete.
+    const SHOWN = 8
+    const names = targets.slice(0, SHOWN).map(i => `• ${i.title || 'Untitled lecture'} (${formatDate(i.created_at)})`)
+    if (n > SHOWN) names.push(`• …and ${n - SHOWN} more`)
+    const ok = await dialog.confirm({
+      title: `Are you sure you want to delete ${n} lecture${n === 1 ? '' : 's'}?`,
+      message: `${names.join('\n')}\n\n` +
+        deleteWarning(n === 1 ? 'The selected lecture' : `All ${n} selected lectures`),
+      confirmLabel: `Delete ${n} forever`,
+      danger: true,
+    })
+    if (!ok) return
+    // One at a time: each delete is its own transaction, and a failure on one
+    // lecture must not stop the rest.
+    const failed = []
+    for (const [i, item] of targets.entries()) {
+      setBulkBusy(`Deleting ${i + 1} of ${n}…`)
+      try {
+        const response = await fetch(`/api/sessions/${item.id}`, { method: 'DELETE' })
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}))
+          failed.push(`${item.title || 'Untitled lecture'}: ${data.detail || `HTTP ${response.status}`}`)
+        }
+      } catch (err) {
+        failed.push(`${item.title || 'Untitled lecture'}: ${err.message}`)
+      }
+    }
+    setBulkBusy(null)
+    await load()
+    if (failed.length) {
+      await dialog.notice({
+        title: `${failed.length} of ${n} could not be deleted`,
+        message: failed.join('\n'),
+      })
+    }
   }
 
   const toggle = (
@@ -216,14 +287,52 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
           {items && items.length === 0 && (
             <div className="empty-state history-empty">
               <strong>No lectures yet</strong>
-              <p>Recordings with a transcript show up here.</p>
+              <p>Your recordings show up here.</p>
+            </div>
+          )}
+
+          {selectableItems.length > 0 && (
+            <div className="history-toolbar">
+              <label className="history-select-all">
+                <input
+                  type="checkbox"
+                  checked={allSelected}
+                  ref={el => { if (el) el.indeterminate = selected.size > 0 && !allSelected }}
+                  onChange={toggleAll}
+                  disabled={!!bulkBusy}
+                />
+                {selected.size > 0 ? `${selected.size} selected` : `Select all (${selectableItems.length})`}
+              </label>
+              {bulkBusy
+                ? <span className="history-bulk-progress"><SpinnerIcon size={14} /> {bulkBusy}</span>
+                : (
+                  <button className="btn-secondary history-bulk-delete" onClick={removeSelected} disabled={selected.size === 0}>
+                    <TrashIcon size={14} /> {selected.size > 0 ? `Delete ${selected.size} selected` : 'Delete selected'}
+                  </button>
+                )}
             </div>
           )}
 
           {items && items.length > 0 && (
             <ul className="history-list">
               {items.map(item => (
-                <li key={item.id} className={`history-row${item.id === currentSessionId ? ' current' : ''}`}>
+                <li key={item.id} className={`history-row${item.id === currentSessionId ? ' current' : ''}${selected.has(item.id) ? ' selected' : ''}`}>
+                  {selectableItems.length > 0 && (
+                    <span
+                      className="history-select"
+                      data-tip={item.locked ? 'Kept — unlock first' : item.id === currentSessionId ? 'Open in the workspace' : undefined}
+                    >
+                      {item.can_edit && (
+                        <input
+                          type="checkbox"
+                          checked={selected.has(item.id)}
+                          onChange={() => toggleSelected(item.id)}
+                          disabled={!selectable(item) || !!bulkBusy}
+                          aria-label={`Select ${item.title || 'untitled lecture'}`}
+                        />
+                      )}
+                    </span>
+                  )}
                   <button className="history-open" onClick={() => { onOpen(item); setOpen(false) }}>
                     <span className="history-title">{item.title || 'Untitled lecture'}</span>
                     <span className="history-meta">
@@ -291,10 +400,14 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                     >
                       {item.locked ? <LockIcon size={16} /> : <UnlockIcon size={16} />}
                     </button>
-                    {item.has_audio && (
+                    {/* While lectures are ticked, the only delete is the bulk one:
+                        a row's own trash would delete just that row. */}
+                    {selected.size === 0 && item.has_audio && (
                       <button className="btn-icon btn-icon-danger" onClick={() => removeAudio(item)} disabled={item.locked} data-tip={item.locked ? 'Kept — unlock first' : 'Delete audio only (keeps transcript and notes)'} aria-label="Delete audio"><AudioOffIcon size={16} /></button>
                     )}
-                    <button className="btn-icon btn-icon-danger" onClick={() => remove(item)} disabled={item.locked} data-tip={item.locked ? 'Kept — unlock first' : 'Delete lecture'} aria-label="Delete lecture"><TrashIcon size={16} /></button>
+                    {selected.size === 0 && (
+                      <button className="btn-icon btn-icon-danger" onClick={() => remove(item)} disabled={item.locked} data-tip={item.locked ? 'Kept — unlock first' : 'Delete lecture'} aria-label="Delete lecture"><TrashIcon size={16} /></button>
+                    )}
                     </>)}
                   </span>
                 </li>
@@ -315,7 +428,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                   : 'Showing the lectures you have recorded.'}
             </p>
             <ul>
-              <li>Transcripts and notes are kept indefinitely.</li>
+              <li>Transcripts and notes are kept until you delete the lecture.</li>
               <li>Audio is deleted automatically after {retentionDays} days and counts toward the storage shown above.</li>
               <li>To keep a recording, download the MP3 or lock the lecture — locked lectures skip the cleanup and can't be deleted until unlocked.</li>
             </ul>

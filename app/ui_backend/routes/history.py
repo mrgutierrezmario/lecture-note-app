@@ -54,10 +54,13 @@ async def _owned_session(session_id: str, user: CurrentUser, db: AsyncSession) -
 async def list_sessions(
     user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
 ):
-    """Lectures with at least one transcribed segment, newest first.
+    """Lectures that hold anything — transcript, audio, notes or documents —
+    newest first.
 
     A session row is created on every page load, so most rows are empty
-    shells; only ones with content count as history."""
+    shells; only ones with content count as history. Content is more than
+    transcript: a recording whose transcription failed still has audio that
+    counts toward the quota, and must be listed to be deletable."""
     seg_count = (
         select(TranscriptSegment.session_id, func.count().label("segments"))
         .group_by(TranscriptSegment.session_id)
@@ -86,10 +89,16 @@ async def list_sessions(
             User.username,
             drive.c.saved_at,
         )
-        .join(seg_count, seg_count.c.session_id == Session.id)
+        .outerjoin(seg_count, seg_count.c.session_id == Session.id)
         .outerjoin(chunks, chunks.c.session_id == Session.id)
         .outerjoin(User, User.id == Session.user_id)
         .outerjoin(drive, drive.c.session_id == Session.id)
+        .where(
+            seg_count.c.segments.isnot(None)
+            | chunks.c.chunks.isnot(None)
+            | select(NotesVersion.id).where(NotesVersion.session_id == Session.id).exists()
+            | select(DocumentUpload.id).where(DocumentUpload.session_id == Session.id).exists()
+        )
         .order_by(Session.created_at.desc())
     )
     if not user.is_admin:
