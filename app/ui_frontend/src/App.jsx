@@ -23,6 +23,7 @@ import HistoryPanel from './components/HistoryPanel'
 import { MicIcon, LogoutIcon, PlusIcon, HelpIcon } from './components/Icons'
 import useAuth from './hooks/useAuth'
 import { prepareMp3, downloadUrl } from './lib/mp3'
+import { tzQuery } from './lib/timezone'
 import { useDialog } from './components/Dialog'
 import LectureDetailsDialog from './components/LectureDetailsDialog'
 import useWebSocket from './hooks/useWebSocket'
@@ -549,13 +550,13 @@ function Workspace({ user, onLogout, onUserChange }) {
   // Formatted document (notes + Q&A + transcript) — PDF or Word.
   const exportPdf = useCallback(() =>
     triggerDownload(
-      `/api/session/${sessionId}/export/lecture.pdf`,
+      `/api/session/${sessionId}/export/lecture.pdf?${tzQuery()}`,
       `lecture-${sessionId.slice(0, 8)}.pdf`,
       'Building the PDF…',
     ), [sessionId, triggerDownload])
   const exportDocx = useCallback(() =>
     triggerDownload(
-      `/api/session/${sessionId}/export/lecture.docx`,
+      `/api/session/${sessionId}/export/lecture.docx?${tzQuery()}`,
       `lecture-${sessionId.slice(0, 8)}.docx`,
       'Building the Word file…',
     ), [sessionId, triggerDownload])

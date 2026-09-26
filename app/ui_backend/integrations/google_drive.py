@@ -25,7 +25,7 @@ import time
 import uuid
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import UTC, datetime
 
 import httpx
 from cryptography.fernet import Fernet, InvalidToken
@@ -44,7 +44,7 @@ from core.models import (
     TranscriptSegment,
 )
 from exports import mp3_export
-from exports.documents_export import LectureDoc, build_docx, build_pdf
+from exports.documents_export import LectureDoc, build_docx, build_pdf, resolve_tz
 
 logger = logging.getLogger(__name__)
 settings = get_settings()
@@ -337,6 +337,9 @@ class Job:
     folder_url: str | None = None
     error: str | None = None
     finished_at: float | None = None
+    # The browser's timezone, for the dates printed in the PDF/Word files. Unset
+    # for the automatic export after a recording, which then prints UTC.
+    tz: str | None = None
 
     def progress(self) -> dict:
         """The status payload the API returns."""
@@ -357,12 +360,12 @@ def status(session_id: str) -> Job | None:
     return _jobs.get(session_id)
 
 
-def start(session_id: str, notify: StatusCallback | None = None) -> Job:
+def start(session_id: str, notify: StatusCallback | None = None, tz: str | None = None) -> Job:
     """Kick off an export unless one is already running."""
     job = _jobs.get(session_id)
     if job and job.status == "running":
         return job
-    job = Job(session_id=session_id, notify=notify)
+    job = Job(session_id=session_id, notify=notify, tz=tz)
     _jobs[session_id] = job
     asyncio.create_task(_run(job))
     return job
@@ -434,7 +437,10 @@ async def _run(job: Job) -> None:
                 root = await drive.ensure_path(link.folder_name or ROOT_FOLDER_NAME)
                 link.folder_id = root
                 await db.commit()
-            folder_name = _slug(session.title, session.created_at)
+            # Dated where the reader is: an evening lecture in New York is
+            # already "tomorrow" in UTC.
+            recorded = session.created_at.replace(tzinfo=UTC).astimezone(resolve_tz(job.tz))
+            folder_name = _slug(session.title, recorded)
             prior = next((f.folder_id for f in existing.values() if f.folder_id), None)
             folder = prior if prior and await drive.exists(prior) else None
             folder = folder or await drive.ensure_folder(folder_name, root)
@@ -468,6 +474,7 @@ async def _run(job: Job) -> None:
             # The formatted document (notes + Q&A + transcript) in both formats:
             # PDF opens anywhere, Word is what students edit.
             lec = await _lecture_doc(db, session)
+            lec.tz = resolve_tz(job.tz)
             await put(
                 "pdf", "lecture.pdf", "application/pdf", await asyncio.to_thread(build_pdf, lec)
             )

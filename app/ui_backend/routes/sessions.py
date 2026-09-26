@@ -387,10 +387,16 @@ def _export_filename(title: str, session_id: str, ext: str) -> str:
 
 @router.get("/{session_id}/export/lecture.pdf")
 async def export_pdf(
-    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+    session_id: str,
+    tz: str | None = None,
+    user: CurrentUser = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """Notes, questions & answers and the full transcript as one PDF."""
+    """Notes, questions & answers and the full transcript as one PDF.
+
+    ``tz`` is the browser's IANA timezone; times print in it (UTC otherwise)."""
     lec = await _lecture_doc(session_id, db, user.id)
+    lec.tz = documents_export.resolve_tz(tz)
     data = await asyncio.to_thread(documents_export.build_pdf, lec)
     return Response(
         content=data,
@@ -401,10 +407,14 @@ async def export_pdf(
 
 @router.get("/{session_id}/export/lecture.docx")
 async def export_docx(
-    session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+    session_id: str,
+    tz: str | None = None,
+    user: CurrentUser = Depends(current_user),
+    db: AsyncSession = Depends(get_db),
 ):
-    """The same document as a Word file."""
+    """The same document as a Word file, times in ``tz`` like the PDF."""
     lec = await _lecture_doc(session_id, db, user.id)
+    lec.tz = documents_export.resolve_tz(tz)
     data = await asyncio.to_thread(documents_export.build_docx, lec)
     return Response(
         content=data,
@@ -578,12 +588,16 @@ async def audio_status(session_id: str):
 
 @router.post("/{session_id}/drive")
 async def save_to_drive(
-    session_id: str, user: CurrentUser = Depends(session_writer), db: AsyncSession = Depends(get_db)
+    session_id: str,
+    tz: str | None = None,
+    user: CurrentUser = Depends(session_writer),
+    db: AsyncSession = Depends(get_db),
 ):
     """Save notes, transcript and MP3 to the *owner's* Google Drive (background).
 
     Poll ``…/drive/status``. Admins may trigger it for another user's lecture;
-    the files still land in that user's Drive, never the admin's.
+    the files still land in that user's Drive, never the admin's. ``tz`` is the
+    browser's timezone, for the dates in the PDF/Word files.
     """
     result = await db.execute(select(Session).where(Session.id == session_id))
     session = result.scalar_one_or_none()
@@ -594,7 +608,7 @@ async def save_to_drive(
     link = await db.get(DriveLink, session.user_id)
     if link is None:
         raise HTTPException(status_code=400, detail="Google Drive is not connected (Settings)")
-    return google_drive.start(session_id).progress()
+    return google_drive.start(session_id, tz=tz).progress()
 
 
 @router.get("/{session_id}/drive/status")

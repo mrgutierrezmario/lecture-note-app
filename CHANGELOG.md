@@ -15,6 +15,7 @@ All notable changes to AI Lecture Notes. The format follows
 
 ### Fixed
 - `deploy/start.sh` falsely reported "Funnel is not enabled" (and could have tried to create a second admin): `grep -q` closing the pipe early made `pipefail` fail the check. It also now pulls images anonymously when the Docker credential helper cannot run (e.g. from a dev container shell), instead of failing the build.
+- **Times were hours off** (4 h in New York): the API sent UTC timestamps without a zone, so browsers read them as local time. They now end in `Z` and every viewer sees their own local time. PDF and Word exports — downloads and "Save to Google Drive" — print the recorded time in the reader's timezone with the zone shown ("05:47 PM EDT"), and date the page header, footer and Drive folder where the reader is. Without a browser timezone (the automatic Drive export after a recording) they print UTC, labelled.
 
 ## [1.1.0] — 2026-09-19
 

@@ -5,10 +5,23 @@ SQLAlchemy rows; the rest describe request bodies or hand-assembled replies.
 Field comments explain anything that isn't obvious from the name.
 """
 
-from datetime import datetime
+from datetime import UTC, datetime
+from typing import Annotated
 from uuid import UUID
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict
+
+
+def _as_utc(value: datetime) -> datetime:
+    """Mark a timestamp as UTC. The database stores naive UTC (``utcnow()``);
+    sent without a zone, browsers read it as *local* time and every lecture
+    showed up hours off. With the zone, the JSON ends in ``Z`` and each
+    browser converts it to the viewer's own timezone."""
+    return value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+
+
+# Every datetime the API sends or receives is UTC, and says so.
+UTCDatetime = Annotated[datetime, AfterValidator(_as_utc)]
 
 # ── Lecture sessions ──────────────────────────────────────────────────────────
 
@@ -18,8 +31,8 @@ class SessionResponse(BaseModel):
 
     id: str
     title: str | None
-    created_at: datetime
-    updated_at: datetime
+    created_at: UTCDatetime
+    updated_at: UTCDatetime
     last_notes_version: int
     vocabulary: str | None = None  # key terms for the transcriber
     notes_focus: str | None = None  # what the notes should emphasise
@@ -55,7 +68,7 @@ class NotesResponse(BaseModel):
     session_id: str
     version: int
     notes_md: str
-    created_at: datetime
+    created_at: UTCDatetime
 
 
 class AudioChunkResponse(BaseModel):
@@ -65,12 +78,12 @@ class AudioChunkResponse(BaseModel):
     chunk_index: int
     s3_key: str | None
     size_bytes: int
-    received_at: datetime
+    received_at: UTCDatetime
     decode_ok: bool
     transcribed_ok: bool
     error: str | None
     deleted_from_s3: bool
-    deleted_at: datetime | None
+    deleted_at: UTCDatetime | None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -96,7 +109,7 @@ class DocumentUploadResponse(BaseModel):
     id: UUID
     filename: str
     file_type: str  # pdf | pptx | docx | image
-    created_at: datetime
+    created_at: UTCDatetime
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -127,7 +140,7 @@ class ChatMessageOut(BaseModel):
     role: str
     text: str
     provider: str | None = None
-    created_at: datetime | None = None
+    created_at: UTCDatetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -298,7 +311,7 @@ class UserResponse(BaseModel):
     email_verified: bool = True
     approved: bool = True  # False = waiting for an admin (Settings → Users → Approve)
     is_demo: bool = False  # read-only visitor account ("Try the demo")
-    created_at: datetime | None = None
+    created_at: UTCDatetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -420,8 +433,8 @@ class SessionSummary(BaseModel):
 
     id: str
     title: str | None
-    created_at: datetime
-    updated_at: datetime
+    created_at: UTCDatetime
+    updated_at: UTCDatetime
     segment_count: int
     notes_version: int
     duration_seconds: int  # approximate: chunk count × 5 s
@@ -433,7 +446,7 @@ class SessionSummary(BaseModel):
     has_audio: bool
     locked: bool = False  # "kept": exempt from cleanup and deletion
     owner: str | None = None  # username; only filled in for admins
-    drive_saved_at: datetime | None = None  # last "save to Google Drive"
+    drive_saved_at: UTCDatetime | None = None  # last "save to Google Drive"
     can_edit: bool = True  # False for a lecture shared with the viewer (read-only)
     shared_by: str | None = None  # owner's username when the viewer isn't the owner
     shared_with: list[str] = []  # usernames it is shared with (owner/admin view)

@@ -42,7 +42,7 @@ def test_sections_follow_content():
 def test_subtitle():
     assert (
         _lecture().subtitle
-        == "Recorded September 14, 2026, 09:56 PM · 1 h 53 min · Notes version 3"
+        == "Recorded September 14, 2026, 09:56 PM UTC · 1 h 53 min · Notes version 3"
     )
     assert _lecture(recorded_at=None, duration_seconds=600, notes_version=0).subtitle == "10 min"
 
@@ -101,3 +101,19 @@ def test_pdf_handles_plain_paragraphs_and_rules():
     md = "## Outline\n- a point\n\nA plain sentence.\n\n---\n*Updated: 2026-03-26*\n"
     data = de.build_pdf(_lecture(notes_md=md))
     assert data.startswith(b"%PDF-")
+
+
+def test_recorded_time_prints_in_the_readers_timezone():
+    # Stored 21:56 UTC is 5:56 PM in New York (EDT); it used to print "09:56 PM".
+    ny = _lecture(tz=de.resolve_tz("America/New_York"))
+    assert "Recorded September 14, 2026, 05:56 PM EDT" in ny.subtitle
+    tokyo = _lecture(tz=de.resolve_tz("Asia/Tokyo"))
+    assert "Recorded September 15, 2026, 06:56 AM JST" in tokyo.subtitle
+
+
+def test_unknown_or_missing_timezone_falls_back_to_labelled_utc():
+    for name in (None, "", "Not/AZone", "../../etc/passwd"):
+        assert (
+            "Recorded September 14, 2026, 09:56 PM UTC" in _lecture(tz=de.resolve_tz(name)).subtitle
+        )
+    assert "09:56 PM UTC" in _lecture().subtitle  # default, e.g. the automatic Drive export
