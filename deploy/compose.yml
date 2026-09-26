@@ -3,7 +3,7 @@
 #
 # Public URL: Tailscale Funnel on the `tailscale` service. The app shares its
 # network namespace, so Funnel proxies to localhost:8000 and the app still
-# reaches postgres/minio/ollama by name through that namespace.
+# reaches postgres/garage/ollama by name through that namespace.
 
 name: lecture-notes
 
@@ -33,32 +33,24 @@ services:
       timeout: 5s
       retries: 10
 
-  minio:
-    image: quay.io/minio/minio:latest
+  # Object storage for the audio chunks. Replaces MinIO, which stopped
+  # publishing community binaries and images in 2025. Single node, ~5 MB RAM.
+  # garage-init.sh (run by start.sh/restore.sh) creates the layout, key, bucket.
+  garage:
+    image: dxflrs/garage:v2.1.0
     restart: *restart
     logging: *logging
-    command: server /data --address :9000
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      GARAGE_RPC_SECRET: ${GARAGE_RPC_SECRET:?set GARAGE_RPC_SECRET in deploy/.env}
+      GARAGE_ADMIN_TOKEN: ${GARAGE_ADMIN_TOKEN:?set GARAGE_ADMIN_TOKEN in deploy/.env}
     volumes:
-      - minio-data:/data
+      - ./garage.toml:/etc/garage.toml:ro
+      - garage-data:/var/lib/garage
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
-      interval: 5s
+      test: ["CMD", "/garage", "status"]
+      interval: 10s
       timeout: 5s
       retries: 10
-
-  # One-shot: make sure the audio bucket exists.
-  minio-init:
-    image: quay.io/minio/mc:latest
-    depends_on:
-      minio:
-        condition: service_healthy
-    entrypoint: >
-      /bin/sh -c "
-      mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
-      mc mb local/lecture-audio --ignore-existing"
 
   # Bundled Ollama (CPU only — Docker cannot use the Mac's GPU). Started only
   # when OLLAMA_BASE_URL is unset; point it at a native Ollama for GPU speed.
@@ -145,16 +137,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      minio-init:
-        condition: service_completed_successfully
+      garage:
+        condition: service_healthy
       tailscale:
         condition: service_started
     environment:
       DATABASE_URL: postgresql+asyncpg://postgres:${POSTGRES_PASSWORD:-postgres}@postgres:5432/lecture_notes
       POSTGRES_HOST: postgres
-      S3_ENDPOINT_URL: http://minio:9000
-      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_ENDPOINT_URL: http://garage:3900
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY in deploy/.env}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY in deploy/.env}
       S3_BUCKET: lecture-audio
       OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://ollama:11434}
       OLLAMA_MODEL: ${OLLAMA_MODEL:-llama3}
@@ -194,7 +186,11 @@ services:
 
 volumes:
   postgres-data:
+  # MinIO's data, kept as a rollback after the move to Garage (2026-09-25).
+  # Nothing uses it; delete with `docker volume rm lecture-notes_minio-data`
+  # once Garage has run a week without trouble.
   minio-data:
+  garage-data:
   ollama-data:
   tailscale-state:
   tailscale-config:

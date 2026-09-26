@@ -73,9 +73,10 @@ if docker volume inspect "${PROJECT}_postgres-data" >/dev/null 2>&1; then
 fi
 
 # ── Start the data services only ──────────────────────────────────────────────
-log "Starting postgres, minio, tailscale (app stays down while restoring)..."
+log "Starting postgres, garage, tailscale (app stays down while restoring)..."
 $DC stop app >/dev/null 2>&1 || true
-$DC up -d postgres minio minio-init tailscale-config tailscale
+$DC up -d postgres garage tailscale-config tailscale
+./garage-init.sh
 for i in $(seq 1 60); do $DC exec -T postgres pg_isready -q -U postgres && break; sleep 1; done
 
 # ── Database ──────────────────────────────────────────────────────────────────

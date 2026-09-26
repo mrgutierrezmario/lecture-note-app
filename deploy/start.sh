@@ -39,7 +39,7 @@ fi
 if [ ! -f .env ]; then
   log "Creating deploy/.env with generated secrets..."
   cp .env.example .env
-  sed -i.bak "s|^SECRET_KEY=$|SECRET_KEY=$(gen 32)|; s|^POSTGRES_PASSWORD=$|POSTGRES_PASSWORD=$(gen)|; s|^MINIO_ROOT_PASSWORD=$|MINIO_ROOT_PASSWORD=$(gen)|" .env
+  sed -i.bak "s|^SECRET_KEY=$|SECRET_KEY=$(gen 32)|; s|^POSTGRES_PASSWORD=$|POSTGRES_PASSWORD=$(gen)|; s|^GARAGE_RPC_SECRET=$|GARAGE_RPC_SECRET=$(openssl rand -hex 32)|; s|^GARAGE_ADMIN_TOKEN=$|GARAGE_ADMIN_TOKEN=$(gen)|; s|^S3_ACCESS_KEY=$|S3_ACCESS_KEY=GK$(openssl rand -hex 12)|; s|^S3_SECRET_KEY=$|S3_SECRET_KEY=$(openssl rand -hex 32)|" .env
   rm -f .env.bak
 fi
 load_env .env
@@ -54,6 +54,9 @@ fi
 
 # ── Build and start ───────────────────────────────────────────────────────────
 log "Building and starting containers (first build takes a few minutes)..."
+# Object storage first: the app needs the key and bucket to exist.
+$DC up -d garage
+./garage-init.sh
 $DC up -d --build --remove-orphans
 
 # ── Ollama models (bundled Ollama only) ───────────────────────────────────────
