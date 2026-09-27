@@ -141,6 +141,21 @@ machine, `deploy/backup-setup.sh` first to reconnect the off-site remote.
   mail is broken:
   `docker compose -f deploy/compose.yml exec app python -m scripts.manage_users passwd admin`
 
+## The demo account
+
+- "Try the demo" signs into one shared account (Settings → Users: the account
+  marked *demo*). Everywhere by default it is read-only: open lectures, ask a
+  few questions, export.
+- With the optional Cloudflare tunnel and `DEMO_FULL_ACCESS_VIA_TUNNEL=true`
+  in `deploy/.env`, requests through that tunnel get full access: record,
+  upload, edit, rename, delete. Never: share, Google Drive, lock/unlock, or
+  change the account. The tunnel's config must use `http://tailscale:8000`
+  (that is how the app tells it apart from Funnel).
+- **Keep the sample lecture locked** (the lock icon in History, as an admin).
+  A kept lecture is read-only to the demo and never cleaned up; anything the
+  demo records is deleted after `DEMO_RETENTION_HOURS` (default 24).
+- The demo's storage cap is its per-user quota (Settings → Users).
+
 ## Where things live
 
 | | |
