@@ -245,7 +245,7 @@ function Login({ onLogin, onRegister, onDemo }) {
             >
               Try the Demo
             </button>
-            {' '}, a read-only account with a sample lecture.
+            , a read-only account with a sample lecture.
           </p>
         )}
         <p className="login-note login-legal">
