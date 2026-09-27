@@ -692,7 +692,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               <span className="auth-icon">{settings.ollama_reachable ? <CheckIcon size={13} /> : <AlertIcon size={13} />}</span>
               <div>
                 <strong>{settings.ollama_reachable ? 'Reachable' : 'Unreachable'}</strong>
-                <p className="auth-detail"><code>{settings.ollama_base_url}</code></p>
+                {settings.ollama_base_url && <p className="auth-detail"><code>{settings.ollama_base_url}</code></p>}
                 {!settings.ollama_reachable && (
                   <p className="auth-detail">
                     Notes generation falls back to heuristics. Set <code>OLLAMA_BASE_URL</code> in

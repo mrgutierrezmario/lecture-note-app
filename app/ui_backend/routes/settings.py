@@ -136,6 +136,10 @@ async def read_settings(user: CurrentUser = Depends(admin_or_demo)):
         current.google_client_id = ""
         current.google_client_secret_masked = None
         current.google_picker_api_key = ""
+        # Built from PUBLIC_URL, so it would show the app's main address to
+        # visitors on any other one; the Ollama URL is internal plumbing.
+        current.google_redirect_uri = ""
+        current.ollama_base_url = ""
     return current
 
 
