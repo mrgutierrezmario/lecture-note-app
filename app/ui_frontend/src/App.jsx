@@ -278,6 +278,11 @@ function Workspace({ user, onLogout, onUserChange }) {
       if (message.stop) stopRecordingRef.current?.()
       setStatus(message.message)
       dialog.notice({ title: 'Storage quota reached', message: message.message })
+    } else if (message.type === 'recording_refused') {
+      // The shared demo account records one lecture at a time; someone else has it.
+      if (message.stop) stopRecordingRef.current?.()
+      setStatus(message.message)
+      dialog.notice({ title: 'Demo is busy', message: message.message })
     }
   }, [])
 

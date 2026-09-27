@@ -155,6 +155,9 @@ machine, `deploy/backup-setup.sh` first to reconnect the off-site remote.
   A kept lecture is read-only to the demo and never cleaned up; anything the
   demo records is deleted after `DEMO_RETENTION_HOURS` (default 24).
 - The demo's storage cap is its per-user quota (Settings → Users).
+- The demo records one lecture at a time (everyone shares the account); a
+  second visitor who presses record is told the demo is busy. The slot frees
+  when the first recording stops or its tab closes.
 
 ## Where things live
 

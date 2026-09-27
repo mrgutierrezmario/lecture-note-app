@@ -140,6 +140,23 @@ class ConnectionManager:
         self.save_storage: dict[str, bool] = {}
         # session -> [used_bytes, quota_bytes]; quota 0 = unlimited
         self.quota: dict[str, list[int]] = {}
+        # The one lecture the shared demo account is recording, if any: every
+        # visitor uses that account, so this keeps it to one recording (one
+        # Whisper stream) at a time. Released on stop or when its last socket closes.
+        self.demo_recording: str | None = None
+
+    def claim_demo_recording(self, session_id: str) -> bool:
+        """Let the demo record into ``session_id`` unless another demo lecture is recording."""
+        holder = self.demo_recording
+        if holder is None or holder == session_id or holder not in self.active_connections:
+            self.demo_recording = session_id
+            return True
+        return False
+
+    def release_demo_recording(self, session_id: str) -> None:
+        """Free the demo's recording slot if ``session_id`` holds it."""
+        if self.demo_recording == session_id:
+            self.demo_recording = None
 
     async def connect(self, websocket: WebSocket, session_id: str):
         """Accept a socket and register it under its session."""
@@ -162,6 +179,7 @@ class ConnectionManager:
                 self.webm_headers.pop(session_id, None)
                 self.save_storage.pop(session_id, None)
                 self.quota.pop(session_id, None)
+                self.release_demo_recording(session_id)
                 reset_transcriber_session(session_id)
         logger.info(f"WebSocket disconnected for session {session_id}")
 
@@ -317,6 +335,23 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                             }
                         )
 
+                    elif (
+                        msg_type == "start"
+                        and user.is_demo
+                        and not (manager.claim_demo_recording(session_id))
+                    ):
+                        await websocket.send_json(
+                            {
+                                "type": "recording_refused",
+                                "stop": True,
+                                "message": (
+                                    "Someone else is recording in the demo right now — "
+                                    "only one demo recording runs at a time. Try again in "
+                                    "a few minutes, or create your own account."
+                                ),
+                            }
+                        )
+
                     elif msg_type == "start":
                         title = message.get("title")
                         manager.save_storage[session_id] = bool(message.get("save_storage", False))
@@ -389,6 +424,25 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                 await db.commit()
                                 apply_prompt(session_id, session.title, session.vocabulary)
 
+                    elif (
+                        msg_type == "resume"
+                        and user.is_demo
+                        and not (manager.claim_demo_recording(session_id))
+                    ):
+                        # Its slot was freed when the socket dropped and another
+                        # visitor took it.
+                        await websocket.send_json(
+                            {
+                                "type": "recording_refused",
+                                "stop": True,
+                                "message": (
+                                    "Someone else is recording in the demo right now — "
+                                    "only one demo recording runs at a time. Try again in "
+                                    "a few minutes, or create your own account."
+                                ),
+                            }
+                        )
+
                     elif msg_type == "resume":
                         # The browser reconnected mid-recording (network blip or a
                         # server restart): restore the per-session options that
@@ -404,6 +458,7 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                         )
 
                     elif msg_type == "stop":
+                        manager.release_demo_recording(session_id)
                         async with AsyncSessionLocal() as db:
                             await generate_notes_for_session(
                                 db,
@@ -430,6 +485,8 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
             elif "bytes" in data:
                 if not can_record:
                     continue  # viewers (shared / demo) never add audio
+                if user.is_demo and manager.demo_recording != session_id:
+                    continue  # another demo lecture holds the one recording slot
                 audio_data = data["bytes"]
                 current_index = chunk_index
                 chunk_index += 1
