@@ -69,7 +69,7 @@ def _check_usage(user: CurrentUser, kind: str) -> None:
     """Raise 429 when ``user`` has used ``kind`` too often; admins are exempt."""
     if user.is_admin:
         return
-    limits = DEMO_LIMITS if user.is_demo else USAGE_LIMITS
+    limits = DEMO_LIMITS if user.demo_read_only else USAGE_LIMITS
     allowed, wait = ratelimit.allow(f"{kind}:{user.id}", limits[kind], USAGE_WINDOW)
     if not allowed:
         what = {"chat": "questions", "image": "image questions", "upload": "uploads"}[kind]
@@ -113,15 +113,20 @@ async def session_writer(
     session_id: str, user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
 ) -> CurrentUser:
     """The owner or an admin — the only ones who may change a lecture. Viewers
-    of a shared lecture and the demo account are read-only."""
-    if user.is_demo:
+    of a shared lecture are read-only; so is the demo account, unless it has
+    full access, and even then not on a kept lecture (the sample)."""
+    if user.demo_read_only:
         raise HTTPException(
             status_code=403,
-            detail="The demo account can't do that — create your own account to record lectures",
+            detail="The demo is read-only here — create your own account to record lectures",
         )
     session = (
         await db.execute(select(Session).where(Session.id == session_id))
     ).scalar_one_or_none()
+    if user.is_demo and session is not None and session.locked:
+        raise HTTPException(
+            status_code=403, detail="The sample lecture can't be changed in the demo"
+        )
     if session is not None and not user.is_admin and session.user_id != user.id:
         raise HTTPException(
             status_code=403,

@@ -34,6 +34,9 @@ const canCaptureTab = typeof navigator.mediaDevices?.getDisplayMedia === 'functi
 
 function Workspace({ user, onLogout, onUserChange }) {
   const dialog = useDialog()
+  // The shared demo account is read-only, except where the server gives it full
+  // access (recording, uploads, edits); sharing, Drive and settings stay off either way.
+  const demoReadOnly = Boolean(user.is_demo && !user.demo_full_access)
   const [sessionId, setSessionId] = useState(() => uuidv4())
   // Opened from history: transcript/notes/chat/exports work, recording is off.
   const [viewingPast, setViewingPast] = useState(false)
@@ -605,7 +608,8 @@ function Workspace({ user, onLogout, onUserChange }) {
     currentSessionRef.current = item.id
     setSessionId(item.id)
     setViewingPast(true)
-    setViewerReadOnly(item.can_edit === false)
+    // The demo never changes a kept lecture (the sample), even with full access.
+    setViewerReadOnly(item.can_edit === false || Boolean(user.is_demo && item.locked))
     setTitle(item.title || '')
     setVocabulary('')
     setNotesFocus('')
@@ -639,7 +643,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     } catch (err) {
       setStatus(`Could not load lecture: ${err.message}`)
     }
-  }, [isRecording])
+  }, [isRecording, user.is_demo])
 
   // Save the per-lecture hints. PATCH covers every state (before, during and
   // after a recording): the server re-prompts Whisper itself.
@@ -699,10 +703,10 @@ function Workspace({ user, onLogout, onUserChange }) {
           sessionId={sessionId}
           title={title}
           onTitleChange={setTitle}
-          disabled={isRecording || viewingPast || user.is_demo}
+          disabled={isRecording || viewingPast || demoReadOnly}
           vocabulary={vocabulary}
           notesFocus={notesFocus}
-          onEditDetails={user.is_demo || viewerReadOnly ? undefined : () => setDetailsOpen(true)}
+          onEditDetails={demoReadOnly || viewerReadOnly ? undefined : () => setDetailsOpen(true)}
         />
 
         <div className="app-bar-actions">
@@ -733,8 +737,14 @@ function Workspace({ user, onLogout, onUserChange }) {
 
       {user.is_demo && (
         <div className="demo-banner">
-          You're in the <strong>demo</strong> — a read-only account. Open a lecture from History, read the transcript and notes, ask questions, download exports.
-          Recording, uploads and settings changes are off. <a href="/" onClick={e => { e.preventDefault(); onLogout() }}>Sign out</a> to create your own account.
+          {demoReadOnly ? (<>
+            You're in the <strong>demo</strong> — a read-only account. Open a lecture from History, read the transcript and notes, ask questions, download exports.
+            Recording, uploads and settings changes are off.
+          </>) : (<>
+            You're in the <strong>demo</strong>. Record a lecture, upload slides, edit notes, ask questions and export — or open the sample lecture from History.
+            Everyone trying the demo shares this account, and lectures recorded here are deleted after 24 hours. Sharing, Google Drive and account settings are off.
+          </>)}
+          {' '}<a href="/" onClick={e => { e.preventDefault(); onLogout() }}>Sign out</a> to create your own account.
         </div>
       )}
 
@@ -755,7 +765,7 @@ function Workspace({ user, onLogout, onUserChange }) {
           </button>
         )}
         <RecordingControls
-          readOnly={viewingPast || user.is_demo}
+          readOnly={viewingPast || demoReadOnly}
           isRecording={isRecording}
           isPaused={isPaused}
           onStart={startRecording}
@@ -776,7 +786,7 @@ function Workspace({ user, onLogout, onUserChange }) {
 
         <div className="toolbar-spacer" />
 
-        {!viewingPast && !user.is_demo && (<>
+        {!viewingPast && !demoReadOnly && (<>
         <label className="device-select-label" data-tip="Which microphone to record from">
           <MicIcon />
           <span className="visually-hidden">Audio input</span>
@@ -840,7 +850,7 @@ function Workspace({ user, onLogout, onUserChange }) {
 
       {viewingPast && (
         <p className="toolbar-hint toolbar-hint-info">
-          {viewerReadOnly ? 'This lecture was shared with you — read, export and ask questions about it; only its owner can change it. ' : 'Viewing a past lecture — you can read, export, and ask questions about it. Recording is off; use New lecture to record.'}
+          {viewerReadOnly && user.is_demo ? 'This is the sample lecture — read, export and ask questions about it; it can\'t be changed. Use New lecture to record your own. ' : viewerReadOnly ? 'This lecture was shared with you — read, export and ask questions about it; only its owner can change it. ' : 'Viewing a past lecture — you can read, export, and ask questions about it. Recording is off; use New lecture to record.'}
         </p>
       )}
 
@@ -869,13 +879,13 @@ function Workspace({ user, onLogout, onUserChange }) {
           version={notesVersion}
           sessionId={sessionId}
           isRecording={isRecording}
-          readOnly={user.is_demo || viewerReadOnly}
+          readOnly={demoReadOnly || viewerReadOnly}
           onNotesChange={(md, v) => { setNotes(md); setNotesVersion(v) }}
         />
         <div className="right-pane">
           {/* Keyed so uploads and chat history reset when switching lectures. */}
-          {!user.is_demo && !viewerReadOnly && <FileUpload key={`upload-${sessionId}`} sessionId={sessionId} />}
-          <ChatPane key={`chat-${sessionId}`} sessionId={sessionId} readOnly={user.is_demo} />
+          {!demoReadOnly && !viewerReadOnly && <FileUpload key={`upload-${sessionId}`} sessionId={sessionId} />}
+          <ChatPane key={`chat-${sessionId}`} sessionId={sessionId} readOnly={demoReadOnly || viewerReadOnly} />
         </div>
       </main>
     </div>

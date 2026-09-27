@@ -247,8 +247,11 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
         session = await ensure_session_exists(db, session_id, user.id)
         # Owner and admins may record; a user the lecture is shared with may
         # watch it live (transcript and notes arrive on the socket) but never
-        # send audio; the demo account is a viewer too.
-        can_record = (user.is_admin or session.user_id == user.id) and not user.is_demo
+        # send audio. The demo account is a viewer too, unless it has full
+        # access — and even then never records into a kept lecture (the sample).
+        can_record = (user.is_admin or session.user_id == user.id) and (
+            not user.is_demo or (user.demo_full and not session.locked)
+        )
         if not can_record and not user.is_demo:
             shared = await db.scalar(
                 select(func.count())
@@ -303,8 +306,10 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                             {
                                 "type": "status",
                                 "message": (
-                                    "Demo account — recording is disabled. Create your own "
-                                    "account to record lectures."
+                                    "This is the sample lecture — start a New lecture to record."
+                                    if user.demo_full
+                                    else "Demo account — recording is disabled. Create your "
+                                    "own account to record lectures."
                                     if user.is_demo
                                     else "This lecture was shared with you — only its owner can "
                                     "record into it."

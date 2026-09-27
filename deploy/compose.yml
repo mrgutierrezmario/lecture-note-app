@@ -167,6 +167,9 @@ services:
       MAIL_REPLY_TO: ${MAIL_REPLY_TO:-}
       PUBLIC_URL: ${PUBLIC_URL:-}
       SUPPORT_EMAIL: ${SUPPORT_EMAIL:-}
+      # Full demo access for requests through the cloudflared service (see below).
+      DEMO_FULL_ACCESS_VIA_TUNNEL: ${DEMO_FULL_ACCESS_VIA_TUNNEL:-false}
+      DEMO_RETENTION_HOURS: ${DEMO_RETENTION_HOURS:-24}
     volumes:
       - app-state:/app/state
       # Whisper / Hugging Face model downloads.
@@ -188,7 +191,10 @@ services:
   # COMPOSE_PROFILES=cloudflare, and CLOUDFLARED_CONFIG / CLOUDFLARED_CREDENTIALS
   # point at a tunnel config and its credentials file (both kept outside the
   # repo). It shares the tailscale container's network namespace like the app,
-  # so the config's service is http://127.0.0.1:8000.
+  # so the config's service is http://127.0.0.1:8000 — or http://tailscale:8000
+  # with DEMO_FULL_ACCESS_VIA_TUNNEL=true: dialling the container's own address
+  # instead of loopback is how the app tells tunnel requests from Funnel ones,
+  # and there "Try the demo" may record, upload and edit.
   cloudflared:
     image: cloudflare/cloudflared:2026.9.3
     profiles: [cloudflare]

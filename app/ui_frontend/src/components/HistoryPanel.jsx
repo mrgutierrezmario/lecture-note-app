@@ -183,7 +183,8 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
 
   // Bulk delete. Kept lectures are refused by the server anyway; the open one
   // is excluded here because it may be recording right now.
-  const selectable = item => !user.is_demo && item.can_edit && !item.locked && item.id !== currentSessionId
+  const demoReadOnly = Boolean(user.is_demo && !user.demo_full_access)
+  const selectable = item => !demoReadOnly && item.can_edit && !item.locked && item.id !== currentSessionId
   const selectableItems = (items || []).filter(selectable)
   const allSelected = selectableItems.length > 0 && selectableItems.every(i => selected.has(i.id))
 
@@ -389,17 +390,17 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                         )}
                       </div>
                     </details>
-                    {!user.is_demo && item.can_edit && (<>
-                    <button className={`btn-icon${item.shared_with?.length ? ' btn-icon-active' : ''}`} onClick={() => setSharing(item)} data-tip={item.shared_with?.length ? `Shared with ${item.shared_with.join(', ')} — click to change` : 'Share read-only with other accounts'} aria-label="Share lecture"><UserIcon size={16} /></button>
-                    <button className="btn-icon" onClick={() => rename(item)} data-tip="Rename" aria-label="Rename lecture"><EditIcon size={16} /></button>
-                    <button
+                    {!demoReadOnly && item.can_edit && (<>
+                    {!user.is_demo && <button className={`btn-icon${item.shared_with?.length ? ' btn-icon-active' : ''}`} onClick={() => setSharing(item)} data-tip={item.shared_with?.length ? `Shared with ${item.shared_with.join(', ')} — click to change` : 'Share read-only with other accounts'} aria-label="Share lecture"><UserIcon size={16} /></button>}
+                    {!(user.is_demo && item.locked) && <button className="btn-icon" onClick={() => rename(item)} data-tip="Rename" aria-label="Rename lecture"><EditIcon size={16} /></button>}
+                    {!user.is_demo && <button
                       className={`btn-icon${item.locked ? ' btn-icon-active' : ''}`}
                       onClick={() => toggleLock(item)}
                       data-tip={item.locked ? `Unlock (allow deletion and ${retentionDays}-day cleanup)` : `Keep (protect from deletion and ${retentionDays}-day cleanup)`}
                       aria-label={item.locked ? 'Unlock lecture' : 'Keep lecture'}
                     >
                       {item.locked ? <LockIcon size={16} /> : <UnlockIcon size={16} />}
-                    </button>
+                    </button>}
                     {/* While lectures are ticked, the only delete is the bulk one:
                         a row's own trash would delete just that row. */}
                     {selected.size === 0 && item.has_audio && (
@@ -424,7 +425,9 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
               {user.is_admin
                 ? 'Showing every lecture on the system.'
                 : user.is_demo
-                  ? 'Demo account: sample lectures anyone trying the demo can open.'
+                  ? (demoReadOnly
+                    ? 'Demo account: sample lectures anyone trying the demo can open.'
+                    : 'Demo account, shared by everyone trying the demo: the kept sample lecture, plus lectures recorded here, which are deleted after 24 hours.')
                   : 'Showing the lectures you have recorded.'}
             </p>
             <ul>

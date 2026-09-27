@@ -6,7 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from sqlalchemy import case, delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from accounts.auth import CurrentUser, current_user, forbid_demo, require_admin
+from accounts.auth import (
+    CurrentUser,
+    current_user,
+    forbid_demo,
+    forbid_read_only_demo,
+    require_admin,
+)
 from core.config import get_settings
 from core.database import get_db
 from core.models import (
@@ -239,7 +245,9 @@ async def set_lock(
 
 @router.delete("/{session_id}/audio", status_code=204)
 async def delete_session_audio(
-    session_id: str, user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)
+    session_id: str,
+    user: CurrentUser = Depends(forbid_read_only_demo),
+    db: AsyncSession = Depends(get_db),
 ):
     """Free quota by dropping a lecture's audio while keeping transcript and notes."""
     session = await _owned_session(session_id, user, db)
@@ -270,11 +278,13 @@ async def delete_session_audio(
 async def rename_session(
     session_id: str,
     body: SessionRename,
-    user: CurrentUser = Depends(forbid_demo),
+    user: CurrentUser = Depends(forbid_read_only_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Set (or clear, with an empty string) a lecture's title."""
     session = await _owned_session(session_id, user, db)
+    if user.is_demo and session.locked:
+        raise HTTPException(409, "The sample lecture can't be changed in the demo")
     session.title = body.title.strip()[:200] or None
     await db.commit()
     # Reuse the list query for a consistent shape.
@@ -286,7 +296,9 @@ async def rename_session(
 
 @router.delete("/{session_id}", status_code=204)
 async def delete_session(
-    session_id: str, user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)
+    session_id: str,
+    user: CurrentUser = Depends(forbid_read_only_demo),
+    db: AsyncSession = Depends(get_db),
 ):
     """Delete a lecture entirely: transcript, notes, documents and audio objects.
     Refused while the lecture is kept.
@@ -294,6 +306,14 @@ async def delete_session(
     session = await _owned_session(session_id, user, db)
     if session.locked:
         raise HTTPException(409, "This lecture is kept — unlock it first")
+    await purge_session(db, session_id)
+    logger.info("Session %s deleted by %s", session_id, user.username)
+    return Response(status_code=204)
+
+
+async def purge_session(db: AsyncSession, session_id: str) -> None:
+    """Remove a lecture and everything under it (audio objects included), then
+    commit. Also used by the demo cleanup (storage/cleanup.py)."""
     chunks = (
         (await db.execute(select(AudioChunk).where(AudioChunk.session_id == session_id)))
         .scalars()
@@ -313,8 +333,6 @@ async def delete_session(
         await db.execute(delete(model).where(model.session_id == session_id))
     await db.execute(delete(Session).where(Session.id == session_id))
     await db.commit()
-    logger.info("Session %s deleted by %s", session_id, user.username)
-    return Response(status_code=204)
 
 
 @router.patch("/{session_id}/owner", response_model=SessionSummary)

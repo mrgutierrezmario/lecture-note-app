@@ -4,6 +4,11 @@ Transcripts and notes are never touched; only the audio bytes go, and the
 chunk rows are marked ``deleted_from_s3`` so quotas and History stay accurate.
 Kept (locked) lectures are exempt. Runs in a background loop started at
 startup and can be triggered from the admin API.
+
+Also: lectures recorded by the shared demo account are deleted whole after
+``demo_retention_hours`` (hourly check), so visitors don't keep seeing each
+other's recordings and the demo can't fill the disk. Kept ones (the sample
+lecture) are exempt here too.
 """
 
 import asyncio
@@ -15,7 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from core.config import get_settings
 from core.database import AsyncSessionLocal
-from core.models import AudioChunk, Session
+from core.models import AudioChunk, Session, User
 from storage.s3_client import s3_client
 
 logger = logging.getLogger(__name__)
@@ -90,9 +95,43 @@ async def run_cleanup_task():
         await asyncio.sleep(settings.cleanup_interval_hours * 3600)
 
 
+async def purge_expired_demo_sessions(db: AsyncSession) -> int:
+    """Delete the demo account's unkept lectures older than ``demo_retention_hours``."""
+    hours = settings.demo_retention_hours
+    if hours <= 0:
+        return 0
+    cutoff = datetime.utcnow() - timedelta(hours=hours)
+    ids = (
+        await db.scalars(
+            select(Session.id)
+            .join(User, User.id == Session.user_id)
+            .where(User.is_demo.is_(True), Session.locked.is_(False), Session.created_at < cutoff)
+        )
+    ).all()
+    from routes.history import purge_session  # routes import storage; import late
+
+    for session_id in ids:
+        await purge_session(db, session_id)
+    if ids:
+        logger.info("Demo cleanup: deleted %d lecture(s) older than %d h", len(ids), hours)
+    return len(ids)
+
+
+async def run_demo_cleanup_task():
+    """Loop forever: purge expired demo lectures once an hour."""
+    while True:
+        try:
+            async with AsyncSessionLocal() as db:
+                await purge_expired_demo_sessions(db)
+        except Exception as e:
+            logger.exception(f"Demo cleanup error: {e}")
+        await asyncio.sleep(3600)
+
+
 def start_cleanup_background_task():
-    """Schedule the cleanup loop on the running event loop."""
+    """Schedule the cleanup loops on the running event loop."""
     asyncio.create_task(run_cleanup_task())
+    asyncio.create_task(run_demo_cleanup_task())
     logger.info(
         f"Cleanup background task started (interval: {settings.cleanup_interval_hours} hours)"
     )

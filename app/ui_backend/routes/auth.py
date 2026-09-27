@@ -20,6 +20,7 @@ from accounts.auth import (
     current_user,
     forbid_demo,
     hash_password,
+    request_via_tunnel,
     require_admin,
     set_login_cookie,
     verify_password,
@@ -622,8 +623,9 @@ async def demo_login(request: Request, response: Response, db: AsyncSession = De
     if user is None:
         raise HTTPException(404, "There is no demo account on this server")
     set_login_cookie(response, request, user.id)
-    logger.info("Demo sign-in from %s", _client_ip(request))
-    return user
+    full = request_via_tunnel(request)
+    logger.info("Demo sign-in from %s%s", _client_ip(request), " (full access)" if full else "")
+    return UserResponse.model_validate(user).model_copy(update={"demo_full_access": full})
 
 
 @router.post("/logout", status_code=204)
@@ -637,7 +639,9 @@ async def logout(response: Response):
 async def me(user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)):
     """The signed-in user's own account."""
     result = await db.execute(select(User).where(User.id == user.id))
-    return result.scalar_one()
+    return UserResponse.model_validate(result.scalar_one()).model_copy(
+        update={"demo_full_access": user.demo_full}
+    )
 
 
 @router.patch("/me", response_model=UserResponse)

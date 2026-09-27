@@ -15,9 +15,11 @@ import hashlib
 import hmac
 import logging
 import secrets
+import socket
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from functools import lru_cache
 
 import bcrypt
 from fastapi import Depends, HTTPException, Request, WebSocket
@@ -54,6 +56,14 @@ class CurrentUser:
     username: str
     is_admin: bool
     is_demo: bool = False
+    # The demo account reached through the tunnel (settings.demo_full_access_via_tunnel):
+    # it may record, upload and edit, but still not share, use Drive or change the account.
+    demo_full: bool = False
+
+    @property
+    def demo_read_only(self) -> bool:
+        """The demo account anywhere it has not been given full access."""
+        return self.is_demo and not self.demo_full
 
 
 # ── Passwords ─────────────────────────────────────────────────────────────────
@@ -135,6 +145,64 @@ async def _load_user(user_id: uuid.UUID) -> CurrentUser | None:
     )
 
 
+# ── The optional Cloudflare tunnel ────────────────────────────────────────────
+
+
+@lru_cache(maxsize=1)
+def _own_address() -> str | None:
+    """This network namespace's own (non-loopback) IPv4 address.
+
+    Funnel and uvicorn's trusted proxies connect over 127.0.0.1. The tunnel is
+    configured to dial the container's own address instead, so a request whose
+    immediate peer is that address can only have come through the tunnel.
+    Found by asking the kernel which source address it would use to reach the
+    outside (a UDP "connect" sends nothing).
+    """
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
+            s.connect(("192.0.2.1", 9))  # TEST-NET-1: never actually contacted
+            addr = s.getsockname()[0]
+    except OSError:
+        return None
+    return None if addr.startswith("127.") else addr
+
+
+def _header(scope, name: bytes) -> str | None:
+    for k, v in scope.get("headers", []):
+        if k == name:
+            return v.decode("latin-1")
+    return None
+
+
+def _mark_tunnel_request(scope) -> bool:
+    """If this request came through the tunnel, say so and apply its proxy headers.
+
+    uvicorn only honours X-Forwarded-* from 127.0.0.1, so for the tunnel's own
+    address it left the client as the tunnel and the scheme as plain http:
+    restore the visitor's address (right-most X-Forwarded-For, the one the
+    tunnel added) and the scheme, so rate limits and Secure cookies still work.
+    """
+    if not get_settings().demo_full_access_via_tunnel:
+        return False
+    client = scope.get("client")
+    own = _own_address()
+    if not client or not own or client[0] != own:
+        return False
+    forwarded = _header(scope, b"x-forwarded-for")
+    if forwarded:
+        hops = [h.strip() for h in forwarded.split(",") if h.strip()]
+        if hops:
+            scope["client"] = (hops[-1], 0)
+    if (_header(scope, b"x-forwarded-proto") or "").lower() == "https":
+        scope["scheme"] = "wss" if scope["type"] == "websocket" else "https"
+    return True
+
+
+def request_via_tunnel(request: Request) -> bool:
+    """Whether the middleware saw this request arrive through the tunnel."""
+    return bool(request.scope.get("state", {}).get("via_tunnel"))
+
+
 # ── Middleware ────────────────────────────────────────────────────────────────
 
 
@@ -155,6 +223,7 @@ class AuthMiddleware:
             await self.app(scope, receive, send)
             return
 
+        via_tunnel = _mark_tunnel_request(scope)
         path = scope["path"]
         protected = path.startswith("/api/") or path.startswith("/ws/")
         if path in _OPEN_API_PATHS:
@@ -166,7 +235,11 @@ class AuthMiddleware:
             user_id = parse_token(token)
             if user_id:
                 user = await _load_user(user_id)
-        scope.setdefault("state", {})["user"] = user
+        if user is not None and user.is_demo and via_tunnel:
+            user = replace(user, demo_full=True)
+        state = scope.setdefault("state", {})
+        state["user"] = user
+        state["via_tunnel"] = via_tunnel
 
         if protected and user is None:
             if scope["type"] == "websocket":
@@ -199,12 +272,25 @@ def current_user(request: Request) -> CurrentUser:
 def forbid_demo(user: CurrentUser = Depends(current_user)) -> CurrentUser:
     """FastAPI dependency: the signed-in user unless it is the demo account (403).
 
-    Used on everything that records, uploads, or changes state — the demo is
-    read-only apart from asking questions."""
+    For what the demo may never do, even with full access: share lectures,
+    use Google Drive, or change the (shared) account itself."""
     if user.is_demo:
         raise HTTPException(
             status_code=403,
-            detail="The demo account can't do that — create your own account to record lectures",
+            detail="The demo account can't do that — create your own account for it",
+        )
+    return user
+
+
+def forbid_read_only_demo(user: CurrentUser = Depends(current_user)) -> CurrentUser:
+    """FastAPI dependency: refuse the demo account where it is read-only (403).
+
+    For recording, uploads and edits: allowed for the demo only with full
+    access (see ``CurrentUser.demo_full``)."""
+    if user.demo_read_only:
+        raise HTTPException(
+            status_code=403,
+            detail="The demo is read-only here — create your own account to record lectures",
         )
     return user
 

@@ -311,6 +311,10 @@ class UserResponse(BaseModel):
     email_verified: bool = True
     approved: bool = True  # False = waiting for an admin (Settings → Users → Approve)
     is_demo: bool = False  # read-only visitor account ("Try the demo")
+    # The demo account with full access on this connection (it came through the
+    # tunnel): recording, uploads and edits are on; sharing, Drive and account
+    # changes stay off.
+    demo_full_access: bool = False
     created_at: UTCDatetime | None = None
 
     model_config = ConfigDict(from_attributes=True)

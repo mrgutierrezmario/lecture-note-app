@@ -91,6 +91,16 @@ class Settings(BaseSettings):
     # Shown on the privacy page as the operator's contact. Blank = generic wording.
     support_email: str = ""
 
+    # The demo account ("Try the demo") is read-only, except for requests that
+    # arrive through the optional Cloudflare tunnel (deploy/compose.yml) when
+    # this is on: there it may record, upload and edit too — never share, use
+    # Google Drive or change the account. The tunnel must dial the container's
+    # own address (not 127.0.0.1) so the app can tell its requests apart.
+    demo_full_access_via_tunnel: bool = False
+    # Lectures the demo account records are deleted this long after creation
+    # (kept/locked ones, like the sample lecture, never are). 0 = never.
+    demo_retention_hours: int = 24
+
     # Google OAuth client ("Web application" type) that lets users connect
     # their own Google Drive. Set from the Settings panel; the secret lives in
     # STATE_DIR/.env. Redirect URI to register: <public_url>/api/drive/callback
