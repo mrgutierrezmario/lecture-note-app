@@ -3,7 +3,9 @@
 # loop watches the tailscale service's healthcheck (the public-URL probe in
 # compose.yml) and, when it fails, restarts tailscale and then the app — both,
 # because the app runs inside the tailscale container's network namespace and
-# loses its network when that namespace is recreated. Data is untouched.
+# loses its network when that namespace is recreated. The optional cloudflared
+# service shares it too, so it is restarted as well when it runs. Data is
+# untouched.
 #
 # Runs in the `watchdog` service (deploy/watchdog/Dockerfile) with the Docker
 # socket mounted.
@@ -29,6 +31,10 @@ while :; do
     app=$(cid app)
     if [ -n "$app" ]; then
       docker restart "$app" >/dev/null && log "app restarted" || log "app restart FAILED"
+    fi
+    cf=$(cid cloudflared)
+    if [ -n "$cf" ]; then
+      docker restart "$cf" >/dev/null && log "cloudflared restarted" || log "cloudflared restart FAILED"
     fi
     log "cooling down ${COOLDOWN}s"
     sleep "$COOLDOWN"
