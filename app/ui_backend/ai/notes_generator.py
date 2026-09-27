@@ -329,7 +329,7 @@ async def generate_notes_for_session(
     if fallback_note and broadcast_callback:
         await broadcast_callback(
             session_id,
-            {"type": "status", "message": f"Notes: using local model — {fallback_note}"},
+            {"type": "status", "message": f"Notes: using the local model ({fallback_note})"},
         )
 
     new_version = (latest_notes.version + 1) if latest_notes else 1

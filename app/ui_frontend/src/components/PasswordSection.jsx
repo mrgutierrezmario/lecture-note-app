@@ -38,7 +38,7 @@ function PasswordSection({ user, onUserChange, onDeleted }) {
 
   const deleteAccount = async () => {
     const pw = await dialog.prompt({
-      title: 'Delete your account?',
+      title: 'Delete Your Account?',
       message: 'Everything you recorded will be removed permanently. Enter your password to confirm.',
       label: 'Password',
       type: 'password',
@@ -59,7 +59,7 @@ function PasswordSection({ user, onUserChange, onDeleted }) {
       }
       onDeleted?.()
     } catch (err) {
-      dialog.notice({ title: 'Account not deleted', message: err.message })
+      dialog.notice({ title: 'Account Not Deleted', message: err.message })
     } finally {
       setDeleting(false)
     }
@@ -68,7 +68,7 @@ function PasswordSection({ user, onUserChange, onDeleted }) {
   const submit = async (e) => {
     e.preventDefault()
     if (next !== repeat) {
-      setStatus({ ok: false, text: 'New passwords do not match' })
+      setStatus({ ok: false, text: 'New passwords don\'t match.' })
       return
     }
     setBusy(true)
@@ -94,7 +94,7 @@ function PasswordSection({ user, onUserChange, onDeleted }) {
 
   return (
     <section className="settings-section">
-      <h3>Your account</h3>
+      <h3>Your Account</h3>
       <form onSubmit={saveEmail}>
         <label className="settings-field">
           <span>Username</span>
@@ -108,12 +108,12 @@ function PasswordSection({ user, onUserChange, onDeleted }) {
         {emailStatus && <p className={emailStatus.ok ? 'settings-inline-ok' : 'settings-inline-error'}>{emailStatus.text}</p>}
         <div className="settings-actions">
           <button type="submit" disabled={emailBusy || email === (user?.email || '')}>
-            {emailBusy ? 'Saving…' : 'Save email'}
+            {emailBusy ? 'Saving…' : 'Save Email'}
           </button>
         </div>
       </form>
 
-      <h3 className="settings-subheading">Change password</h3>
+      <h3 className="settings-subheading">Change Password</h3>
       <form onSubmit={submit}>
         <label className="settings-field">
           <span>Current password</span>
@@ -130,19 +130,19 @@ function PasswordSection({ user, onUserChange, onDeleted }) {
         {status && <p className={status.ok ? 'settings-inline-ok' : 'settings-inline-error'}>{status.text}</p>}
         <div className="settings-actions">
           <button type="submit" disabled={busy || !current || !next || !repeat}>
-            {busy ? 'Saving…' : 'Change password'}
+            {busy ? 'Saving…' : 'Change Password'}
           </button>
         </div>
       </form>
 
-      <h4 className="settings-subheading settings-danger-heading">Delete account</h4>
+      <h4 className="settings-subheading settings-danger-heading">Delete Account</h4>
       <p className="settings-note settings-note-full">
-        Removes your account and every lecture in it — transcripts, notes, documents and recordings — and
-        disconnects Google Drive (files already saved there stay in your Drive). This cannot be undone.
+        Removes your account and every lecture in it (transcripts, notes, documents and recordings) and
+        disconnects Google Drive (files already saved there stay in your Drive). This can't be undone.
       </p>
       <div className="settings-actions">
         <button type="button" className="btn-danger-outline" disabled={deleting} onClick={deleteAccount}>
-          {deleting ? 'Deleting…' : 'Delete my account…'}
+          {deleting ? 'Deleting…' : 'Delete My Account…'}
         </button>
       </div>
     </section>

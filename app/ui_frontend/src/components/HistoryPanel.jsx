@@ -80,7 +80,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
   }, [open])
 
   const rename = async (item) => {
-    const title = await dialog.prompt({ title: 'Rename lecture', label: 'Title', defaultValue: item.title || '', confirmLabel: 'Save' })
+    const title = await dialog.prompt({ title: 'Rename Lecture', label: 'Title', defaultValue: item.title || '', confirmLabel: 'Save' })
     if (title === null) return
     const response = await fetch(`/api/sessions/${item.id}`, {
       method: 'PATCH',
@@ -111,7 +111,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
         message: `${Object.keys(data.files).length} file(s) are in your Drive under "AI Lecture Notes".`,
       })
     } catch (err) {
-      dialog.notice({ title: 'Could not save to Google Drive', message: err.message })
+      dialog.notice({ title: 'Couldn\'t Save to Google Drive', message: err.message })
     } finally {
       setDriveBusy(b => { const n = { ...b }; delete n[item.id]; return n })
     }
@@ -139,7 +139,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
       })
       downloadUrl(url, filename || `recording-${item.id.slice(0, 8)}.mp3`)
     } catch (err) {
-      await dialog.notice({ title: "Couldn't build the MP3", message: err.message })
+      await dialog.notice({ title: "Couldn't Build the MP3", message: err.message })
     } finally {
       setMp3Busy(b => { const n = { ...b }; delete n[item.id]; return n })
     }
@@ -153,15 +153,15 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
     })
     if (response.ok) { load(); return }
     const data = await response.json().catch(() => ({}))
-    await dialog.notice({ title: "Can't keep this lecture", message: data.detail || `HTTP ${response.status}` })
+    await dialog.notice({ title: "Can't Keep This Lecture", message: data.detail || `HTTP ${response.status}` })
   }
 
   const removeAudio = async (item) => {
     const label = item.title || 'this untitled lecture'
     const ok = await dialog.confirm({
-      title: 'Delete the audio?',
+      title: 'Delete the Audio?',
       message: `The recording for ${label} will be removed permanently and can't be recovered. The transcript and notes stay; the MP3 download goes away.`,
-      confirmLabel: 'Delete audio',
+      confirmLabel: 'Delete Audio',
       danger: true,
     })
     if (!ok) return
@@ -171,9 +171,9 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
 
   const remove = async (item) => {
     const ok = await dialog.confirm({
-      title: 'Are you sure you want to delete this lecture?',
+      title: 'Delete This Lecture?',
       message: deleteWarning(item.title ? `"${item.title}"` : 'This untitled lecture'),
-      confirmLabel: 'Delete forever',
+      confirmLabel: 'Delete Forever',
       danger: true,
     })
     if (!ok) return
@@ -206,10 +206,10 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
     const names = targets.slice(0, SHOWN).map(i => `• ${i.title || 'Untitled lecture'} (${formatDate(i.created_at)})`)
     if (n > SHOWN) names.push(`• …and ${n - SHOWN} more`)
     const ok = await dialog.confirm({
-      title: `Are you sure you want to delete ${n} lecture${n === 1 ? '' : 's'}?`,
+      title: `Delete ${n} Lecture${n === 1 ? '' : 's'}?`,
       message: `${names.join('\n')}\n\n` +
         deleteWarning(n === 1 ? 'The selected lecture' : `All ${n} selected lectures`),
-      confirmLabel: `Delete ${n} forever`,
+      confirmLabel: `Delete ${n} Forever`,
       danger: true,
     })
     if (!ok) return
@@ -232,7 +232,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
     await load()
     if (failed.length) {
       await dialog.notice({
-        title: `${failed.length} of ${n} could not be deleted`,
+        title: `${failed.length} of ${n} Couldn\'t Be Deleted`,
         message: failed.join('\n'),
       })
     }
@@ -252,7 +252,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
       <div className="settings-backdrop" onClick={() => setOpen(false)}>
         <div className="settings-panel history-panel" role="dialog" aria-label="Lecture history" onClick={e => e.stopPropagation()}>
           <div className="settings-header">
-            <h2>Your lectures</h2>
+            <h2>Your Lectures</h2>
             <button className="btn-icon settings-close" onClick={() => setOpen(false)} aria-label="Close" data-tip="Close">
               <CloseIcon size={18} />
             </button>
@@ -302,13 +302,13 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                   onChange={toggleAll}
                   disabled={!!bulkBusy}
                 />
-                {selected.size > 0 ? `${selected.size} selected` : `Select all (${selectableItems.length})`}
+                {selected.size > 0 ? `${selected.size} selected` : `Select All (${selectableItems.length})`}
               </label>
               {bulkBusy
                 ? <span className="history-bulk-progress"><SpinnerIcon size={14} /> {bulkBusy}</span>
                 : (
                   <button className="btn-secondary history-bulk-delete" onClick={removeSelected} disabled={selected.size === 0}>
-                    <TrashIcon size={14} /> {selected.size > 0 ? `Delete ${selected.size} selected` : 'Delete selected'}
+                    <TrashIcon size={14} /> {selected.size > 0 ? `Delete ${selected.size} Selected` : 'Delete Selected'}
                   </button>
                 )}
             </div>
@@ -321,7 +321,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                   {selectableItems.length > 0 && (
                     <span
                       className="history-select"
-                      data-tip={item.locked ? 'Kept — unlock first' : item.id === currentSessionId ? 'Open in the workspace' : undefined}
+                      data-tip={item.locked ? 'Kept: unlock it first' : item.id === currentSessionId ? 'Open in the workspace' : undefined}
                     >
                       {item.can_edit && (
                         <input
@@ -339,15 +339,15 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                     <span className="history-meta">
                       {formatDate(item.created_at)}
                       {' · '}{formatDuration(item.duration_seconds)}
-                      {item.notes_version > 0 && <span className="history-tag"><NotesIcon size={12} /> notes</span>}
-                      {item.has_audio && <span className="history-tag"><AudioIcon size={12} /> audio</span>}
-                      {item.locked && <span className="history-tag history-tag-kept"><LockIcon size={12} /> kept</span>}
+                      {item.notes_version > 0 && <span className="history-tag"><NotesIcon size={12} /> Notes</span>}
+                      {item.has_audio && <span className="history-tag"><AudioIcon size={12} /> Audio</span>}
+                      {item.locked && <span className="history-tag history-tag-kept"><LockIcon size={12} /> Kept</span>}
                       {driveBusy[item.id]
                         ? <span className="history-tag history-tag-busy"><SpinnerIcon size={12} /> Saving to Drive: {driveBusy[item.id]}</span>
                         : item.drive_saved_at && <span className="history-tag" data-tip={`Saved to Google Drive ${formatDate(item.drive_saved_at)}`}><DriveIcon size={12} /> Drive</span>}
                       {user.is_admin && item.owner && <span className="history-tag history-owner">{item.owner}</span>}
-                      {item.shared_by && <span className="history-tag" data-tip="Shared with you — read-only"><UserIcon size={12} /> shared by {item.shared_by}</span>}
-                      {item.can_edit && item.shared_with?.length > 0 && <span className="history-tag" data-tip={`Shared with ${item.shared_with.join(', ')}`}><UserIcon size={12} /> shared</span>}
+                      {item.shared_by && <span className="history-tag" data-tip="Shared with you (read-only)"><UserIcon size={12} /> shared by {item.shared_by}</span>}
+                      {item.can_edit && item.shared_with?.length > 0 && <span className="history-tag" data-tip={`Shared with ${item.shared_with.join(', ')}`}><UserIcon size={12} /> Shared</span>}
                     </span>
                   </button>
                   <span className="user-row-actions">
@@ -391,7 +391,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                       </div>
                     </details>
                     {!demoReadOnly && item.can_edit && (<>
-                    {!user.is_demo && <button className={`btn-icon${item.shared_with?.length ? ' btn-icon-active' : ''}`} onClick={() => setSharing(item)} data-tip={item.shared_with?.length ? `Shared with ${item.shared_with.join(', ')} — click to change` : 'Share read-only with other accounts'} aria-label="Share lecture"><UserIcon size={16} /></button>}
+                    {!user.is_demo && <button className={`btn-icon${item.shared_with?.length ? ' btn-icon-active' : ''}`} onClick={() => setSharing(item)} data-tip={item.shared_with?.length ? `Shared with ${item.shared_with.join(', ')} . Click to change.` : 'Share read-only with other accounts'} aria-label="Share lecture"><UserIcon size={16} /></button>}
                     {!(user.is_demo && item.locked) && <button className="btn-icon" onClick={() => rename(item)} data-tip="Rename" aria-label="Rename lecture"><EditIcon size={16} /></button>}
                     {!user.is_demo && <button
                       className={`btn-icon${item.locked ? ' btn-icon-active' : ''}`}
@@ -404,10 +404,10 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
                     {/* While lectures are ticked, the only delete is the bulk one:
                         a row's own trash would delete just that row. */}
                     {selected.size === 0 && item.has_audio && (
-                      <button className="btn-icon btn-icon-danger" onClick={() => removeAudio(item)} disabled={item.locked} data-tip={item.locked ? 'Kept — unlock first' : 'Delete audio only (keeps transcript and notes)'} aria-label="Delete audio"><AudioOffIcon size={16} /></button>
+                      <button className="btn-icon btn-icon-danger" onClick={() => removeAudio(item)} disabled={item.locked} data-tip={item.locked ? 'Kept: unlock it first' : 'Delete audio only (keeps transcript and notes)'} aria-label="Delete audio"><AudioOffIcon size={16} /></button>
                     )}
                     {selected.size === 0 && (
-                      <button className="btn-icon btn-icon-danger" onClick={() => remove(item)} disabled={item.locked} data-tip={item.locked ? 'Kept — unlock first' : 'Delete lecture'} aria-label="Delete lecture"><TrashIcon size={16} /></button>
+                      <button className="btn-icon btn-icon-danger" onClick={() => remove(item)} disabled={item.locked} data-tip={item.locked ? 'Kept: unlock it first' : 'Delete lecture'} aria-label="Delete lecture"><TrashIcon size={16} /></button>
                     )}
                     </>)}
                   </span>
@@ -433,7 +433,7 @@ function HistoryPanel({ user, currentSessionId, onOpen }) {
             <ul>
               <li>Transcripts and notes are kept until you delete the lecture.</li>
               <li>Audio is deleted automatically after {retentionDays} days and counts toward the storage shown above.</li>
-              <li>To keep a recording, download the MP3 or lock the lecture — locked lectures skip the cleanup and can't be deleted until unlocked.</li>
+              <li>To keep a recording, download the MP3 or lock the lecture. Locked lectures skip the cleanup and can't be deleted until unlocked.</li>
             </ul>
           </div>
           </div>

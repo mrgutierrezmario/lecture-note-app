@@ -12,28 +12,28 @@ function RecordingControls({ isRecording, isPaused = false, onStart, onStop, onP
           onClick={onStart}
           disabled={!isConnected}
           data-tip={hasTranscript
-            ? 'Keep recording into this same lecture — the transcript and notes continue'
-            : 'Start recording — transcript appears live, notes build as you go'}
+            ? 'Keep recording into this same lecture; the transcript and notes continue'
+            : 'Start recording: the transcript appears live and notes build as you go'}
         >
           <span className="record-dot" />
-          {hasTranscript ? 'Continue recording' : 'Start recording'}
+          {hasTranscript ? 'Continue Recording' : 'Start Recording'}
         </button>
       ) : (
         <>
           {isPaused ? (
-            <button className="btn-primary btn-record" onClick={onResume} data-tip="Resume — picks up exactly where you paused">
+            <button className="btn-primary btn-record" onClick={onResume} data-tip="Resume: picks up exactly where you paused">
               <PlayIcon size={14} />
               Resume
             </button>
           ) : (
-            <button className="btn-secondary btn-pause" onClick={onPause} data-tip="Pause — nothing is recorded until you resume; the lecture stays open">
+            <button className="btn-secondary btn-pause" onClick={onPause} data-tip="Pause: nothing is recorded until you resume, and the lecture stays open">
               <PauseIcon size={14} />
               Pause
             </button>
           )}
           <button className="btn-primary btn-stop" onClick={onStop} data-tip="Stop recording and generate the final notes">
             <span className={`record-dot${isPaused ? '' : ' recording'}`} />
-            Stop recording
+            Stop Recording
           </button>
         </>
       )}

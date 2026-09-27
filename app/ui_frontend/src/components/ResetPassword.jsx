@@ -12,7 +12,7 @@ function ResetPassword({ token, onDone }) {
 
   const submit = async (e) => {
     e.preventDefault()
-    if (password !== repeat) { setError('Passwords do not match'); return }
+    if (password !== repeat) { setError('Passwords don\'t match.'); return }
     setBusy(true)
     setError(null)
     try {
@@ -37,11 +37,11 @@ function ResetPassword({ token, onDone }) {
     <div className="login-screen">
       <form className="login-card" onSubmit={submit}>
         <img className="login-logo" src="/logo-mark.svg" alt="M.G. Network and Technology Solutions" />
-        <h1>Choose a new password</h1>
+        <h1>Choose a New Password</h1>
         {done ? (
           <>
             <p className="login-sent">Your password has been changed. You can sign in with it now.</p>
-            <button type="button" className="btn-primary login-submit" onClick={onDone}>Go to sign in</button>
+            <button type="button" className="btn-primary login-submit" onClick={onDone}>Go to Sign In</button>
           </>
         ) : (
           <>
@@ -55,10 +55,10 @@ function ResetPassword({ token, onDone }) {
             </label>
             {error && <p className="login-error">{error}</p>}
             <button type="submit" className="btn-primary login-submit" disabled={busy || !password || !repeat}>
-              {busy ? 'Saving…' : 'Set new password'}
+              {busy ? 'Saving…' : 'Set New Password'}
             </button>
             <p className="login-note">
-              <button type="button" className="link-button" onClick={onDone}>Back to sign in</button>
+              <button type="button" className="link-button" onClick={onDone}>Back to Sign In</button>
             </p>
           </>
         )}

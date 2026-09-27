@@ -31,7 +31,7 @@ function NotesPane({ notes, version, sessionId, isRecording, readOnly = false, o
       onNotesChange?.(data.notes_md, data.version)
       setEditing(false)
     } catch (err) {
-      dialog.notice({ title: 'Could not save notes', message: err.message })
+      dialog.notice({ title: 'Couldn\'t Save Notes', message: err.message })
     } finally {
       setBusy(null)
     }
@@ -39,7 +39,7 @@ function NotesPane({ notes, version, sessionId, isRecording, readOnly = false, o
 
   const regenerate = async () => {
     const ok = await dialog.confirm({
-      title: 'Regenerate the notes?',
+      title: 'Regenerate the Notes?',
       message: 'The notes are rewritten from the whole transcript using the current lecture focus. Earlier versions stay in the history, but the new notes replace what you see here. This can take a minute for a long lecture.',
       confirmLabel: 'Regenerate',
     })
@@ -51,7 +51,7 @@ function NotesPane({ notes, version, sessionId, isRecording, readOnly = false, o
       if (!response.ok) throw new Error(data.detail || `HTTP ${response.status}`)
       onNotesChange?.(data.notes_md, data.version)
     } catch (err) {
-      dialog.notice({ title: 'Could not regenerate', message: err.message })
+      dialog.notice({ title: 'Couldn\'t Regenerate', message: err.message })
     } finally {
       setBusy(null)
     }

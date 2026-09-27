@@ -252,7 +252,7 @@ async def delete_session_audio(
     """Free quota by dropping a lecture's audio while keeping transcript and notes."""
     session = await _owned_session(session_id, user, db)
     if session.locked:
-        raise HTTPException(409, "This lecture is kept — unlock it first")
+        raise HTTPException(409, "This lecture is kept. Unlock it first.")
     chunks = (
         (
             await db.execute(
@@ -305,7 +305,7 @@ async def delete_session(
     """
     session = await _owned_session(session_id, user, db)
     if session.locked:
-        raise HTTPException(409, "This lecture is kept — unlock it first")
+        raise HTTPException(409, "This lecture is kept. Unlock it first.")
     await purge_session(db, session_id)
     logger.info("Session %s deleted by %s", session_id, user.username)
     return Response(status_code=204)

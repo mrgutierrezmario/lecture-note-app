@@ -62,7 +62,7 @@ function FileUpload({ sessionId }) {
       >
         <span className="pane-icon pane-icon-blue dropzone-icon"><UploadIcon size={18} /></span>
         <div className="dropzone-text">
-          <strong>Add slides to this lecture</strong>
+          <strong>Add Slides to This Lecture</strong>
           <span>{isUploading ? 'Uploading… (images take a few seconds to read)' : 'Drop a PDF, PowerPoint, Word file or image, or browse'}</span>
         </div>
         <button

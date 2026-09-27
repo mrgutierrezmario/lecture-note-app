@@ -12,9 +12,9 @@ import PasswordSection from './PasswordSection'
 import DriveSection from './DriveSection'
 
 const VISION_MODELS = [
-  { id: 'claude-opus-5', label: 'Claude Opus 5 — best at dense slides' },
-  { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 — balanced' },
-  { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 — cheapest, weakest on slides' },
+  { id: 'claude-opus-5', label: 'Claude Opus 5 (best at dense slides)' },
+  { id: 'claude-sonnet-5', label: 'Claude Sonnet 5 (balanced)' },
+  { id: 'claude-haiku-4-5', label: 'Claude Haiku 4.5 (cheapest, weakest on slides)' },
 ]
 
 const WHISPER_LANGUAGES = [
@@ -34,11 +34,11 @@ const WHISPER_LANGUAGES = [
 ]
 
 const WHISPER_MODELS = [
-  { id: 'tiny', label: 'tiny — fastest, least accurate' },
+  { id: 'tiny', label: 'tiny (fastest, least accurate)' },
   { id: 'base', label: 'base' },
-  { id: 'small', label: 'small — keeps up with realtime on CPU' },
-  { id: 'medium', label: 'medium — slower than realtime on CPU' },
-  { id: 'large-v3', label: 'large-v3 — GPU or offline reruns only' },
+  { id: 'small', label: 'small (keeps up with real time on CPU)' },
+  { id: 'medium', label: 'medium (slower than real time on CPU)' },
+  { id: 'large-v3', label: 'large-v3 (GPU or offline reruns only)' },
 ]
 
 const AUTH_LABELS = {
@@ -62,7 +62,7 @@ function ProviderKey({ label, keyMasked, keyInput, onKeyInput, onSaveKey, onClea
         <span>{label} API key</span>
         <input
           type="password"
-          placeholder={keyMasked ? `Saved (${keyMasked}) — paste to replace` : 'Paste key…'}
+          placeholder={keyMasked ? `Saved (${keyMasked}. Paste to replace.` : 'Paste key…'}
           value={keyInput}
           onChange={e => onKeyInput(e.target.value)}
           autoComplete="off"
@@ -70,9 +70,9 @@ function ProviderKey({ label, keyMasked, keyInput, onKeyInput, onSaveKey, onClea
       </label>
       <p className="settings-note">{help}</p>
       <div className="settings-actions">
-        <button disabled={saving || !keyInput.trim()} onClick={onSaveKey}>Save {label} key</button>
-        {keyMasked && <button className="btn-secondary" disabled={saving} onClick={onClearKey}>Clear key</button>}
-        {keyMasked && <button className="btn-secondary" disabled={saving || test?.pending} onClick={onTest}>{test?.pending ? 'Testing…' : 'Test connection'}</button>}
+        <button disabled={saving || !keyInput.trim()} onClick={onSaveKey}>Save {label} Key</button>
+        {keyMasked && <button className="btn-secondary" disabled={saving} onClick={onClearKey}>Clear Key</button>}
+        {keyMasked && <button className="btn-secondary" disabled={saving || test?.pending} onClick={onTest}>{test?.pending ? 'Testing…' : 'Test Connection'}</button>}
       </div>
       {test && !test.pending && (
         <p className={test.ok ? 'settings-inline-ok' : 'settings-inline-error'}>{test.detail}</p>
@@ -172,7 +172,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
       })
       setMessage(
         data.restart_required.length
-          ? `${successMessage} — ${data.restart_required.join(', ')} takes effect after a backend restart.`
+          ? `${successMessage} ${data.restart_required.join(', ')} takes effect after a restart.`
           : successMessage,
       )
       return true
@@ -267,14 +267,14 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
       {message && <div className="settings-message">{message}</div>}
       {(isAdmin || isDemo) && !settings && !error && <p className="settings-loading">Loading…</p>}
       {isDemo && settings && (
-        <div className="settings-message">Demo — the administrator's settings are shown read-only. API keys and the user list are hidden.</div>
+        <div className="settings-message">Demo: the administrator's settings are shown read-only. API keys and the user list are hidden.</div>
       )}
 
       {settings && (
         <>
           {!isDemo && (<>
           <section className="settings-section">
-            <h3>API keys</h3>
+            <h3>API Keys</h3>
             <p className="settings-note settings-note-full">Save any keys you have; choose which provider does what under Models below.</p>
             <h4 className="settings-subheading">Claude (Anthropic)</h4>
             <div className={`auth-status tone-${authLabel.tone}`}>
@@ -310,7 +310,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
                   }
                 }}
               >
-                Save key
+                Save Key
               </button>
               {auth.key_masked && (
                 <button
@@ -318,21 +318,21 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
                   disabled={saving}
                   onClick={() => save({ anthropic_api_key: '' }, 'API key cleared.')}
                 >
-                  Clear key
+                  Clear Key
                 </button>
               )}
             </div>
 
             <details className="settings-help">
-              <summary>How to get an API key</summary>
+              <summary>How to Get an API Key</summary>
               <ol>
-                <li>Go to <strong>console.anthropic.com</strong> and sign in or create an account — this is Anthropic's API platform, separate from claude.ai.</li>
+                <li>Go to <strong>console.anthropic.com</strong> and sign in or create an account. This is Anthropic's API platform, separate from claude.ai.</li>
                 <li>Under <strong>Billing</strong>, add credits. Reading one slide image costs about a cent, so $5–10 lasts a long time.</li>
                 <li>Under <strong>API Keys</strong>, create a key and paste it above.</li>
               </ol>
               <p className="settings-note">
                 A Claude Pro or Max chat subscription does not include API credits. Without a key, images
-                are read by the local llava model instead — it works, but is weaker on dense slides.
+                are read by the local llava model instead. It works, but it's weaker on dense slides.
               </p>
             </details>
 
@@ -364,7 +364,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               help="Key at platform.openai.com → API keys (prepaid credits required)."
             />
 
-            <h4 className="settings-subheading">Google Drive (OAuth client)</h4>
+            <h4 className="settings-subheading">Google Drive (OAuth Client)</h4>
             <p className="settings-note settings-note-full">
               Lets users connect their own Google Drive. In Google Cloud console create an OAuth client of type
               <strong> Web application</strong> with this redirect URI: <code>{settings.google_redirect_uri}</code>
@@ -383,7 +383,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               <span>Client secret</span>
               <input
                 type="password"
-                placeholder={settings.google_client_secret_masked ? `Saved (${settings.google_client_secret_masked}) — paste to replace` : 'GOCSPX-…'}
+                placeholder={settings.google_client_secret_masked ? `Saved (${settings.google_client_secret_masked}. Paste to replace.` : 'GOCSPX-…'}
                 value={googleClient.secret}
                 onChange={e => setGoogleClient({ ...googleClient, secret: e.target.value })}
                 autoComplete="off"
@@ -399,7 +399,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
                   if (await save(payload, 'Google OAuth client saved.')) setGoogleClient({ id: '', secret: '' })
                 }}
               >
-                Save Google client
+                Save Google Client
               </button>
               {(settings.google_client_id || settings.google_client_secret_masked) && (
                 <button className="btn-secondary" disabled={saving} onClick={() => save({ google_client_id: '', google_client_secret: '' }, 'Google OAuth client cleared.')}>
@@ -408,18 +408,18 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               )}
             </div>
             {settings.google_client_id && settings.google_client_secret_masked && (
-              <p className="settings-inline-ok">Configured — users can connect their Drive from Settings.</p>
+              <p className="settings-inline-ok">Configured. Users can connect their Drive from Settings.</p>
             )}
-            <h4 className="settings-subheading">Google Drive folder selector</h4>
+            <h4 className="settings-subheading">Google Drive Folder Selector</h4>
             <p className="settings-note settings-note-full">
               Lets users pick an <em>existing</em> Drive folder with Google's chooser instead of only creating one.
-              Optional — needs an API key from the same Cloud project.
+              Optional; it needs an API key from the same Cloud project.
             </p>
             <label className="settings-field">
               <span>Folder selector API key</span>
               <input
                 type="text"
-                placeholder={settings.google_picker_api_key ? `Saved (…${settings.google_picker_api_key.slice(-4)}) — paste to replace` : 'AIza… (optional)'}
+                placeholder={settings.google_picker_api_key ? `Saved (…${settings.google_picker_api_key.slice(-4)}. Paste to replace.` : 'AIza… (optional)'}
                 value={pickerKey}
                 onChange={e => setPickerKey(e.target.value)}
                 autoComplete="off"
@@ -431,14 +431,14 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
             </p>
             <div className="settings-actions">
               <button disabled={saving || !pickerKey.trim()} onClick={async () => { if (await save({ google_picker_api_key: pickerKey.trim() }, 'Folder selector key saved.')) setPickerKey('') }}>
-                Save folder selector key
+                Save Folder Selector Key
               </button>
               {settings.google_picker_api_key && (
                 <button className="btn-secondary" disabled={saving} onClick={() => save({ google_picker_api_key: '' }, 'Folder selector key cleared.')}>Clear</button>
               )}
             </div>
             {settings.google_picker_api_key && (
-              <p className="settings-inline-ok">Enabled — users see "Choose existing folder" under Google Drive.</p>
+              <p className="settings-inline-ok">Enabled. Users see “Choose Existing Folder” under Google Drive.</p>
             )}
           </section>
 
@@ -476,7 +476,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               </select>
             </label>
             <p className="settings-note">
-              Restart required — the model is loaded once at first use. Anything slower than
+              Restart required: the model is loaded once, at first use. Anything slower than
               realtime on CPU makes chunks queue up and lag grows across a lecture.
             </p>
             <label className="settings-field">
@@ -504,14 +504,14 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
             <label className="settings-field">
               <span>Notes &amp; chat</span>
               <select value={draft.text_provider} onChange={e => setDraft({ ...draft, text_provider: e.target.value })}>
-                <option value="ollama">Local Ollama — private, runs on this Mac</option>
+                <option value="ollama">Local Ollama (private, runs on this Mac)</option>
                 <option value="claude" disabled={!settings.auth || settings.auth.source === 'none'}>Claude{!settings.auth || settings.auth.source === 'none' ? ' (no key)' : ''}</option>
                 <option value="gemini" disabled={!settings.gemini_key_masked}>Google Gemini{settings.gemini_key_masked ? '' : ' (no key)'}</option>
                 <option value="openai" disabled={!settings.openai_key_masked}>OpenAI{settings.openai_key_masked ? '' : ' (no key)'}</option>
               </select>
             </label>
             <p className="settings-note">
-              Generates the running notes and answers "Ask about the lecture". Cloud providers receive the
+              Generates the running notes and answers “Ask About the Lecture”. Cloud providers receive the
               transcript; Ollama keeps it on this machine. A cloud failure falls back to Ollama.
               {settings.active_text_provider !== settings.text_provider && (
                 <> <strong>Currently using {settings.active_text_provider}.</strong></>
@@ -521,7 +521,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
             <label className="settings-field">
               <span>Slides &amp; images</span>
               <select value={draft.vision_provider} onChange={e => setDraft({ ...draft, vision_provider: e.target.value })}>
-                <option value="claude" disabled={!settings.auth || settings.auth.source === 'none'}>Claude — best at dense slides{!settings.auth || settings.auth.source === 'none' ? ' (no key)' : ''}</option>
+                <option value="claude" disabled={!settings.auth || settings.auth.source === 'none'}>Claude (best at dense slides){!settings.auth || settings.auth.source === 'none' ? ' (no key)' : ''}</option>
                 <option value="gemini" disabled={!settings.gemini_key_masked}>Google Gemini{settings.gemini_key_masked ? '' : ' (no key)'}</option>
                 <option value="openai" disabled={!settings.openai_key_masked}>OpenAI{settings.openai_key_masked ? '' : ' (no key)'}</option>
                 <option value="llava">Local llava only</option>
@@ -554,7 +554,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
                         <option value={draft.gemini_model}>{draft.gemini_model} (not in Google's current list)</option>
                       )}
                       {geminiModels.map(m => (
-                        <option key={m.id} value={m.id}>{m.label}{m.id.includes('latest') ? ' — auto-updates' : ''} ({m.id})</option>
+                        <option key={m.id} value={m.id}>{m.label}{m.id.includes('latest') ? ', auto-updates' : ''} ({m.id})</option>
                       ))}
                     </select>
                   ) : (
@@ -563,7 +563,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
                 </label>
                 <p className="settings-note">
                   {geminiModels === null ? 'Loading the model list from Google…'
-                    : geminiModels.length === 0 ? 'Could not load the model list from Google — type a model name.'
+                    : geminiModels.length === 0 ? 'Couldn\'t load the model list from Google. Type a model name.'
                     : 'Live list from Google for your key. "Gemini Flash Latest" always tracks the newest Flash release.'}
                   {' '}<button type="button" className="link-button" onClick={loadGeminiModels}>Refresh</button>
                 </p>
@@ -608,7 +608,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
               />
             </label>
             <p className="settings-note">
-              Retained audio only — transcripts and notes never count. 0 means unlimited.
+              Retained audio only; transcripts and notes never count. 0 means unlimited.
               About 5 MB per lecture hour; audio is also deleted after {draft.audio_retention_days} days. Per-user overrides are set under Users.
             </p>
             <label className="settings-field">
@@ -626,7 +626,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
 
             <div className="settings-actions">
               <button disabled={saving || !dirty} onClick={() => save(draft, 'Settings saved.')}>
-                {saving ? 'Saving…' : 'Save models'}
+                {saving ? 'Saving…' : 'Save Models'}
               </button>
               {dirty && (
                 <button
@@ -655,7 +655,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
 
           <section className="settings-section">
           <fieldset disabled={readOnly} className="settings-fieldset">
-            <h3>Sign-up</h3>
+            <h3>Sign-Up</h3>
             <label className="switch settings-switch">
               <input
                 type="checkbox"
@@ -678,8 +678,8 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
             <p className="settings-note settings-note-full">
               With approval on, a new account confirms its email, then every admin with an email address gets
               an "Approve this account" link; pending accounts also show under Users below. Turn sign-up off
-              once everyone is enrolled — admins can always add accounts below.
-              {dirty && ' Save with the Save models button above.'}
+              once everyone is enrolled. Admins can always add accounts below.
+              {dirty && ' Save with the Save Models button above.'}
             </p>
           </fieldset>
           </section>
@@ -696,7 +696,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
                 {!settings.ollama_reachable && (
                   <p className="auth-detail">
                     Notes generation falls back to heuristics. Set <code>OLLAMA_BASE_URL</code> in
-                    <code> .env</code> — the default <code>localhost</code> is wrong when Ollama
+                    <code> .env</code>. The default <code>localhost</code> is wrong when Ollama
                     runs in a different container.
                   </p>
                 )}
@@ -706,7 +706,7 @@ function SettingsPanel({ user, onUserChange, onLogout }) {
         </>
       )}
       <p className="settings-footer">
-        <a href="/guide" target="_blank" rel="noreferrer">User guide</a> — how to record, add slides, ask questions and save to Drive
+        <a href="/guide" target="_blank" rel="noreferrer">User guide</a> : how to record, add slides, ask questions and save to Drive
         {' · '}
         <a href="/privacy" target="_blank" rel="noreferrer">Privacy policy</a>
         {' · '}

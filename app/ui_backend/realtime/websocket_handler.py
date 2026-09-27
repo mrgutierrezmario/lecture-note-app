@@ -324,12 +324,12 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                             {
                                 "type": "status",
                                 "message": (
-                                    "This is the sample lecture — start a New lecture to record."
+                                    "This is the sample lecture. Start a New Lecture to record."
                                     if user.demo_full
-                                    else "Demo account — recording is disabled. Create your "
+                                    else "Demo account: recording is disabled. Create your "
                                     "own account to record lectures."
                                     if user.is_demo
-                                    else "This lecture was shared with you — only its owner can "
+                                    else "This lecture was shared with you. Only its owner can "
                                     "record into it."
                                 ),
                             }
@@ -345,8 +345,8 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                 "type": "recording_refused",
                                 "stop": True,
                                 "message": (
-                                    "Someone else is recording in the demo right now — "
-                                    "only one demo recording runs at a time. Try again in "
+                                    "Someone else is recording in the demo right now. "
+                                    "Only one demo recording runs at a time. Try again in "
                                     "a few minutes, or create your own account."
                                 ),
                             }
@@ -436,8 +436,8 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                 "type": "recording_refused",
                                 "stop": True,
                                 "message": (
-                                    "Someone else is recording in the demo right now — "
-                                    "only one demo recording runs at a time. Try again in "
+                                    "Someone else is recording in the demo right now. "
+                                    "Only one demo recording runs at a time. Try again in "
                                     "a few minutes, or create your own account."
                                 ),
                             }
@@ -454,7 +454,7 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                         manager.start_notes_task(session_id)
                         await manager.broadcast(
                             session_id,
-                            {"type": "status", "message": "Reconnected — recording continues"},
+                            {"type": "status", "message": "Reconnected. Recording continues."},
                         )
 
                     elif msg_type == "stop":

@@ -36,7 +36,7 @@ function SessionInfo({ sessionId, title, onTitleChange, disabled, vocabulary = '
           data-tip={[
             vocabulary ? `Key terms: ${vocabulary.length > 50 ? vocabulary.slice(0, 50) + '…' : vocabulary}` : null,
             notesFocus ? `Focus: ${notesFocus.length > 50 ? notesFocus.slice(0, 50) + '…' : notesFocus}` : null,
-          ].filter(Boolean).join(' · ') || 'Lecture details — key terms for the transcript and a focus for the notes'}
+          ].filter(Boolean).join(' · ') || 'Lecture details: key terms for the transcript and a focus for the notes'}
         >
           <TermsIcon size={16} />
         </button>

@@ -277,7 +277,7 @@ def forbid_demo(user: CurrentUser = Depends(current_user)) -> CurrentUser:
     if user.is_demo:
         raise HTTPException(
             status_code=403,
-            detail="The demo account can't do that — create your own account for it",
+            detail="The demo account can't do that. Create your own account for it.",
         )
     return user
 
@@ -290,7 +290,7 @@ def forbid_read_only_demo(user: CurrentUser = Depends(current_user)) -> CurrentU
     if user.demo_read_only:
         raise HTTPException(
             status_code=403,
-            detail="The demo is read-only here — create your own account to record lectures",
+            detail="The demo is read-only here. Create your own account to record lectures.",
         )
     return user
 

@@ -51,7 +51,7 @@ function ShareDialog({ lecture, onSave, onClose }) {
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <form className="dialog" role="dialog" aria-labelledby="share-title" onClick={e => e.stopPropagation()} onSubmit={share}>
-        <h2 id="share-title">Share lecture</h2>
+        <h2 id="share-title">Share Lecture</h2>
         <p className="dialog-subtitle">{lecture.title || 'Untitled lecture'}</p>
         <p className="dialog-message">
           Read-only: they can view the transcript and notes, ask their own questions and export, but not change anything.

@@ -99,7 +99,7 @@ async def folder_name_of(link: DriveLink, folder_id: str) -> str:
             f"{DRIVE_API}/files/{folder_id}", params={"fields": "name,mimeType,trashed"}
         )
         if response.status_code != 200:
-            raise DriveError("That folder isn't accessible — pick it again with the chooser")
+            raise DriveError("That folder isn't accessible. Pick it again with the chooser.")
         data = response.json()
         if data.get("mimeType") != FOLDER_MIME or data.get("trashed"):
             raise DriveError("Please choose a folder")
@@ -143,7 +143,7 @@ def decrypt(ciphertext: str) -> str:
         return _fernet().decrypt(ciphertext.encode()).decode()
     except InvalidToken:
         raise DriveError(
-            "Stored Google credentials can't be read — reconnect Google Drive"
+            "The stored Google credentials can't be read. Reconnect Google Drive."
         ) from None
 
 
@@ -198,7 +198,7 @@ async def exchange_code(code: str) -> tuple[str, str | None]:
         tokens = response.json()
         refresh = tokens.get("refresh_token")
         if not refresh:
-            raise DriveError("Google did not return a refresh token — try connecting again")
+            raise DriveError("Google didn't return a refresh token. Try connecting again.")
         email = None
         info = await client.get(
             USERINFO_URL, headers={"Authorization": f"Bearer {tokens['access_token']}"}
@@ -220,7 +220,7 @@ async def _access_token(refresh_token: str) -> str:
             },
         )
     if response.status_code != 200:
-        raise DriveError("Google Drive access was revoked — reconnect it in Settings")
+        raise DriveError("Google Drive access was revoked. Reconnect it in Settings.")
     return response.json()["access_token"]
 
 

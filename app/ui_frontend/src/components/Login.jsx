@@ -27,13 +27,13 @@ function Login({ onLogin, onRegister, onDemo }) {
   // full notice once signed in, since the query string is left in place.
   const params = new URLSearchParams(window.location.search)
   const banner = params.get('approved') === '1'
-    ? `Account "${params.get('user') || ''}" approved — sign in to manage users.`
+    ? `Account "${params.get('user') || ''}" approved. Sign in to manage users.`
     : params.get('approved') === 'already'
       ? `Account "${params.get('user') || ''}" was already approved.`
       : params.get('approved') === 'expired'
-        ? 'That approval link has expired — sign in and approve the account under Settings → Users.'
+        ? 'That approval link has expired. Sign in and approve the account under Settings → Users.'
         : params.get('verified') === 'pending'
-          ? 'Email confirmed. Your account is waiting for an administrator to approve it — you will get an email when it is active.'
+          ? 'Email confirmed. Your account is waiting for an administrator to approve it. You\'ll get an email when it\'s active.'
           : null
 
   useEffect(() => {
@@ -49,7 +49,7 @@ function Login({ onLogin, onRegister, onDemo }) {
     e.preventDefault()
     setError(null)
     if (mode === 'register' && password !== repeat) {
-      setError('Passwords do not match')
+      setError('Passwords don\'t match.')
       return
     }
     setBusy(true)
@@ -117,13 +117,13 @@ function Login({ onLogin, onRegister, onDemo }) {
             <p className="login-note">
               {resent
                 ? 'Sent again.'
-                : <>Didn't get it? <button type="button" className="link-button" disabled={busy} onClick={resend}>Send it again</button></>}
-              {' · '}<button type="button" className="link-button" onClick={() => switchMode('login')}>Back to sign in</button>
+                : <>Didn't get it? <button type="button" className="link-button" disabled={busy} onClick={resend}>Send It Again</button></>}
+              {' · '}<button type="button" className="link-button" onClick={() => switchMode('login')}>Back to Sign In</button>
             </p>
           </>
         ) : mode === 'forgot' && sent ? (
           <p className="login-sent">
-            If that account exists and has an email address, a reset link is on its way. It works for 60 minutes — check your spam folder if it doesn't show up.
+            If that account exists and has an email address, a reset link is on its way. It works for 60 minutes. Check your spam folder if it doesn't show up.
           </p>
         ) : mode !== 'register' ? (
           <label className="login-field">
@@ -149,7 +149,7 @@ function Login({ onLogin, onRegister, onDemo }) {
                 autoComplete="username"
                 autoCapitalize="none"
                 pattern="[A-Za-z0-9._-]{2,64}"
-                title="2-64 letters, digits, dots, dashes or underscores"
+                title="2–64 letters, numbers, dots, dashes or underscores"
                 autoFocus
                 required
               />
@@ -200,8 +200,8 @@ function Login({ onLogin, onRegister, onDemo }) {
             {error}
             {needsVerify && (
               <> {resent
-                ? 'Sent again — check your inbox.'
-                : <button type="button" className="link-button" disabled={busy} onClick={resend}>Send the link again</button>}</>
+                ? 'Sent again. Check your inbox.'
+                : <button type="button" className="link-button" disabled={busy} onClick={resend}>Send the Link Again</button>}</>
             )}
           </p>
         )}
@@ -210,28 +210,28 @@ function Login({ onLogin, onRegister, onDemo }) {
           <button type="submit" className="btn-primary login-submit" disabled={busy || !canSubmit}>
             {busy
               ? (mode === 'login' ? 'Signing in…' : mode === 'forgot' ? 'Sending…' : 'Creating account…')
-              : (mode === 'login' ? 'Sign in' : mode === 'forgot' ? 'Email me a reset link' : 'Create account')}
+              : (mode === 'login' ? 'Sign In' : mode === 'forgot' ? 'Email Me a Reset Link' : 'Create Account')}
           </button>
         )}
 
         {mode === 'forgot' ? (
           <p className="login-note">
-            <button type="button" className="link-button" onClick={() => switchMode('login')}>Back to sign in</button>
+            <button type="button" className="link-button" onClick={() => switchMode('login')}>Back to Sign In</button>
           </p>
         ) : mode === 'login' ? (
           <p className="login-note">
             {registrationOpen ? (
-              <>New here? <button type="button" className="link-button" onClick={() => switchMode('register')}>Create an account</button></>
+              <>New here? <button type="button" className="link-button" onClick={() => switchMode('register')}>Create an Account</button></>
             ) : (
               <>No account? Ask your administrator to create one.</>
             )}
             {resetAvailable && (
-              <> · <button type="button" className="link-button" onClick={() => switchMode('forgot')}>Forgot password?</button></>
+              <> · <button type="button" className="link-button" onClick={() => switchMode('forgot')}>Forgot Password?</button></>
             )}
           </p>
         ) : !pending && (
           <p className="login-note">
-            Already have an account? <button type="button" className="link-button" onClick={() => switchMode('login')}>Sign in</button>
+            Already have an account? <button type="button" className="link-button" onClick={() => switchMode('login')}>Sign In</button>
           </p>
         )}
         {demoAvailable && mode === 'login' && !pending && (
@@ -243,9 +243,9 @@ function Login({ onLogin, onRegister, onDemo }) {
               disabled={busy}
               onClick={async () => { setBusy(true); setError(null); try { await onDemo() } catch (err) { setError(err.message) } finally { setBusy(false) } }}
             >
-              Try the demo
+              Try the Demo
             </button>
-            {' '}— a read-only account with a sample lecture.
+            {' '}, a read-only account with a sample lecture.
           </p>
         )}
         <p className="login-note login-legal">

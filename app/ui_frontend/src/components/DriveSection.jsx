@@ -100,7 +100,7 @@ function DriveSection({ isAdmin, refreshKey }) {
       {status && !status.available && (
         <p className="settings-note settings-note-full">
           {isAdmin
-            ? 'Not set up yet — save the Google OAuth client above and users can connect their own Drive.'
+            ? 'Not set up yet. Save the Google OAuth client above, and users can connect their own Drive.'
             : 'Not available on this server.'}
         </p>
       )}
@@ -109,7 +109,7 @@ function DriveSection({ isAdmin, refreshKey }) {
           <p className="settings-note settings-note-full">
             Keep your own copy: each lecture's notes, transcript and MP3 go into an
             "AI Lecture Notes" folder in your Google Drive. Google will ask you to allow this app
-            to "see and edit files it creates" — that is the only permission requested; it cannot
+            to “see and edit files it creates.” That is the only permission it asks for; it can't
             see anything else in your Drive.
           </p>
           <div className="settings-actions">
@@ -128,7 +128,7 @@ function DriveSection({ isAdmin, refreshKey }) {
               {status.email && <p className="auth-detail">{status.email}</p>}
               {status.folder_url && (
                 <p className="auth-detail">
-                  <a href={status.folder_url} target="_blank" rel="noreferrer">Open the "AI Lecture Notes" folder</a>
+                  <a href={status.folder_url} target="_blank" rel="noreferrer">Open the “AI Lecture Notes” Folder</a>
                 </p>
               )}
             </div>
@@ -157,18 +157,18 @@ function DriveSection({ isAdmin, refreshKey }) {
             />
           </label>
           <p className="settings-note">
-            Use "/" for a path, e.g. <code>School/Fall 2026</code>, and <em>Create folder</em> makes it in your
-            Drive right away — or <em>Choose existing folder</em> to pick one you already have. New saves go
-            there; lectures already saved keep updating where they are. Moving the folder later is fine — the
+            Use "/" for a path, e.g. <code>School/Fall 2026</code>, and <em>Create Folder</em> makes it in your
+            Drive right away, or <em>Choose Existing Folder</em> to pick one you already have. New saves go
+            there; lectures already saved keep updating where they are. Moving the folder later is fine; the
             app follows it.
           </p>
           <div className="settings-actions">
             <button disabled={busy || !folder.trim() || folder.trim() === status.folder_name} onClick={saveFolder}>
-              {busy ? 'Working…' : folderSaved ? 'Folder created' : 'Create folder'}
+              {busy ? 'Working…' : folderSaved ? 'Folder created' : 'Create Folder'}
             </button>
             {status.picker_available && (
               <button className="btn-secondary" disabled={busy} onClick={chooseFolder} data-tip="Pick a folder that already exists in your Drive (Google's chooser)">
-                Choose existing folder…
+                Choose Existing Folder…
               </button>
             )}
             <button className="btn-secondary" disabled={busy} onClick={disconnect}>Disconnect</button>

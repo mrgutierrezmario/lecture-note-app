@@ -75,7 +75,7 @@ def _check_usage(user: CurrentUser, kind: str) -> None:
         what = {"chat": "questions", "image": "image questions", "upload": "uploads"}[kind]
         raise HTTPException(
             status_code=429,
-            detail=f"You've sent a lot of {what} in a short time — try again in about "
+            detail=f"You've sent a lot of {what} in a short time. Try again in about "
             f"{max(1, wait // 60)} minute(s).",
             headers={"Retry-After": str(wait)},
         )
@@ -118,7 +118,7 @@ async def session_writer(
     if user.demo_read_only:
         raise HTTPException(
             status_code=403,
-            detail="The demo is read-only here — create your own account to record lectures",
+            detail="The demo is read-only here. Create your own account to record lectures.",
         )
     session = (
         await db.execute(select(Session).where(Session.id == session_id))
@@ -939,8 +939,8 @@ async def chat(
             except Exception as e:
                 if "credit balance" in str(e).lower():
                     answer = (
-                        "Image analysis requires API credits for the selected provider — "
-                        "add credits or pick another provider in Settings."
+                        "Image analysis needs API credits for the selected provider. "
+                        "Add credits or pick another provider in Settings."
                     )
                     provider = "no-credits"
                     logger.warning("Cloud vision unavailable: no API credits")

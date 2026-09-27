@@ -164,7 +164,7 @@ async def forgot_password(
     key = f"forgot:{_client_ip(request)}"
     wait = ratelimit.retry_after(key)
     if wait:
-        raise HTTPException(429, f"Too many requests — try again in {wait} seconds")
+        raise HTTPException(429, f"Too many requests. Try again in {wait} seconds.")
     ratelimit.record_failure(key)
     user = await _find_user(db, body.identifier)
     if user is None or user.disabled or not user.email or not mailer.configured():
@@ -216,10 +216,10 @@ async def reset_password(body: ResetPasswordRequest, db: AsyncSession = Depends(
         )
     ).scalar_one_or_none()
     if row is None or row.used_at is not None or row.expires_at < datetime.utcnow():
-        raise HTTPException(400, "This reset link is invalid or has expired — request a new one")
+        raise HTTPException(400, "This reset link is invalid or has expired. Request a new one.")
     user = (await db.execute(select(User).where(User.id == row.user_id))).scalar_one_or_none()
     if user is None or user.disabled:
-        raise HTTPException(400, "This reset link is invalid or has expired — request a new one")
+        raise HTTPException(400, "This reset link is invalid or has expired. Request a new one.")
     user.password_hash = hash_password(_validate_password(body.new_password))
     row.used_at = datetime.utcnow()
     # Any other outstanding links for this account are void now. A password
@@ -346,7 +346,7 @@ async def register(
     the link signs the user in. Without mail, the account is signed in at once.
     """
     if not get_settings().registration_open:
-        raise HTTPException(403, "Registration is closed — ask an administrator for an account")
+        raise HTTPException(403, "Registration is closed. Ask an administrator for an account.")
     username = _validate_username(body.username)
     email = _validate_email(body.email)
     if not email:
@@ -449,7 +449,7 @@ async def resend_verification(
     key = f"forgot:{_client_ip(request)}"
     wait = ratelimit.retry_after(key)
     if wait:
-        raise HTTPException(429, f"Too many requests — try again in {wait} seconds")
+        raise HTTPException(429, f"Too many requests. Try again in {wait} seconds.")
     ratelimit.record_failure(key)
     user = await _find_user(db, body.identifier)
     if user and not user.disabled and not user.email_verified and mailer.configured():
@@ -518,7 +518,7 @@ async def login(
     if wait:
         raise HTTPException(
             429,
-            f"Too many failed sign-in attempts — try again in {wait} seconds",
+            f"Too many failed sign-in attempts. Try again in {wait} seconds.",
             headers={"Retry-After": str(wait)},
         )
     user = await _find_user(db, body.username)
@@ -533,7 +533,7 @@ async def login(
             403,
             {
                 "code": "verification_required",
-                "message": f"Confirm your email first — we sent a link to {user.email}.",
+                "message": f"Confirm your email first. We sent a link to {user.email}.",
             },
         )
     if not user.approved:
@@ -571,7 +571,9 @@ async def delete_own_account(
             select(func.count()).select_from(User).where(User.is_admin.is_(True))
         )
         if (admins or 0) <= 1:
-            raise HTTPException(400, "You are the only administrator — add another before deleting")
+            raise HTTPException(
+                400, "You're the only administrator. Add another before deleting this account."
+            )
 
     # Google Drive: revoke and forget.
     link = await db.get(DriveLink, row.id)
@@ -618,7 +620,7 @@ async def demo_login(request: Request, response: Response, db: AsyncSession = De
     key = f"demo:{_client_ip(request)}"
     allowed, wait = ratelimit.allow(key, 10, 10 * 60)
     if not allowed:
-        raise HTTPException(429, f"Too many demo sign-ins — try again in {wait} seconds")
+        raise HTTPException(429, f"Too many demo sign-ins. Try again in {wait} seconds.")
     user = await _demo_user(db)
     if user is None:
         raise HTTPException(404, "There is no demo account on this server")

@@ -42,11 +42,11 @@ function TranscriptPane({ transcript }) {
       <header className="pane-header">
         <div className="pane-title">
           <span className="pane-icon pane-icon-blue"><TranscriptIcon /></span>
-          <h2>Live transcript</h2>
+          <h2>Live Transcript</h2>
         </div>
         <span className="pane-meta">
           {transcript.length === 1 && String(transcript[0].id).endsWith('-full')
-            ? 'Full transcript'
+            ? 'Full Transcript'
             : `${transcript.length} ${transcript.length === 1 ? 'segment' : 'segments'}`}
         </span>
       </header>
@@ -55,7 +55,7 @@ function TranscriptPane({ transcript }) {
           <div className="empty-state">
             <span className="empty-icon"><MicIcon size={22} strokeWidth={1.6} /></span>
             <strong>Nothing transcribed yet</strong>
-            <p>Press Start recording and speech will appear here in real time.</p>
+            <p>Press Start Recording and speech will appear here in real time.</p>
           </div>
         ) : (
           <div className="transcript-text">
@@ -71,7 +71,7 @@ function TranscriptPane({ transcript }) {
         )}
         {behind && (
           <button type="button" className="jump-latest" onClick={() => scrollToEnd(true)}>
-            ↓ Jump to latest
+            ↓ Jump to Latest
           </button>
         )}
       </div>

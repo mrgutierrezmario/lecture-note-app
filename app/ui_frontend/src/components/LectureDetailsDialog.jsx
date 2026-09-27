@@ -30,9 +30,9 @@ function LectureDetailsDialog({ vocabulary, notesFocus, onSave, onClose }) {
   return (
     <div className="dialog-backdrop" onClick={onClose}>
       <form className="dialog dialog-wide" role="dialog" aria-labelledby="details-title" onClick={e => e.stopPropagation()} onSubmit={submit}>
-        <h2 id="details-title">Lecture details</h2>
+        <h2 id="details-title">Lecture Details</h2>
         <label className="dialog-field">
-          <span>Key terms — names, acronyms, course terms (comma separated)</span>
+          <span>Key terms: names, acronyms, course terms (comma-separated)</span>
           <input
             ref={firstRef}
             type="text"
@@ -44,7 +44,7 @@ function LectureDetailsDialog({ vocabulary, notesFocus, onSave, onClose }) {
           <small>The transcriber uses these to spell them right. Changes apply from the next chunk.</small>
         </label>
         <label className="dialog-field">
-          <span>Notes focus — what the notes should emphasise</span>
+          <span>Notes focus: what the notes should emphasize</span>
           <input
             type="text"
             value={focus}

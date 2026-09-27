@@ -126,32 +126,32 @@ function Workspace({ user, onLogout, onUserChange }) {
     window.history.replaceState({}, '', window.location.pathname)
     if (verified) {
       dialog.notice(verified === '1'
-        ? { title: 'Email confirmed', message: 'Your account is ready! — Welcome to AI Lecture Notes.' }
+        ? { title: 'Email Confirmed', message: 'Your account is ready. Welcome to AI Lecture Notes!' }
         : verified === 'pending'
-          ? { title: 'Email confirmed', message: 'Thanks — your account now needs to be approved by an administrator. You will get an email as soon as it is active.' }
-          : { title: 'Link expired', message: 'That confirmation link is no longer valid. Sign in and use "Send the link again" to get a fresh one.' })
+          ? { title: 'Email Confirmed', message: 'Thanks! Your account now needs to be approved by an administrator. You will get an email as soon as it is active.' }
+          : { title: 'Link Expired', message: 'That confirmation link is no longer valid. Sign in and use “Send the Link Again” to get a fresh one.' })
       return
     }
     if (approved) {
       const who = params.get('user') || 'The account'
       dialog.notice(approved === '1'
-        ? { title: 'Account approved', message: `${who} can sign in now and has been emailed.` }
+        ? { title: 'Account Approved', message: `${who} can sign in now and has been emailed.` }
         : approved === 'already'
-          ? { title: 'Already approved', message: `${who} was approved earlier — nothing to do.` }
-          : { title: 'Link expired', message: 'That approval link is no longer valid. You can approve the account under Settings → Users.' })
+          ? { title: 'Already Approved', message: `${who} was approved earlier, so there\'s nothing to do.` }
+          : { title: 'Link Expired', message: 'That approval link is no longer valid. You can approve the account under Settings → Users.' })
       return
     }
     if (drive === 'connected') {
       dialog.notice({
-        title: 'Google Drive connected',
+        title: 'Google Drive Connected',
         message: 'Finished lectures will be saved to an "AI Lecture Notes" folder in your Drive. You can turn automatic saving off in Settings → Google Drive.',
       })
     } else {
       const reason = params.get('reason')
       dialog.notice({
-        title: 'Google Drive was not connected',
+        title: 'Google Drive Wasn\'t Connected',
         message: reason === 'expired'
-          ? 'The sign-in took too long — please try again from Settings.'
+          ? 'The sign-in took too long. Please try again from Settings.'
           : reason === 'access_denied' || reason === 'cancelled'
             ? 'The Google sign-in was cancelled.'
             : 'Google did not complete the connection. Try again from Settings → Google Drive.',
@@ -177,7 +177,7 @@ function Workspace({ user, onLogout, onUserChange }) {
   }, [loadDevices])
 
   const micErrorMessage = useCallback((error) => {
-    if (!window.isSecureContext) return 'Error: Microphone needs HTTPS (or localhost) — open the site over https://'
+    if (!window.isSecureContext) return 'The microphone needs a secure connection. Open the site with https://'
     switch (error?.name) {
       case 'NotAllowedError':
       case 'SecurityError':
@@ -277,12 +277,12 @@ function Workspace({ user, onLogout, onUserChange }) {
       // stop=true: refused at start, so tear down the recorder we just started.
       if (message.stop) stopRecordingRef.current?.()
       setStatus(message.message)
-      dialog.notice({ title: 'Storage quota reached', message: message.message })
+      dialog.notice({ title: 'Storage Quota Reached', message: message.message })
     } else if (message.type === 'recording_refused') {
       // The shared demo account records one lecture at a time; someone else has it.
       if (message.stop) stopRecordingRef.current?.()
       setStatus(message.message)
-      dialog.notice({ title: 'Demo is busy', message: message.message })
+      dialog.notice({ title: 'Demo Is Busy', message: message.message })
     }
   }, [])
 
@@ -347,7 +347,7 @@ function Workspace({ user, onLogout, onUserChange }) {
   const recoverMic = useCallback(async (reason, startedAt = Date.now()) => {
     if (!isRecordingRef.current || stoppingRef.current) return
     if (recoverTimerRef.current) { clearTimeout(recoverTimerRef.current); recoverTimerRef.current = null }
-    setStatus('Microphone lost — trying to get it back…')
+    setStatus('Microphone lost. Trying to get it back…')
     try {
       const constraints = {
         audio: selectedDeviceId ? { deviceId: { exact: selectedDeviceId } } : true,
@@ -365,14 +365,14 @@ function Workspace({ user, onLogout, onUserChange }) {
       streamRef.current = micStream
       startCapture(micStream)
       console.warn(`Microphone recovered after it was lost (${reason})`)
-      setStatus(`Recording resumed — microphone was lost for a moment${lostTabAudio ? ' (tab audio not restored)' : ''}${micMutedRef.current ? ' — mic muted' : ''}`)
+      setStatus(`Recording resumed. The microphone was lost for a moment${lostTabAudio ? ' (tab audio not restored)' : ''}${micMutedRef.current ? ' (mic muted)' : ''}`)
     } catch (err) {
       if (Date.now() - startedAt < RECOVER_FOR_MS) {
         recoverTimerRef.current = setTimeout(() => recoverMic(reason, startedAt), RECOVER_EVERY_MS)
       } else {
         console.error('Could not get the microphone back:', err)
-        setStatus('Microphone lost — press Stop, then Start recording to continue')
-        dialog.notice({ title: 'Microphone lost', message: 'Another app or the system took the microphone and it could not be reacquired. Press Stop, then Start recording; the lecture continues in the same session.' })
+        setStatus('Microphone lost. Press Stop, then Start Recording to continue.')
+        dialog.notice({ title: 'Microphone Lost', message: 'Another app or the system took the microphone and it could not be reacquired. Press Stop, then Start Recording; the lecture continues in the same session.' })
       }
     }
   }, [selectedDeviceId, dialog, startCapture])
@@ -442,7 +442,7 @@ function Workspace({ user, onLogout, onUserChange }) {
       acquireWakeLock()
       if (micState !== 'granted') { setMicState('granted'); loadDevices() }
       sendMessage({ type: 'start', title: title || undefined, save_storage: saveStorage, vocabulary, notes_focus: notesFocus })
-      setStatus(`Recording (${statusLabel})${micMuted ? ' — mic muted' : ''}...`)
+      setStatus(`Recording (${statusLabel})${micMuted ? ' (mic muted)' : ''}…`)
     } catch (error) {
       console.error('Error starting recording:', error)
       if (error?.name === 'NotAllowedError') setMicState('denied')
@@ -460,7 +460,7 @@ function Workspace({ user, onLogout, onUserChange }) {
         micTrackRef.current.enabled = !next
       }
       if (isRecordingRef.current) {
-        setStatus(next ? 'Recording — mic muted (transcript paused)' : 'Recording — mic on')
+        setStatus(next ? 'Recording (mic muted, transcript paused)' : 'Recording (mic on)')
       }
       return next
     })
@@ -475,7 +475,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     rec.pause()
     isPausedRef.current = true
     setIsPaused(true)
-    setStatus('Paused — press Resume to keep recording')
+    setStatus('Paused. Press Resume to keep recording.')
   }, [])
 
   const resumeRecording = useCallback(() => {
@@ -484,7 +484,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     rec.resume()
     isPausedRef.current = false
     setIsPaused(false)
-    setStatus(micMuted ? 'Recording — mic muted (transcript paused)' : 'Recording resumed')
+    setStatus(micMuted ? 'Recording (mic muted, transcript paused)' : 'Recording resumed')
   }, [micMuted])
 
   const stopRecording = useCallback(() => {
@@ -520,7 +520,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     setIsRecording(false)
     isRecordingRef.current = false
     sendMessage({ type: 'stop' })
-    setStatus('Processing...')
+    setStatus('Processing…')
   }, [sendMessage, stopLevelMeter, releaseWakeLock])
 
   // Hand the URL straight to the browser's download manager. The server marks
@@ -538,7 +538,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)
-    setTimeout(() => setStatus('Download started — check your downloads'), 1500)
+    setTimeout(() => setStatus('Download started. Check your downloads.'), 1500)
   }, [])
 
   const exportNotes = useCallback(() =>
@@ -581,7 +581,7 @@ function Workspace({ user, onLogout, onUserChange }) {
         setStatus(job.phase === 'converting' ? 'Converting to MP3…' : `Preparing MP3… ${job.percent ?? 0}%`)
       })
       downloadUrl(url, filename || `recording-${sessionId.slice(0, 8)}.mp3`)
-      setStatus('MP3 ready — check your downloads')
+      setStatus('MP3 ready. Check your downloads.')
     } catch (err) {
       setStatus(`MP3 export failed: ${err.message}`)
     } finally {
@@ -660,7 +660,7 @@ function Workspace({ user, onLogout, onUserChange }) {
     })
     if (!response.ok) {
       const data = await response.json().catch(() => ({}))
-      dialog.notice({ title: 'Could not save', message: data.detail || `HTTP ${response.status}` })
+      dialog.notice({ title: 'Couldn\'t Save', message: data.detail || `HTTP ${response.status}` })
       return
     }
     setVocabulary(terms)
@@ -719,9 +719,9 @@ function Workspace({ user, onLogout, onUserChange }) {
           <span
             className={`status-pill ${isConnected ? 'connected' : 'disconnected'}`}
             data-tip={isConnected
-              ? (queuedChunks ? `Reconnected — sending ${queuedChunks * 5} s of buffered audio` : 'Live link to the server is up')
+              ? (queuedChunks ? `Reconnected. Sending ${queuedChunks * 5} s of buffered audio` : 'Live link to the server is up')
               : (isRecording
-                ? `Not connected — recording continues, ${queuedChunks * 5} s buffered and will be sent when the link is back`
+                ? `Not connected. Recording continues; ${queuedChunks * 5} s of audio is buffered and will be sent when the link is back.`
                 : 'Not connected to the server')}
           >
             <span className="status-dot" />
@@ -743,10 +743,10 @@ function Workspace({ user, onLogout, onUserChange }) {
       {user.is_demo && (
         <div className="demo-banner">
           {demoReadOnly ? (<>
-            You're in the <strong>demo</strong> — a read-only account. Open a lecture from History, read the transcript and notes, ask questions, download exports.
+            You're in the <strong>demo</strong>, a read-only account. Open a lecture from History, read the transcript and notes, ask questions, download exports.
             Recording, uploads and settings changes are off.
           </>) : (<>
-            You're in the <strong>demo</strong>. Record a lecture, upload slides, edit notes, ask questions and export — or open the sample lecture from History.
+            You're in the <strong>demo</strong>. Record a lecture, upload slides, edit notes, ask questions and export, or open the sample lecture from History.
             Everyone trying the demo shares this account, and lectures recorded here are deleted after 24 hours. Sharing, Google Drive and account settings are off.
           </>)}
           {' '}<a href="/" onClick={e => { e.preventDefault(); onLogout() }}>Sign out</a> to create your own account.
@@ -766,7 +766,7 @@ function Workspace({ user, onLogout, onUserChange }) {
         {viewingPast && (
           <button className="btn-primary btn-new-lecture" onClick={startNewLecture} data-tip="Leave this past lecture and start a fresh recording">
             <PlusIcon size={16} />
-            New lecture
+            New Lecture
           </button>
         )}
         <RecordingControls
@@ -811,7 +811,7 @@ function Workspace({ user, onLogout, onUserChange }) {
           ) : (
             <button type="button" className="btn-secondary" onClick={enableMicrophone} disabled={isRecording}
               data-tip={micState === 'denied' ? 'Show how to unblock the microphone' : 'Ask for microphone access so the device list can load'}>
-              {micState === 'denied' ? 'Microphone blocked — how to fix' : 'Enable microphone'}
+              {micState === 'denied' ? 'Microphone Blocked: How to Fix' : 'Enable Microphone'}
             </button>
           )}
         </label>
@@ -832,14 +832,14 @@ function Workspace({ user, onLogout, onUserChange }) {
           <label
             className="switch"
             data-tip={inputIsVirtual
-              ? `Silences ${inputShort} — the meeting audio, not you. The recording keeps running. To mute yourself in the call, use Zoom's mute button.`
+              ? `Silences ${inputShort} (the meeting audio, not you). The recording keeps running. To mute yourself in the call, use Zoom's mute button.`
               : `Silences your microphone; the recording keeps running and the transcript resumes when you unmute${captureTabAudio ? ' (tab audio is unaffected)' : ''}.`}
           >
             <input type="checkbox" checked={micMuted} onChange={toggleMicMute} />
             <span className="switch-track" />
             Mute {inputShort}
           </label>
-          <label className="switch" data-tip="Transcribe without keeping the recording — no MP3 later, no storage used">
+          <label className="switch" data-tip="Transcribe without keeping the recording: no MP3 later, no storage used">
             <input
               type="checkbox"
               checked={saveStorage}
@@ -855,19 +855,19 @@ function Workspace({ user, onLogout, onUserChange }) {
 
       {viewingPast && (
         <p className="toolbar-hint toolbar-hint-info">
-          {viewerReadOnly && user.is_demo ? 'This is the sample lecture — read, export and ask questions about it; it can\'t be changed. Use New lecture to record your own. ' : viewerReadOnly ? 'This lecture was shared with you — read, export and ask questions about it; only its owner can change it. ' : 'Viewing a past lecture — you can read, export, and ask questions about it. Recording is off; use New lecture to record.'}
+          {viewerReadOnly && user.is_demo ? 'This is the sample lecture. You can read it, export it and ask questions about it, but it can\'t be changed. Use New Lecture to record your own. ' : viewerReadOnly ? 'This lecture was shared with you. You can read it, export it and ask questions about it; only its owner can change it. ' : 'Viewing a past lecture. You can read it, export it and ask questions about it. Recording is off; use New Lecture to record.'}
         </p>
       )}
 
       {!isRecording && !viewingPast && (
         <p className="toolbar-hint toolbar-hint-phone">
-          Recording a call on this phone? Put it on speakerphone — phones only let apps hear your side of a call, so the other party is picked up through the speaker.
+          Recording a call on this phone? Put it on speakerphone: phones only let apps hear your side of a call, so the other party is picked up through the speaker.
         </p>
       )}
 
       {noAudio && isRecording && (
         <p className="toolbar-hint toolbar-hint-danger">
-          No audio is reaching the recorder. If you're on a phone or Zoom call, the call has the microphone — phones don't let another app hear a call. Record from a different device, or on a computer use Tab audio to capture the call.
+          No audio is reaching the recorder. If you're on a phone or Zoom call, the call has the microphone, and phones don't let another app hear a call. Record from a different device, or on a computer use Tab audio to capture the call.
         </p>
       )}
 

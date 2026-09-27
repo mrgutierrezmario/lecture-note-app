@@ -134,7 +134,7 @@ function ChatPane({ sessionId, readOnly = false }) {
     if (msg.id) {
       const response = await fetch(`/api/session/${sessionId}/chat/${msg.id}`, { method: 'DELETE' })
       if (!response.ok && response.status !== 404) {
-        dialog.notice({ title: 'Could not delete', message: `HTTP ${response.status}` })
+        dialog.notice({ title: 'Couldn\'t Delete', message: `HTTP ${response.status}` })
         return
       }
     }
@@ -146,15 +146,15 @@ function ChatPane({ sessionId, readOnly = false }) {
 
   const clearChat = async () => {
     const ok = await dialog.confirm({
-      title: 'Clear this conversation?',
-      message: 'All questions and answers for this lecture are removed — from the export too. The transcript and notes are not affected.',
+      title: 'Clear This Conversation?',
+      message: 'All questions and answers for this lecture are removed, from the export too. The transcript and notes are not affected.',
       confirmLabel: 'Clear',
       danger: true,
     })
     if (!ok) return
     const response = await fetch(`/api/session/${sessionId}/chat`, { method: 'DELETE' })
     if (!response.ok) {
-      dialog.notice({ title: 'Could not clear', message: `HTTP ${response.status}` })
+      dialog.notice({ title: 'Couldn\'t Clear', message: `HTTP ${response.status}` })
       return
     }
     setMessages([])
@@ -172,7 +172,7 @@ function ChatPane({ sessionId, readOnly = false }) {
       <header className="pane-header">
         <div className="pane-title">
           <span className="pane-icon pane-icon-cyan"><ChatIcon /></span>
-          <h2>Ask about the lecture</h2>
+          <h2>Ask About the Lecture</h2>
         </div>
         {messages.length > 0 && !readOnly && (
           <span className="pane-meta pane-actions">
@@ -212,7 +212,7 @@ function ChatPane({ sessionId, readOnly = false }) {
             {msg.role === 'assistant' && msg.provider && (
               <span className={`chat-provider${msg.fallback ? ' chat-provider-fallback' : ''}`}>
                 {providerLabel(msg.provider)}
-                {msg.fallback && <> — {msg.fallback}</>}
+                {msg.fallback && <> ({msg.fallback})</>}
               </span>
             )}
           </div>
