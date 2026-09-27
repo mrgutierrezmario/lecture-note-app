@@ -28,8 +28,72 @@ def _clean(value: str) -> str:
     return (value or "").replace("\r", "").replace("\n", "").strip()
 
 
+LOGO_URL = "https://mgnetsolutions.com/email-logo.png"
+PRODUCT = "AI Lecture Notes"
+COMPANY = "M.G. Network and Technology Solutions"
+
+
+_FONT = "-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif"
+_CARD = (
+    "max-width:600px;background:#ffffff;border:1px solid #dfe5ee;"
+    f"border-radius:10px;overflow:hidden;font-family:{_FONT};"
+)
+_BAR = (
+    "height:4px;line-height:4px;font-size:0;background:#12bceb;"
+    "background-image:linear-gradient(90deg,#0B74F6,#12BCEB 52%,#11D4B2);"
+)
+_FOOT = (
+    "padding:18px 28px 24px;color:#51607a;font-size:12px;line-height:1.5;"
+    "border-top:1px solid #dfe5ee;"
+)
+_NAME = "vertical-align:middle;color:#ffffff;font-size:20px;font-weight:800;"
+_TABLE = 'role="presentation" width="100%" cellpadding="0" cellspacing="0"'
+
+
+def _shell(title: str, body: str) -> str:
+    """The layout every email shares with the other M.G. apps and
+    mgnetsolutions.com: navy header with the MG logo and the product name, the
+    blue-teal line, a light card, and a footer naming the company. Table layout
+    and inline styles, because that is what mail clients render reliably."""
+    site = (get_settings().public_url or "").rstrip("/")
+    home = ""
+    if site:
+        host = html.escape(site.split("://", 1)[-1])
+        href = html.escape(site, quote=True)
+        home = f' · <a href="{href}" style="color:#51607a;">{host}</a>'
+    logo = (
+        f'<img src="{LOGO_URL}" width="120" height="65" alt="{COMPANY}" '
+        'style="display:block;border:0;">'
+    )
+    return f"""<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light"><meta name="supported-color-schemes" content="light">
+<title>{html.escape(title)}</title>
+</head>
+<body style="margin:0;padding:0;background:#f4f6fa;">
+<table {_TABLE} style="background:#f4f6fa;">
+  <tr><td align="center" style="padding:24px 12px;">
+    <table {_TABLE} style="{_CARD}">
+      <tr><td style="background:#0a1430;padding:20px 28px;">
+        <table {_TABLE}><tr>
+          <td style="vertical-align:middle;">{logo}</td>
+          <td align="right" style="{_NAME}">{PRODUCT}</td>
+        </tr></table>
+      </td></tr>
+      <tr><td style="{_BAR}">&nbsp;</td></tr>
+      <tr><td style="padding:8px 4px 4px;">{body}</td></tr>
+      <tr><td style="{_FOOT}">{PRODUCT} by {COMPANY}{home}</td></tr>
+    </table>
+  </td></tr>
+</table>
+</body></html>"""
+
+
 def _send_sync(to: str, subject: str, text: str, html_body: str) -> None:
     s = get_settings()
+    if not html_body.lstrip().lower().startswith("<!doctype"):
+        html_body = _shell(subject, html_body)
     from_addr = _clean(s.mail_from or s.mail_username)
     msg = MIMEMultipart("alternative")
     msg["Subject"] = _clean(subject)
@@ -65,7 +129,7 @@ def password_reset_email(username: str, link: str, minutes: int) -> tuple[str, s
         f"Hi {username},\n\n"
         f"Someone asked to reset the password for your AI Lecture Notes account. "
         f"Open this link within {minutes} minutes to choose a new password:\n\n{link}\n\n"
-        "If you didn't ask for this, you can ignore this email — your password stays the same.\n\n"
+        "If you didn't ask for this, you can ignore this email. Your password stays the same.\n\n"
         "This is an automated message; replies are not monitored."
     )
     body = f"""
@@ -76,13 +140,13 @@ def password_reset_email(username: str, link: str, minutes: int) -> tuple[str, s
   the password for your
   AI Lecture Notes account. This link works for {minutes} minutes:</p>
   <p style="margin:0 0 20px"><a href="{html.escape(link, quote=True)}"
-     style="display:inline-block;background:#0b74f6;color:#fff;text-decoration:none;
+     style="display:inline-block;background:#0a5fd1;color:#fff;text-decoration:none;
             padding:12px 18px;border-radius:8px;font-weight:600">
      Choose a new password</a></p>
   <p style="margin:0 0 8px;font-size:13px;color:#5b6b86">Or paste this into your browser:<br>
      <span style="word-break:break-all">{html.escape(link)}</span></p>
   <p style="margin:16px 0 0;font-size:13px;color:#5b6b86">If you didn't ask for this, ignore this
-  email — your password stays the same.</p>
+  email. Your password stays the same.</p>
   <p style="margin:16px 0 0;font-size:12px;color:#8a97ae">This is an automated message; replies
   are not monitored.</p>
 </div>"""
@@ -95,7 +159,7 @@ def verify_email(username: str, link: str, hours: int) -> tuple[str, str, str]:
     text = (
         f"Hi {username},\n\n"
         f"Welcome to AI Lecture Notes. Confirm this email address to finish creating your "
-        f"account — the link works for {hours} hours:\n\n{link}\n\n"
+        f"account. The link works for {hours} hours:\n\n{link}\n\n"
         "If you didn't sign up, you can ignore this email.\n\n"
         "This is an automated message; replies are not monitored."
     )
@@ -107,7 +171,7 @@ def verify_email(username: str, link: str, hours: int) -> tuple[str, str, str]:
   Notes. Confirm this address to finish creating your account. The link works for {hours}
   hours:</p>
   <p style="margin:0 0 20px"><a href="{html.escape(link, quote=True)}"
-     style="display:inline-block;background:#0b74f6;color:#fff;text-decoration:none;
+     style="display:inline-block;background:#0a5fd1;color:#fff;text-decoration:none;
             padding:12px 18px;border-radius:8px;font-weight:600">
      Confirm email</a></p>
   <p style="margin:0 0 8px;font-size:13px;color:#5b6b86">Or paste this into your browser:<br>
@@ -127,7 +191,7 @@ def _wrap(title: str, intro: str, button: str, link: str, outro: str) -> str:
         safe_link = html.escape(link, quote=True)
         button_html = (
             f"<p style='margin:0 0 20px'><a href='{safe_link}' style='display:inline-block;"
-            "background:#0b74f6;color:#fff;text-decoration:none;padding:12px 18px;"
+            "background:#0a5fd1;color:#fff;text-decoration:none;padding:12px 18px;"
             f"border-radius:8px;font-weight:600'>{html.escape(button)}</a></p>"
             "<p style='margin:0 0 8px;font-size:13px;color:#5b6b86'>Or paste this into your "
             f"browser:<br><span style='word-break:break-all'>{html.escape(link)}</span></p>"
@@ -176,7 +240,7 @@ def account_approved_email(
     guide = link.rstrip("/") + "/guide"
     text = (
         f"Hi {username},\n\n"
-        f"Your account has been approved — you can sign in now:\n\n{link}\n\n"
+        f"Your account has been approved, so you can sign in now:\n\n{link}\n\n"
         "A few things worth knowing before your first lecture:\n\n"
         f"- Recordings are kept for {retention_days} days. After that the audio is deleted "
         "automatically; the transcript and notes stay. Download the MP3 from History before "
@@ -207,7 +271,7 @@ def account_approved_email(
     )
     body = _wrap(
         "Your account is active",
-        f"Hi {html.escape(username)}, your account has been approved — you can sign in now.",
+        f"Hi {html.escape(username)}, your account has been approved, so you can sign in now.",
         "Sign in",
         link,
         outro,
