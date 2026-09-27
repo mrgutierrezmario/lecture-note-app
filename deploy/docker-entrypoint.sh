@@ -13,4 +13,9 @@ echo "[app] applying migrations..."
 (cd alembic && alembic upgrade head)
 
 echo "[app] starting on :8000"
-exec uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips='*'
+# Trust X-Forwarded-For only from 127.0.0.1: Funnel and the optional Cloudflare
+# tunnel both reach the app there (same network namespace). With '*', uvicorn
+# takes the left-most address, which any client can write, so rate limits keyed
+# on the client IP could be sidestepped; with a trusted proxy it takes the
+# right-most untrusted one — the real visitor.
+exec uvicorn main:app --host 0.0.0.0 --port 8000 --proxy-headers --forwarded-allow-ips=127.0.0.1

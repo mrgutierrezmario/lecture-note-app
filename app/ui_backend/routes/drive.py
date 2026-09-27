@@ -16,7 +16,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from accounts.auth import CurrentUser, current_user
+from accounts.auth import CurrentUser, current_user, forbid_demo
 from core.database import get_db
 from core.models import DriveLink
 from core.schemas import DrivePickerToken, DriveStatus, DriveUpdate
@@ -52,7 +52,7 @@ async def read_status(
 
 
 @router.get("/connect")
-async def connect(user: CurrentUser = Depends(current_user)):
+async def connect(user: CurrentUser = Depends(forbid_demo)):
     """Send the browser to Google to authorise the app (drive.file scope only)."""
     if not google_drive.configured():
         raise HTTPException(status_code=400, detail="Google Drive is not set up on this server")
@@ -64,7 +64,7 @@ async def callback(
     code: str | None = None,
     state: str | None = None,
     error: str | None = None,
-    user: CurrentUser = Depends(current_user),
+    user: CurrentUser = Depends(forbid_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Google's return trip: store the refresh token, then land back in the app."""
@@ -92,7 +92,7 @@ async def callback(
 
 @router.get("/picker-token", response_model=DrivePickerToken)
 async def picker_token(
-    user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)
+    user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)
 ):
     """Credentials for Google's folder picker: the user's own short-lived access
     token (their Drive, drive.file scope), the Picker API key and the app id."""
@@ -117,7 +117,7 @@ async def picker_token(
 @router.patch("", response_model=DriveStatus)
 async def update(
     body: DriveUpdate,
-    user: CurrentUser = Depends(current_user),
+    user: CurrentUser = Depends(forbid_demo),
     db: AsyncSession = Depends(get_db),
 ):
     """Turn automatic saving on or off, or change the folder path in Drive.
@@ -153,7 +153,7 @@ async def update(
 
 
 @router.delete("", response_model=DriveStatus)
-async def disconnect(user: CurrentUser = Depends(current_user), db: AsyncSession = Depends(get_db)):
+async def disconnect(user: CurrentUser = Depends(forbid_demo), db: AsyncSession = Depends(get_db)):
     """Forget the connection and ask Google to revoke it. Files already in
     the Drive stay there — they belong to the user."""
     link = await db.get(DriveLink, user.id)
