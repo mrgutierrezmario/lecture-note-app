@@ -21,6 +21,7 @@ from accounts.auth import AuthMiddleware
 from core import settings_store
 from core.config import get_settings
 from core.database import AsyncSessionLocal
+from core.security_headers import SecurityHeadersMiddleware
 from core.version import __version__
 from realtime.websocket_handler import handle_websocket
 from routes import (
@@ -68,7 +69,7 @@ app = FastAPI(
     openapi_url="/openapi.json" if _docs else None,
 )
 
-# Outermost middleware: /api and /ws are unreachable without a login cookie.
+# /api and /ws are unreachable without a login cookie.
 app.add_middleware(AuthMiddleware)
 
 app.add_middleware(
@@ -78,6 +79,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# Added last, so outermost: every response gets the headers, including
+# login refusals and CORS preflights.
+app.add_middleware(SecurityHeadersMiddleware)
 
 app.include_router(sessions_router)
 app.include_router(admin_router)

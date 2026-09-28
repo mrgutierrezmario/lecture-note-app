@@ -18,16 +18,9 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap"
     />
-    <!-- Apply the saved theme before first paint so the page never flashes the wrong one. -->
-    <script>
-      (function () {
-        var stored = null
-        try { stored = localStorage.getItem('theme') } catch (e) {}
-        var dark = stored === 'dark' ||
-          (stored !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches)
-        document.documentElement.dataset.theme = dark ? 'dark' : 'light'
-      })()
-    </script>
+    <!-- Apply the saved theme before first paint so the page never flashes the
+         wrong one. A file, not inline, so the content policy can forbid inline scripts. -->
+    <script src="/theme-init.js"></script>
   </head>
   <body>
     <div id="root"></div>
