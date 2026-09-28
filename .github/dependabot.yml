@@ -7,6 +7,11 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # Wait a week before proposing a new release: hijacked package
+    # versions are usually caught and pulled within days. Security
+    # updates skip the wait.
+    cooldown:
+      default-days: 7
     groups:
       python-dependencies:
         patterns: ["*"]
@@ -17,6 +22,11 @@ updates:
     schedule:
       interval: weekly
       day: monday
+    # Wait a week before proposing a new release: hijacked package
+    # versions are usually caught and pulled within days. Security
+    # updates skip the wait.
+    cooldown:
+      default-days: 7
     groups:
       frontend-dependencies:
         patterns: ["*"]
@@ -26,6 +36,11 @@ updates:
     directory: /deploy
     schedule:
       interval: monthly
+    # Wait a week before proposing a new release: hijacked package
+    # versions are usually caught and pulled within days. Security
+    # updates skip the wait.
+    cooldown:
+      default-days: 7
     open-pull-requests-limit: 2
     # Base-image majors/minors (Python 3.x, Node LTS) are deliberate upgrades,
     # not routine bumps: the native wheels (ctranslate2, av) lag new Pythons
@@ -40,3 +55,8 @@ updates:
     directory: /
     schedule:
       interval: monthly
+    # Wait a week before proposing a new release: hijacked package
+    # versions are usually caught and pulled within days. Security
+    # updates skip the wait.
+    cooldown:
+      default-days: 7
