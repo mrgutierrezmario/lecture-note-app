@@ -1,9 +1,9 @@
 fastapi==0.141.1
 uvicorn[standard]==0.53.0
-sqlalchemy[asyncio]==2.0.54
+sqlalchemy[asyncio]==2.1.0
 asyncpg==0.31.0
 alembic==1.20.0
-boto3==1.43.97
+boto3==1.43.102
 python-dotenv==1.2.3
 httpx==0.28.1
 requests==2.34.2
