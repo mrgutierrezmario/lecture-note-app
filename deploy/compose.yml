@@ -114,8 +114,10 @@ services:
       retries: 3
       start_period: 5m
     ports:
-      # Local/LAN access to the app without going through Funnel.
-      - "${APP_PORT:-8010}:8000"
+      # This Mac only. The public addresses go through Cloudflare and
+      # Tailscale, which don't use this port; set APP_BIND=0.0.0.0 to open it
+      # to the local network.
+      - "${APP_BIND:-127.0.0.1}:${APP_PORT:-8010}:8000"
     extra_hosts:
       # Lets the app (which shares this network namespace) reach services on
       # the Mac itself, e.g. a native Ollama at host.docker.internal:11434.

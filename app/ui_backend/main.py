@@ -7,6 +7,7 @@ the built React UI, so one port serves the whole app. Run with uvicorn
 
 import asyncio
 import logging
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 
@@ -54,11 +55,17 @@ async def lifespan(app: FastAPI):
     logger.info("Shutting down...")
 
 
+# The interactive API docs (/docs, /redoc, /openapi.json) are a map of every
+# endpoint, so they're off unless API_DOCS=1 (local development).
+_docs = os.environ.get("API_DOCS") == "1"
 app = FastAPI(
     title="Lecture Notes API",
     description="AI-powered lecture transcription and note-taking",
     version=__version__,
     lifespan=lifespan,
+    docs_url="/docs" if _docs else None,
+    redoc_url="/redoc" if _docs else None,
+    openapi_url="/openapi.json" if _docs else None,
 )
 
 # Outermost middleware: /api and /ws are unreachable without a login cookie.
@@ -164,6 +171,6 @@ else:
         """Placeholder when the UI has not been built (development)."""
         return {
             "message": "Lecture Notes API",
-            "docs": "/docs",
+            "docs": "/docs (with API_DOCS=1)",
             "hint": "Run `npm run build` in app/ui_frontend to serve the UI from this port.",
         }

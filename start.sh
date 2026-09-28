@@ -37,7 +37,7 @@ fi
 # ── Backend ───────────────────────────────────────────────────────────────────
 log "Starting backend..."
 cd "$BACKEND"
-venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload > /tmp/backend.log 2>&1 &
+API_DOCS=1 venv/bin/uvicorn main:app --host 0.0.0.0 --port 8000 --reload > /tmp/backend.log 2>&1 &
 BACKEND_PID=$!
 log "Backend started (pid $BACKEND_PID). Logs: /tmp/backend.log"
 

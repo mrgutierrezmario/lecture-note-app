@@ -90,7 +90,7 @@ Notes are generated every `NOTES_INTERVAL_SECONDS` and immediately on recording 
 
 ## API Documentation
 
-Visit http://localhost:8000/docs for interactive Swagger UI.
+Start the backend with `API_DOCS=1` and visit http://localhost:8000/docs for the interactive Swagger UI. It is off by default so a deployed server does not publish a map of its API.
 
 ## Troubleshooting
 
