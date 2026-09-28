@@ -172,6 +172,8 @@ services:
       # Full demo access for requests through the cloudflared service (see below).
       DEMO_FULL_ACCESS_VIA_TUNNEL: ${DEMO_FULL_ACCESS_VIA_TUNNEL:-false}
       DEMO_RETENTION_HOURS: ${DEMO_RETENTION_HOURS:-24}
+      DEMO_MAX_RECORDING_MINUTES: ${DEMO_MAX_RECORDING_MINUTES:-40}
+      DEMO_MAX_RECORDINGS: ${DEMO_MAX_RECORDINGS:-3}
     volumes:
       - app-state:/app/state
       # Whisper / Hugging Face model downloads.

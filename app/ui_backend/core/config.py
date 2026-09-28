@@ -100,6 +100,11 @@ class Settings(BaseSettings):
     # Lectures the demo account records are deleted this long after creation
     # (kept/locked ones, like the sample lecture, never are). 0 = never.
     demo_retention_hours: int = 24
+    # Recording limits for the demo account (only relevant where it may record,
+    # see demo_full_access_via_tunnel): minutes per lecture, and lectures with
+    # a recording kept at once (they expire with demo_retention_hours). 0 = no limit.
+    demo_max_recording_minutes: int = 40
+    demo_max_recordings: int = 3
 
     # Google OAuth client ("Web application" type) that lets users connect
     # their own Google Drive. Set from the Settings panel; the secret lives in

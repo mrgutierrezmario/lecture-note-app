@@ -279,10 +279,12 @@ function Workspace({ user, onLogout, onUserChange }) {
       setStatus(message.message)
       dialog.notice({ title: 'Storage Quota Reached', message: message.message })
     } else if (message.type === 'recording_refused') {
-      // The shared demo account records one lecture at a time; someone else has it.
+      // Demo limits: one recording at a time, a time cap per lecture, and a
+      // cap on how many recorded lectures it keeps. Stopping sends "stop",
+      // which finishes the notes for whatever was recorded.
       if (message.stop) stopRecordingRef.current?.()
       setStatus(message.message)
-      dialog.notice({ title: 'Demo Is Busy', message: message.message })
+      dialog.notice({ title: message.title || 'Demo Is Busy', message: message.message })
     }
   }, [])
 

@@ -158,6 +158,10 @@ machine, `deploy/backup-setup.sh` first to reconnect the off-site remote.
 - The demo records one lecture at a time (everyone shares the account); a
   second visitor who presses record is told the demo is busy. The slot frees
   when the first recording stops or its tab closes.
+- Where the demo can record, each lecture stops at
+  `DEMO_MAX_RECORDING_MINUTES` (default 40) and its notes are finished, and
+  it keeps at most `DEMO_MAX_RECORDINGS` recorded lectures (default 3) until
+  one is deleted or expires. `0` turns either limit off.
 
 ## Where things live
 

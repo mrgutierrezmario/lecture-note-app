@@ -144,6 +144,8 @@ class ConnectionManager:
         # visitor uses that account, so this keeps it to one recording (one
         # Whisper stream) at a time. Released on stop or when its last socket closes.
         self.demo_recording: str | None = None
+        # Demo lectures already told they hit the time limit (one message each).
+        self.demo_capped: set[str] = set()
 
     def claim_demo_recording(self, session_id: str) -> bool:
         """Let the demo record into ``session_id`` unless another demo lecture is recording."""
@@ -152,6 +154,10 @@ class ConnectionManager:
             self.demo_recording = session_id
             return True
         return False
+
+    def demo_limit_reached(self, session_id: str) -> None:
+        """Remember we told this lecture it hit the demo's time limit."""
+        self.demo_capped.add(session_id)
 
     def release_demo_recording(self, session_id: str) -> None:
         """Free the demo's recording slot if ``session_id`` holds it."""
@@ -244,6 +250,56 @@ async def ensure_session_exists(db: AsyncSession, session_id: str, user_id=None)
     return session
 
 
+# Audio arrives in 5-second chunks (MediaRecorder timeslice in App.jsx), and a
+# lecture's chunk numbering carries on across reconnects, so the chunk index
+# is how long it has been recording.
+CHUNK_SECONDS = 5
+
+
+def _demo_chunk_cap() -> int:
+    return settings.demo_max_recording_minutes * 60 // CHUNK_SECONDS
+
+
+def _demo_refusal(title: str, message: str) -> dict:
+    return {"type": "recording_refused", "stop": True, "title": title, "message": message}
+
+
+def _demo_time_limit() -> dict:
+    return _demo_refusal(
+        "Demo Time Limit",
+        f"Demo recordings stop at {settings.demo_max_recording_minutes} minutes. "
+        "Your notes for this lecture are being finished now.",
+    )
+
+
+async def _demo_start_refusal(session_id: str, user_id, chunk_index: int) -> dict | None:
+    """Why the demo may not (re)start recording into ``session_id``, or None."""
+    if settings.demo_max_recording_minutes and chunk_index >= _demo_chunk_cap():
+        return _demo_time_limit()
+    if chunk_index == 0 and settings.demo_max_recordings:
+        # A new recording: count the demo's other lectures that have audio.
+        async with AsyncSessionLocal() as db:
+            recorded = await db.scalar(
+                select(func.count(func.distinct(Session.id)))
+                .select_from(Session)
+                .join(AudioChunk, AudioChunk.session_id == Session.id)
+                .where(
+                    Session.user_id == user_id,
+                    Session.locked.is_(False),
+                    Session.id != session_id,
+                )
+            )
+        if recorded >= settings.demo_max_recordings:
+            hours = settings.demo_retention_hours
+            wait = f" Demo lectures are deleted {hours} hours after they're made." if hours else ""
+            return _demo_refusal(
+                "Demo Recording Limit",
+                f"The demo keeps up to {settings.demo_max_recordings} recorded lectures. "
+                f"Delete one in History to record another.{wait}",
+            )
+    return None
+
+
 async def handle_websocket(websocket: WebSocket, session_id: str):
     """Serve one recording socket for its whole lifetime.
 
@@ -334,6 +390,13 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                                 ),
                             }
                         )
+
+                    elif (
+                        msg_type in ("start", "resume")
+                        and user.is_demo
+                        and (refusal := await _demo_start_refusal(session_id, user.id, chunk_index))
+                    ):
+                        await websocket.send_json(refusal)
 
                     elif (
                         msg_type == "start"
@@ -487,6 +550,17 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                     continue  # viewers (shared / demo) never add audio
                 if user.is_demo and manager.demo_recording != session_id:
                     continue  # another demo lecture holds the one recording slot
+                if (
+                    user.is_demo
+                    and settings.demo_max_recording_minutes
+                    and chunk_index >= _demo_chunk_cap()
+                ):
+                    # Time limit: drop the audio and tell the browser once; it
+                    # stops and sends "stop", which finishes the notes.
+                    if session_id not in manager.demo_capped:
+                        manager.demo_limit_reached(session_id)
+                        await websocket.send_json(_demo_time_limit())
+                    continue
                 audio_data = data["bytes"]
                 current_index = chunk_index
                 chunk_index += 1
