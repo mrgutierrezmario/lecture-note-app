@@ -103,6 +103,37 @@ def _is_repetition_loop(text: str) -> bool:
     return False
 
 
+# What Whisper says over silence, applause or room noise: sign-offs from the
+# YouTube captions it was trained on. A whole segment that is only one of
+# these is dropped (a lecturer's real "thank you" mid-sentence is untouched).
+# 2026-09-28: about 1 line in 10 of a 90-minute lecture was one of these.
+_STOCK_PHRASES = re.compile(
+    r"^(?:(?:thank you|thanks)(?: (?:so|very) much)?(?: (?:for|to) (?:watching|"
+    r"listening|your (?:time|attention)|joining us))?(?: (?:all|everyone|guys))?"
+    r"|please (?:like and )?subscribe(?: to (?:my|the|our) channel)?"
+    r"|(?:subtitles|captions|transcription) by .*|see you (?:next time|in the next video)"
+    r"|bye(?: bye)?|you|okay|so)$"
+)
+# Whisper also echoes its prompt ("Lecture: MGT699 …") back as speech:
+# "This is a video of MGT699-29." Such a line names the lecture, says
+# nothing else, and is dropped.
+_PROMPT_ECHO = re.compile(
+    r"^(?:this is (?:a|the) (?:video|recording|lecture) (?:of|for|about)|lecture) \S+"
+)
+
+
+def _is_hallucination(norm: str, session_id: str | None = None) -> bool:
+    """True for Whisper's stock filler, or an echo of the lecture's prompt."""
+    if _STOCK_PHRASES.match(norm):
+        return True
+    prompt = _session_prompts.get(session_id or "")
+    if prompt and len(norm.split()) <= 8 and _PROMPT_ECHO.match(norm):
+        title_words = set(_normalize(prompt).split()) - {"lecture", "terms"}
+        if title_words & set(norm.split()) or re.search(r"\d", norm):
+            return True
+    return False
+
+
 def _is_recent_duplicate(norm: str, recent: deque[str]) -> bool:
     """True if this text already appeared in the last few segments.
 
@@ -221,6 +252,9 @@ def transcribe_wav_sync(wav_path: str, session_id: str | None = None) -> list[di
         text = segment.text.strip()
         norm = _normalize(text)
         if not norm:
+            continue
+        if _is_hallucination(norm, session_id):
+            logger.info(f"Filtered Whisper filler: {text!r}")
             continue
         if _is_repetition_loop(text):
             logger.info(f"Filtered repetition loop: {text!r}")
