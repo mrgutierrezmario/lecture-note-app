@@ -156,10 +156,11 @@ def _is_hallucination(norm: str, session_id: str | None = None) -> bool:
         return False
     if _is_title_echo(norm, title):
         return True
-    if len(norm.split()) <= 8 and _PROMPT_ECHO.match(norm):
-        if set(_tokens(title)) & set(norm.split()) or re.search(r"\d", norm):
-            return True
-    return False
+    return bool(
+        len(norm.split()) <= 8
+        and _PROMPT_ECHO.match(norm)
+        and (set(_tokens(title)) & set(norm.split()) or re.search(r"\d", norm))
+    )
 
 
 def _is_recent_duplicate(norm: str, recent: deque[str]) -> bool:

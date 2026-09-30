@@ -230,9 +230,7 @@ manager = ConnectionManager()
 
 def apply_prompt(session_id: str, title: str | None, vocabulary: str | None) -> None:
     """Point Whisper at this lecture's key terms (plus the server-wide list)."""
-    set_session_prompt(
-        session_id, build_prompt(vocabulary, settings.whisper_vocabulary), title
-    )
+    set_session_prompt(session_id, build_prompt(vocabulary, settings.whisper_vocabulary), title)
 
 
 async def ensure_session_exists(db: AsyncSession, session_id: str, user_id=None) -> Session:
