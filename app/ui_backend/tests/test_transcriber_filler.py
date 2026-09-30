@@ -31,7 +31,7 @@ REAL = [
 
 @pytest.fixture()
 def session():
-    t.set_session_prompt("s1", t.build_prompt("MGT699-09-28-26", None))
+    t.set_session_prompt("s1", "", "MGT699-09-28-26")
     yield "s1"
     t.set_session_prompt("s1", "")
 
@@ -53,3 +53,33 @@ def test_prompt_echo_is_dropped(session):
 def test_prompt_echo_needs_a_prompt():
     # Without a lecture prompt there is nothing to echo, so the line is kept.
     assert not t._is_hallucination(t._normalize("This is a video of the market."), None)
+
+
+# Lines from the BIA568-09-30-26 lecture, where the title was in Whisper's prompt.
+TITLE_ECHOES = ["BIA568-09-30-26.", "BIA568-09-30.", "BIA568-29-30.", "BIA568-30-26.", "BIA568"]
+TITLE_REAL = [
+    "BIA568 is a hybrid model in which AI handles routine queries.",
+    "25%. So initially, they were very optimistic and",
+    "30, 26.",
+]
+
+
+@pytest.fixture()
+def bia_session():
+    t.set_session_prompt("s2", "", "BIA568-09-30-26")
+    yield "s2"
+    t.set_session_prompt("s2", "")
+
+
+@pytest.mark.parametrize("text", TITLE_ECHOES)
+def test_title_echo_is_dropped(text, bia_session):
+    assert t._is_hallucination(t._normalize(text), bia_session)
+
+
+@pytest.mark.parametrize("text", TITLE_REAL)
+def test_speech_near_title_is_kept(text, bia_session):
+    assert not t._is_hallucination(t._normalize(text), bia_session)
+
+
+def test_title_is_not_sent_to_whisper():
+    assert "BIA568" not in t.build_prompt(None)

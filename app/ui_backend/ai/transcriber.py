@@ -33,9 +33,10 @@ RMS_SILENCE_THRESHOLD = 0.008  # skip chunk if RMS below this — pure silence
 # Recent segment texts, keyed by session so concurrent recordings never
 # suppress each other's speech. Used only to drop chunk-boundary duplicates.
 _recent_segments: dict[str, deque[str]] = {}
-# Per-session spelling hints for Whisper (lecture title + key terms + the
-# server-wide vocabulary), set by the websocket handler on start/reconnect.
+# Per-session spelling hints for Whisper (key terms + the server-wide
+# vocabulary) and lecture titles, set by the websocket handler on start/reconnect.
 _session_prompts: dict[str, str] = {}
+_session_titles: dict[str, str] = {}
 _PROMPT_MAX_CHARS = 600  # Whisper reads at most ~224 tokens of prompt
 _recent_lock = threading.Lock()
 _DEDUP_WINDOW = 4
@@ -47,16 +48,15 @@ def _normalize(text: str) -> str:
     return re.sub(r"\s+", " ", re.sub(r"[^\w\s]", " ", text.lower())).strip()
 
 
-def build_prompt(title: str | None, vocabulary: str | None, global_vocabulary: str = "") -> str:
-    """Compose Whisper's ``initial_prompt`` from what we know about the lecture.
+def build_prompt(vocabulary: str | None, global_vocabulary: str = "") -> str:
+    """Compose Whisper's ``initial_prompt`` from the lecture's key terms.
 
-    Whisper treats the prompt as preceding text, so a short natural sentence
-    that *contains* the terms biases it toward those spellings: "Lecture:
-    MGT-699 Strategy. Terms: Porter's five forces, SWOT, Nvidia."
+    Whisper treats the prompt as preceding text, so a short sentence that
+    *contains* the terms biases it toward those spellings: "Terms: Porter's
+    five forces, SWOT, Nvidia." The lecture title is left out: it is usually
+    a course code and date ("BIA568-09-30-26") that Whisper echoed back as
+    speech over quiet stretches and spliced into sentences (2026-09-30).
     """
-    parts = []
-    if title and title.strip():
-        parts.append(f"Lecture: {title.strip()}.")
     terms = ", ".join(
         t.strip()
         for src in (global_vocabulary, vocabulary)
@@ -64,17 +64,23 @@ def build_prompt(title: str | None, vocabulary: str | None, global_vocabulary: s
         for t in src.split(",")
         if t.strip()
     )
-    if terms:
-        parts.append(f"Terms: {terms}.")
-    return " ".join(parts)[:_PROMPT_MAX_CHARS]
+    return f"Terms: {terms}."[:_PROMPT_MAX_CHARS] if terms else ""
 
 
-def set_session_prompt(session_id: str, prompt: str) -> None:
-    """Remember the spelling hints for a session (empty string clears them)."""
+def set_session_prompt(session_id: str, prompt: str, title: str | None = None) -> None:
+    """Remember a session's spelling hints and title (empty values clear them).
+
+    The title is not sent to Whisper; it is kept only to recognise echoes of
+    it in the transcript.
+    """
     if prompt:
         _session_prompts[session_id] = prompt
     else:
         _session_prompts.pop(session_id, None)
+    if title and title.strip():
+        _session_titles[session_id] = title.strip()
+    else:
+        _session_titles.pop(session_id, None)
 
 
 def _recent_for(session_id: str | None) -> deque[str]:
@@ -114,22 +120,44 @@ _STOCK_PHRASES = re.compile(
     r"|(?:subtitles|captions|transcription) by .*|see you (?:next time|in the next video)"
     r"|bye(?: bye)?|you|okay|so)$"
 )
-# Whisper also echoes its prompt ("Lecture: MGT699 …") back as speech:
-# "This is a video of MGT699-29." Such a line names the lecture, says
-# nothing else, and is dropped.
+# Whisper also echoes the lecture title back as speech: "This is a video of
+# MGT699-29." Such a line names the lecture, says nothing else, and is dropped.
 _PROMPT_ECHO = re.compile(
     r"^(?:this is (?:a|the) (?:video|recording|lecture) (?:of|for|about)|lecture) \S+"
 )
 
 
+def _tokens(text: str) -> list[str]:
+    return [w for w in re.split(r"[\W_]+", text.lower()) if w]
+
+
+def _is_title_echo(norm: str, title: str) -> bool:
+    """True if the line is only the title, or a garbled copy of it.
+
+    "BIA568-09-30-26." / "BIA568-29-30." for title "BIA568-09-30-26": every
+    word is a title word or a bare number, and at least one is a title word
+    with letters in it (so "30 26" alone, or a spoken number, is kept).
+    """
+    title_words = set(_tokens(title))
+    words = _tokens(norm)
+    return (
+        bool(words)
+        and all(w in title_words or w.isdigit() for w in words)
+        and any(w in title_words and not w.isdigit() for w in words)
+    )
+
+
 def _is_hallucination(norm: str, session_id: str | None = None) -> bool:
-    """True for Whisper's stock filler, or an echo of the lecture's prompt."""
+    """True for Whisper's stock filler, or an echo of the lecture's title."""
     if _STOCK_PHRASES.match(norm):
         return True
-    prompt = _session_prompts.get(session_id or "")
-    if prompt and len(norm.split()) <= 8 and _PROMPT_ECHO.match(norm):
-        title_words = set(_normalize(prompt).split()) - {"lecture", "terms"}
-        if title_words & set(norm.split()) or re.search(r"\d", norm):
+    title = _session_titles.get(session_id or "")
+    if not title:
+        return False
+    if _is_title_echo(norm, title):
+        return True
+    if len(norm.split()) <= 8 and _PROMPT_ECHO.match(norm):
+        if set(_tokens(title)) & set(norm.split()) or re.search(r"\d", norm):
             return True
     return False
 
