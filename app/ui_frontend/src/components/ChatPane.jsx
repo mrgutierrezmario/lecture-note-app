@@ -101,10 +101,14 @@ function ChatPane({ sessionId, readOnly = false }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       })
-      const data = await response.json()
-      if (!response.ok) {
-        const detail = data?.detail || `Server error (${response.status})`
-        setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${detail}` }])
+      // A crash comes back as plain-text "Internal Server Error", not JSON.
+      const data = await response.json().catch(() => null)
+      if (!response.ok || !data) {
+        const detail = typeof data?.detail === 'string' ? data.detail : null
+        const text = detail
+          ? `Error: ${detail}`
+          : `The AI couldn't answer right now (server error ${response.status}). Try again.`
+        setMessages(prev => [...prev, { role: 'assistant', text }])
       } else {
         setMessages(prev => {
           // Attach the stored id to the question we just appended, then the answer.
@@ -121,8 +125,11 @@ function ChatPane({ sessionId, readOnly = false }) {
           }]
         })
       }
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', text: `Error: ${err.message}` }])
+    } catch {
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        text: 'Couldn\'t reach the server. Check your connection and try again.',
+      }])
     } finally {
       setIsLoading(false)
     }
