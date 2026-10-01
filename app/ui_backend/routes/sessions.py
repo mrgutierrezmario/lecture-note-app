@@ -996,7 +996,11 @@ async def chat(
                 answer = f"Error analyzing image: {str(e)}"
                 provider = "none"
         logger.info("Image question answered by %s", provider)
-        q_id, a_id = await _store_chat(db, session_id, request.message, answer, provider)
+        q_id, a_id = (
+            (None, None)
+            if user.is_demo
+            else await _store_chat(db, session_id, user.id, request.message, answer, provider)
+        )
         return ChatResponse(
             answer=answer,
             session_id=session_id,
