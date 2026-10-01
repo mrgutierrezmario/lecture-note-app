@@ -9,8 +9,8 @@ Protocol (one socket per lecture, path ``/ws/session/{session_id}``):
   ``{"type": "stop"}``, ``{"type": "ping"}``.
 * Browser → server, binary frames: 5-second WebM/Opus chunks from
   ``MediaRecorder``. Only the first chunk carries the container header, so it
-  is kept (trimmed to the metadata prefix) and prepended to every later chunk
-  before decoding.
+  is kept (trimmed to the metadata prefix) and every later chunk is re-framed
+  behind it by ``realtime.webm_stream.WebmStream`` before decoding.
 * Server → browser, JSON: ``transcript_delta``, ``notes_update``, ``status``,
   ``quota_exceeded`` and ``pong``.
 
@@ -37,6 +37,7 @@ from core.config import get_settings
 from core.database import AsyncSessionLocal
 from core.models import AudioChunk, Session, SessionShare, TranscriptSegment
 from integrations import google_drive
+from realtime.webm_stream import WebmStream
 from storage import quota
 from storage.s3_client import s3_client
 
@@ -74,7 +75,7 @@ _header_recovery_failed: set[str] = set()
 async def _recover_webm_header(session_id: str) -> bytes | None:
     """Re-read a session's EBML header from object storage.
 
-    ``manager.webm_headers`` is memory-only, and it is dropped both on backend
+    ``manager.webm_streams`` is memory-only, and it is dropped both on backend
     restart and whenever the last socket for a session closes. A browser that
     reconnects mid-stream therefore sends continuation chunks with no header
     available, and every one of them fails to decode for the rest of the
@@ -136,7 +137,7 @@ class ConnectionManager:
         """Create empty per-session tables."""
         self.active_connections: dict[str, list[WebSocket]] = {}
         self.notes_tasks: dict[str, asyncio.Task] = {}
-        self.webm_headers: dict[str, bytes] = {}
+        self.webm_streams: dict[str, WebmStream] = {}
         self.save_storage: dict[str, bool] = {}
         # session -> [used_bytes, quota_bytes]; quota 0 = unlimited
         self.quota: dict[str, list[int]] = {}
@@ -182,7 +183,7 @@ class ConnectionManager:
                 if session_id in self.notes_tasks:
                     self.notes_tasks[session_id].cancel()
                     del self.notes_tasks[session_id]
-                self.webm_headers.pop(session_id, None)
+                self.webm_streams.pop(session_id, None)
                 self.save_storage.pop(session_id, None)
                 self.quota.pop(session_id, None)
                 self.release_demo_recording(session_id)
@@ -572,17 +573,20 @@ async def handle_websocket(websocket: WebSocket, session_id: str):
                 # rest of the recording.
                 has_ebml_header = audio_data[:4] == _EBML_MAGIC
 
+                # The stream re-frames each blob on element boundaries so it
+                # decodes to all of its audio (see realtime/webm_stream.py).
                 if has_ebml_header:
-                    manager.webm_headers[session_id] = _webm_header(audio_data)
+                    stream = WebmStream(_webm_header(audio_data))
+                    manager.webm_streams[session_id] = stream
                     _header_recovery_failed.discard(session_id)
-                    data_to_transcribe = audio_data
                 else:
-                    header = manager.webm_headers.get(session_id)
-                    if header is None:
+                    stream = manager.webm_streams.get(session_id)
+                    if stream is None:
                         header = await _recover_webm_header(session_id)
                         if header:
-                            manager.webm_headers[session_id] = header
-                    data_to_transcribe = header + audio_data if header else audio_data
+                            stream = WebmStream(header)
+                            manager.webm_streams[session_id] = stream
+                data_to_transcribe = stream.feed(audio_data) if stream else audio_data
 
                 # A reconnect cancels the notes loop (last socket closed) and the
                 # browser keeps streaming without re-sending "start" — so make
