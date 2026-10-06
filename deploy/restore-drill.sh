@@ -71,17 +71,22 @@ tar -C "$WORK" -xzf "$BUNDLE"
 STAGE=$(ls -d "$WORK"/lecture-notes-*)
 log "Bundle: $(basename "$BUNDLE")${DRILL_IMAGE:+ · app image: $DRILL_IMAGE}"
 
-# The bundle's .env gives the drill the same DB/MinIO passwords the dump and
-# settings expect; ports and the Tailscale name are overridden so nothing
-# clashes with the live stack.
-grep -v '^\(APP_PORT\|TS_HOSTNAME\|TS_AUTHKEY\)=' "$STAGE/env" > "$WORK/drill.env"
+# The bundle's .env gives the drill the same DB password and SECRET_KEY the
+# dump and settings expect; ports and the Tailscale name are overridden so
+# nothing clashes with the live stack. Garage starts empty, so it gets its own
+# throwaway secrets and S3 key (this also lets bundles from before the move to
+# Garage, which have none, restore).
+grep -v '^\(APP_PORT\|TS_HOSTNAME\|TS_AUTHKEY\|GARAGE_RPC_SECRET\|GARAGE_ADMIN_TOKEN\|S3_ACCESS_KEY\|S3_SECRET_KEY\)=' "$STAGE/env" > "$WORK/drill.env"
 printf 'APP_PORT=%s\nTS_HOSTNAME=%s\nTS_AUTHKEY=\n' "$DRILL_PORT" "$DRILL" >> "$WORK/drill.env"
+printf 'GARAGE_RPC_SECRET=%s\nGARAGE_ADMIN_TOKEN=%s\nS3_ACCESS_KEY=GK%s\nS3_SECRET_KEY=%s\n' \
+  "$(openssl rand -hex 32)" "$(openssl rand -hex 16)" "$(openssl rand -hex 12)" "$(openssl rand -hex 32)" >> "$WORK/drill.env"
 
 # ── Data services ─────────────────────────────────────────────────────────────
-log "Starting drill postgres/minio/tailscale (project $DRILL)..."
-$DC up -d postgres minio minio-init tailscale-config tailscale >/dev/null 2>&1
+log "Starting drill postgres/garage/tailscale (project $DRILL)..."
+$DC up -d postgres garage tailscale-config tailscale >/dev/null 2>&1
 for i in $(seq 1 60); do $DC exec -T postgres pg_isready -q -U postgres && break; sleep 1; done
 $DC exec -T postgres pg_isready -q -U postgres || fail "postgres did not start"
+DC="$DC" ENV_FILE="$WORK/drill.env" ./garage-init.sh || fail "garage did not initialise"
 
 # ── Restore ───────────────────────────────────────────────────────────────────
 log "Restoring the database..."

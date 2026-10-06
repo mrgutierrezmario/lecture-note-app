@@ -35,7 +35,7 @@ deploy/start.sh
 curl -s http://localhost:8010/health     # want "status":"healthy"
 ```
 
-The app restarts for about a minute; Postgres and MinIO stay up, nothing is
+The app restarts for about a minute; Postgres and Garage stay up, nothing is
 lost. If a security PR merged mid-month, do this that week instead of
 waiting.
 

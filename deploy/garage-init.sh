@@ -2,15 +2,17 @@
 # Prepare Garage for the app: node layout, access key, bucket. Idempotent —
 # start.sh and restore.sh run it on every start; each step is skipped when
 # already done. Needs S3_ACCESS_KEY / S3_SECRET_KEY in deploy/.env.
+# restore-drill.sh points it at its throwaway project with DC and ENV_FILE.
 set -euo pipefail
 cd "$(dirname "$0")"
-DC="docker compose -f compose.yml"
+DC="${DC:-docker compose -f compose.yml}"
+ENV_FILE="${ENV_FILE:-.env}"
 g() { $DC exec -T garage /garage "$@" 2>/dev/null; }
 log() { echo "[garage] $*"; }
 
-KEY_ID=$(grep -E '^S3_ACCESS_KEY=' .env | cut -d= -f2-)
-KEY_SECRET=$(grep -E '^S3_SECRET_KEY=' .env | cut -d= -f2-)
-[ -n "$KEY_ID" ] && [ -n "$KEY_SECRET" ] || { echo "S3_ACCESS_KEY/S3_SECRET_KEY missing in deploy/.env" >&2; exit 1; }
+KEY_ID=$(grep -E '^S3_ACCESS_KEY=' "$ENV_FILE" | cut -d= -f2-)
+KEY_SECRET=$(grep -E '^S3_SECRET_KEY=' "$ENV_FILE" | cut -d= -f2-)
+[ -n "$KEY_ID" ] && [ -n "$KEY_SECRET" ] || { echo "S3_ACCESS_KEY/S3_SECRET_KEY missing in $ENV_FILE" >&2; exit 1; }
 
 for i in $(seq 1 30); do g status >/dev/null && break; sleep 1; done
 g status >/dev/null || { echo "Garage did not start" >&2; exit 1; }
