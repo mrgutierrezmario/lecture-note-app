@@ -12,10 +12,10 @@
 #      help, so hold instead.
 #   2. Re-attach any dependant that started before tailscale's current start
 #      (Docker or this script restarted tailscale underneath it).
-#   3. Restart a service that exited with an error or never started, a
-#      service whose own healthcheck has failed for UNHEALTHY_STREAK checks in
-#      a row, and cloudflared when it has exited or has had no connection to
-#      Cloudflare for CF_READY_FAILS passes.
+#   3. Restart a service (dependants, cloudflared, any WATCHED ones) that
+#      exited with an error or never started, or whose own healthcheck has
+#      failed UNHEALTHY_STREAK checks in a row; and cloudflared when it has
+#      exited or has had no connection to Cloudflare for CF_READY_FAILS passes.
 #
 # A service stopped on purpose (`docker compose stop`, exit 0/137/143) is left
 # alone. Data is untouched. Runs as the `watchdog` service with the Docker
@@ -24,7 +24,8 @@ set -u
 
 PROJECT=${PROJECT:?compose project name}
 DEPENDANTS=${DEPENDANTS:-app cloudflared}  # services in tailscale's network namespace
-CLOUDFLARED=${CLOUDFLARED:-cloudflared}    # tunnel service ("" if none)
+CLOUDFLARED=${CLOUDFLARED-cloudflared}     # tunnel service ("" if none)
+WATCHED=${WATCHED:-}                       # other services to restart when unhealthy or crashed
 # Where tailscale's container can reach cloudflared's /ready (needs a fixed
 # --metrics address). Loopback when cloudflared shares tailscale's namespace.
 CF_READY_URL=${CF_READY_URL:-http://127.0.0.1:20241/ready}
@@ -85,7 +86,7 @@ err() { e=$(field "$1" '{{.State.Error}}'); [ -n "$e" ] && echo ": $e"; }
 check_services() {
   ts=$1
   ts_start=$(started "$ts")
-  for svc in $(echo "$DEPENDANTS $CLOUDFLARED" | tr ' ' '\n' | awk 'NF && !seen[$0]++'); do
+  for svc in $(echo "$DEPENDANTS $CLOUDFLARED $WATCHED" | tr ' ' '\n' | awk 'NF && !seen[$0]++'); do
     c=$(cid "$svc")
     [ -n "$c" ] || continue
     reason=$(stopped_reason "$svc" "$c")
@@ -122,7 +123,7 @@ check_tunnel() {
   fi
 }
 
-log "watching '$PROJECT' every ${INTERVAL}s (dependants: $DEPENDANTS; tunnel: ${CLOUDFLARED:-none})"
+log "watching '$PROJECT' every ${INTERVAL}s (dependants: $DEPENDANTS; tunnel: ${CLOUDFLARED:-none}${WATCHED:+; also: $WATCHED})"
 held=0
 while :; do
   ts=$(cid tailscale)
