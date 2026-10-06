@@ -93,6 +93,12 @@ services:
       TS_USERSPACE: "true"
       TS_SERVE_CONFIG: /config/serve.json
       TS_EXTRA_ARGS: --accept-dns=false
+      # Log in only when the saved state has no login. Without it containerboot
+      # runs `tailscale up` on every start and exits when that cannot reach the
+      # control server in time, so an internet outage became a restart loop
+      # (89 restarts on 2026-10-05), each one stranding the app on a dead
+      # network namespace.
+      TS_AUTH_ONCE: "true"
     volumes:
       - tailscale-state:/var/lib/tailscale
       - tailscale-config:/config:ro
@@ -179,8 +185,10 @@ services:
       # Whisper / Hugging Face model downloads.
       - app-cache:/root/.cache
 
-  # Self-healing for the public URL: restarts tailscale + app when the
-  # tailscale healthcheck fails (Docker alone only marks it unhealthy).
+  # Self-healing for the public URL: restarts tailscale when its healthcheck
+  # fails (Docker alone only marks it unhealthy) unless the internet itself is
+  # down, and re-attaches the app and cloudflared whenever tailscale has
+  # restarted underneath them or cloudflared has exited. See watchdog/watchdog.sh.
   watchdog:
     build: ./watchdog
     image: lecture-notes-watchdog:latest

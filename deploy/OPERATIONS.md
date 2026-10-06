@@ -89,8 +89,13 @@ base images are ignored by design (native wheels lag new Pythons).
 
 The stack heals the most common case itself: the `tailscale` service's
 healthcheck fetches the public URL through Funnel every minute, and after
-three misses the `watchdog` service restarts `tailscale` and `app` (about
-3 minutes end to end, data untouched). So the first thing to do when the
+three misses the `watchdog` service restarts `tailscale`, waits for it to log
+in, then restarts `app` and `cloudflared` (about 3 minutes end to end, data
+untouched). It also restarts those two whenever `tailscale` restarted
+underneath them (they share its network and lose it on every restart), and
+restarts `cloudflared` if it has exited. If the internet itself is down it
+logs "internet down, holding" and waits rather than restarting anything,
+since a restart can't help then. So the first thing to do when the
 uptime monitor emails you is nothing for five minutes; if the recovery mail
 doesn't follow, `docker compose -f deploy/compose.yml logs watchdog` shows
 what it tried, and then in order:
