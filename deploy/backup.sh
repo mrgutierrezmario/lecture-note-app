@@ -109,7 +109,7 @@ STEP="off-site sync"
 if [ $REMOTE = 1 ]; then
   if command -v rclone >/dev/null && rclone listremotes | grep -qx "$RCLONE_REMOTE"; then
     log "Syncing to $RCLONE_REMOTE ..."
-    rclone sync "$BACKUP_DIR" "$RCLONE_REMOTE" --exclude 'backup.log' --transfers 8 --stats-one-line -q
+    rclone sync "$BACKUP_DIR" "$RCLONE_REMOTE" --exclude '*.log' --transfers 8 --stats-one-line -q
     log "Off-site copy up to date."
   else
     log "No rclone remote '$RCLONE_REMOTE' — local backup only (run deploy/backup-setup.sh for off-site)."
