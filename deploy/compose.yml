@@ -79,7 +79,9 @@ services:
         EOF
 
   tailscale:
-    image: tailscale/tailscale:latest
+    # Pinned: containerboot's start-up behaviour (TS_AUTH_ONCE, exit on a
+    # failed login) is what the watchdog is built around. Bump deliberately.
+    image: tailscale/tailscale:v1.102.3
     restart: *restart
     logging: *logging
     hostname: ${TS_HOSTNAME:-lecture-notes}
@@ -187,8 +189,10 @@ services:
 
   # Self-healing for the public URL: restarts tailscale when its healthcheck
   # fails (Docker alone only marks it unhealthy) unless the internet itself is
-  # down, and re-attaches the app and cloudflared whenever tailscale has
-  # restarted underneath them or cloudflared has exited. See watchdog/watchdog.sh.
+  # down; re-attaches the app and cloudflared whenever tailscale has restarted
+  # underneath them; restarts the app after ~10 minutes unhealthy or an error
+  # exit, and cloudflared when it exits or loses Cloudflare for ~5 minutes.
+  # See watchdog/watchdog.sh.
   watchdog:
     build: ./watchdog
     image: lecture-notes-watchdog:latest
@@ -196,6 +200,7 @@ services:
     logging: *logging
     environment:
       PROJECT: lecture-notes
+      DEPENDANTS: app cloudflared
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
 
@@ -213,7 +218,9 @@ services:
     restart: *restart
     logging: *logging
     network_mode: service:tailscale
-    command: tunnel --config /etc/cloudflared/config.yml run
+    # Fixed metrics address: the watchdog polls /ready on it to notice a
+    # tunnel that is running but has no connection to Cloudflare.
+    command: tunnel --metrics 127.0.0.1:20241 --config /etc/cloudflared/config.yml run
     depends_on:
       app:
         condition: service_started
