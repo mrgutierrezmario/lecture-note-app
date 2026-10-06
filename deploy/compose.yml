@@ -230,10 +230,6 @@ services:
 
 volumes:
   postgres-data:
-  # MinIO's data, kept as a rollback after the move to Garage (2026-09-25).
-  # Nothing uses it; delete with `docker volume rm lecture-notes_minio-data`
-  # once Garage has run a week without trouble.
-  minio-data:
   garage-data:
   ollama-data:
   tailscale-state:
