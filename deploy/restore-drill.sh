@@ -5,6 +5,9 @@
 #   deploy/restore-drill.sh --from-remote   fetch the off-site copy first (what a
 #                                           real disaster recovery would do)
 #   deploy/restore-drill.sh --keep          leave the drill stack running to poke at
+#   deploy/restore-drill.sh --notify        email BACKUP_NOTIFY_EMAIL if it fails
+#                                           (the monthly launchd job runs
+#                                           --from-remote --notify)
 #   DRILL_IMAGE=lecture-notes-app:candidate deploy/restore-drill.sh
 #                                           run a different app image (e.g. one built
 #                                           from a dependency-update branch) against
@@ -23,11 +26,26 @@ DRILL=lecture-drill
 DRILL_PORT="${DRILL_PORT:-8020}"
 BACKUP_DIR="${BACKUP_DIR:-$PWD/state/backups}"
 RCLONE_REMOTE="${RCLONE_REMOTE:-lecture-backup:}"
-FROM_REMOTE=0; KEEP=0
-for arg in "$@"; do case "$arg" in --from-remote) FROM_REMOTE=1 ;; --keep) KEEP=1 ;; esac; done
+FROM_REMOTE=0; KEEP=0; NOTIFY=0
+for arg in "$@"; do case "$arg" in --from-remote) FROM_REMOTE=1 ;; --keep) KEEP=1 ;; --notify) NOTIFY=1 ;; esac; done
 
-log() { echo "[drill $(date '+%H:%M:%S')] $*"; }
-fail() { echo "[drill] FAILED: $*" >&2; exit 1; }
+log() { echo "[drill $(date '+%Y-%m-%d %H:%M:%S')] $*"; }
+REASON="exited early (see the log)"
+fail() { REASON="$*"; echo "[drill] FAILED: $*" >&2; exit 1; }
+# One value from the live deploy/.env. Read, never exported: exported values
+# would override the drill's own env file in every compose call.
+live_env() { grep -E "^$1=" .env 2>/dev/null | head -1 | cut -d= -f2- | sed "s/^[\"']//; s/[\"']\$//"; }
+# Same mail path as backup.sh: the app's own account, to BACKUP_NOTIFY_EMAIL.
+notify_failure() {
+  local user pass to from
+  user=$(live_env MAIL_USERNAME); pass=$(live_env MAIL_PASSWORD); to=$(live_env BACKUP_NOTIFY_EMAIL)
+  from=$(live_env MAIL_FROM); from=${from:-$user}
+  [ -n "$user" ] && [ -n "$pass" ] && [ -n "$to" ] || return 0
+  printf 'From: %s\nTo: %s\nSubject: Lecture Notes restore drill FAILED on %s\n\n%s\n\nLog: deploy/state/backups/restore-drill.log\n' \
+    "$from" "$to" "$(hostname)" "$REASON" |
+    curl -s --url "smtps://$(live_env MAIL_SERVER | grep . || echo smtp.gmail.com):$(live_env MAIL_PORT | grep . || echo 465)" \
+      --mail-from "$from" --mail-rcpt "$to" --user "$user:$pass" -T - >/dev/null 2>&1 || true
+}
 WORK=$(mktemp -d)
 # Compose override for the drill: the app shares the tailscale container's
 # network namespace, and an unsigned-in Tailscale node restarts itself every
@@ -51,7 +69,12 @@ cleanup() {
     $DC down -v --remove-orphans >/dev/null 2>&1 || true
   fi
   rm -rf "$WORK"
-  [ $status -eq 0 ] && log "PASSED — the backup restores cleanly." || echo "[drill] exit $status" >&2
+  if [ $status -eq 0 ]; then
+    log "PASSED — the backup restores cleanly."
+  else
+    echo "[drill] exit $status" >&2
+    [ $NOTIFY = 1 ] && notify_failure
+  fi
   exit $status
 }
 trap cleanup EXIT
@@ -60,7 +83,7 @@ trap cleanup EXIT
 if [ $FROM_REMOTE = 1 ]; then
   command -v rclone >/dev/null || fail "rclone is needed for --from-remote"
   log "Fetching the off-site copy into $WORK/remote ..."
-  rclone copy "$RCLONE_REMOTE" "$WORK/remote" --transfers 8 -q
+  rclone copy "$RCLONE_REMOTE" "$WORK/remote" --transfers 8 -q || fail "could not fetch the off-site copy from $RCLONE_REMOTE"
   SRC="$WORK/remote"
 else
   SRC="$BACKUP_DIR"

@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Monthly restore drill on the 1st at 05:00, two hours after the nightly
+     backup (deploy/restore-drill.sh - -from-remote - -notify): restores the
+     off-site copy into a throwaway stack, checks it, tears it down, and emails
+     BACKUP_NOTIFY_EMAIL only if it fails. If the Mac is asleep at 05:00 the
+     job runs when it wakes. Installed by deploy/backup-setup.sh, which
+     replaces __REPO__ and __HOME__.
+     Log: deploy/state/backups/restore-drill.log -->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.mgnetwork.lecture-restore-drill</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>__REPO__/deploy/restore-drill.sh</string>
+    <string>--from-remote</string>
+    <string>--notify</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <!-- launchd jobs get a minimal PATH; docker and rclone live here. -->
+    <key>PATH</key>
+    <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin</string>
+    <key>HOME</key>
+    <string>__HOME__</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict>
+    <key>Day</key>
+    <integer>1</integer>
+    <key>Hour</key>
+    <integer>5</integer>
+    <key>Minute</key>
+    <integer>0</integer>
+  </dict>
+  <key>StandardOutPath</key>
+  <string>__REPO__/deploy/state/backups/restore-drill.log</string>
+  <key>StandardErrorPath</key>
+  <string>__REPO__/deploy/state/backups/restore-drill.log</string>
+</dict>
+</plist>

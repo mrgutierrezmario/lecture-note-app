@@ -82,9 +82,15 @@ if [ "$(uname)" = Darwin ]; then
   launchctl unload "$PLIST" 2>/dev/null || true
   launchctl load "$PLIST"
   log "Scheduled nightly at 03:00 (launchd: com.mgnetwork.lecture-backup). Log: deploy/state/backups/backup.log"
+  PLIST=~/Library/LaunchAgents/com.mgnetwork.lecture-restore-drill.plist
+  sed "s|__REPO__|$REPO|g; s|__HOME__|$HOME|g" mac/com.mgnetwork.lecture-restore-drill.plist > "$PLIST"
+  launchctl unload "$PLIST" 2>/dev/null || true
+  launchctl load "$PLIST"
+  log "Scheduled the restore drill monthly, 1st at 05:00 (launchd: com.mgnetwork.lecture-restore-drill). Log: deploy/state/backups/restore-drill.log"
 else
-  log "Add this line with 'crontab -e' to run nightly at 03:00:"
+  log "Add these lines with 'crontab -e' to back up nightly at 03:00 and drill a restore monthly:"
   echo "  0 3 * * * $REPO/deploy/backup.sh >> $REPO/deploy/state/backups/backup.log 2>&1"
+  echo "  0 5 1 * * $REPO/deploy/restore-drill.sh --from-remote --notify >> $REPO/deploy/state/backups/restore-drill.log 2>&1"
 fi
 
 # ── First backup ──────────────────────────────────────────────────────────────

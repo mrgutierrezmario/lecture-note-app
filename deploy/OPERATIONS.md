@@ -13,8 +13,9 @@ These run without you:
 | What | When | How you'd know it failed |
 |---|---|---|
 | Backup (database + settings + audio → encrypted off-site copy) | nightly 03:00 | Email to `BACKUP_NOTIFY_EMAIL`; `deploy/state/backups/backup.log` |
+| Restore drill (off-site copy → throwaway stack, checked, torn down) | monthly, 1st at 05:00 | Email to `BACKUP_NOTIFY_EMAIL`; `deploy/state/backups/restore-drill.log` |
 | Audio cleanup (recordings older than the retention period) | daily | — (transcripts and notes are never deleted) |
-| Container restarts after a crash or reboot | always | Uptime monitor email |
+| Container restarts after a crash or reboot; `watchdog` re-attaches and restarts | always | Uptime monitor email; Grafana site-down email |
 | Log rotation (20 MB × 5 per service) | always | — |
 | Dependabot patch/minor updates | Mondays, merged when CI passes | GitHub email per PR |
 | Security advisories | as published | GitHub email + Security tab |
@@ -48,10 +49,12 @@ deploy/start.sh
 docker compose -f deploy/compose.yml logs --tail=100 app
 ```
 
-## Every few months (5 minutes)
+## Restore drill (monthly, automatic)
 
-Prove the backup restores — a backup that has never been restored is a
-hope, not a backup:
+A backup that has never been restored is a hope, not a backup. launchd runs
+the drill on the 1st of each month at 05:00 (`com.mgnetwork.lecture-restore-drill`,
+installed by `backup-setup.sh`) and emails `BACKUP_NOTIFY_EMAIL` only if it
+fails. To run it by hand:
 
 ```bash
 deploy/restore-drill.sh --from-remote
