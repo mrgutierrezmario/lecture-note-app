@@ -3,7 +3,7 @@ uvicorn[standard]==0.54.0
 sqlalchemy[asyncio]==2.1.6
 asyncpg==0.32.0
 alembic==1.20.1
-boto3==1.43.118
+boto3==1.43.123
 python-dotenv==1.2.4
 httpx==0.28.1
 requests==2.34.2
@@ -11,10 +11,10 @@ faster-whisper==1.2.1
 # av 11 has no aarch64 wheel and builds against system FFmpeg; 12.x ships
 # manylinux wheels with FFmpeg bundled. faster-whisper 1.0.2 widens the pin.
 av>=19.0.2,<20
-websockets==17.3
-pydantic==2.14.1
-pydantic-settings==2.16.1
-python-multipart==0.0.32
+websockets==17.4
+pydantic==2.14.2
+pydantic-settings==2.16.2
+python-multipart==0.0.33
 pdfplumber==0.11.10
 python-pptx==1.0.2
 python-docx==1.2.0
